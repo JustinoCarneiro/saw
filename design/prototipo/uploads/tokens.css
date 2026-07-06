@@ -1,0 +1,61 @@
+/* ============================================================
+   SAW HUB · Design Tokens
+   Identidade do CLIENTE (SAW) — extraída dos mockups oficiais.
+   NÃO é a marca da Onda. Tema base: DARK (vinho + dourado).
+   ============================================================ */
+
+:root {
+  /* ---- Marca SAW ---- */
+  --gold:         #F0B050;   /* dourado/âmbar — ação primária, logo, destaques */
+  --gold-bright:  #F8C85E;   /* hover / brilho */
+  --gold-soft:    #D9BE93;   /* dourado suave — texto de detalhe, eyebrows */
+  --wine:         #57191C;   /* vinho/bordô — cor de marca, faixas, login */
+  --wine-deep:    #3C1013;   /* vinho profundo — fundos de marca */
+  --wine-bright:  #7A2328;   /* vinho realce */
+
+  /* ---- Superfícies (dark) ---- */
+  --bg:           #0C0C0C;   /* fundo do app */
+  --surface:      #141414;   /* cartões / painéis */
+  --surface-2:    #1B1917;   /* superfície secundária (tom quente sutil) */
+  --elevated:     #221E1A;   /* menus, popovers, linhas ativas */
+  --line:         #2A2724;   /* bordas / divisores */
+  --line-soft:    #1E1B19;   /* bordas sutis */
+
+  /* ---- Texto ---- */
+  --text:         #F4EEE4;   /* texto principal (creme) */
+  --text-soft:    #A9A29A;   /* secundário */
+  --text-faint:   #6E6862;   /* terciário / legendas */
+  --on-gold:      #1A1206;   /* texto/ícone sobre dourado */
+  --on-wine:      #F4EEE4;   /* texto sobre vinho */
+
+  /* ---- Status ---- */
+  --success:      #3FB27F;   /* No prazo / Concluída / Pago */
+  --success-bg:   rgba(63,178,127,.14);
+  --warning:      #F0B050;   /* Atenção / Pendente */
+  --warning-bg:   rgba(240,176,80,.14);
+  --danger:       #E5573F;   /* Atrasada / Ao vivo / Cancelado */
+  --danger-bg:    rgba(229,87,63,.14);
+  --info:         #5AA9E6;   /* Informativo / Visita */
+  --info-bg:      rgba(90,169,230,.14);
+
+  /* ---- Forma & elevação ---- */
+  --r-sm:   8px;
+  --r-card: 16px;
+  --r-lg:   22px;
+  --r-pill: 999px;
+  --shadow:       0 10px 30px -12px rgba(0,0,0,.60);
+  --shadow-float: 0 18px 44px -16px rgba(0,0,0,.70);
+  --ring:         0 0 0 3px rgba(240,176,80,.30); /* foco acessível */
+
+  /* ---- Tipografia ---- */
+  --font-ui:      'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-display: 'Anton', 'Archivo', 'Inter', sans-serif; /* wordmark / hero condensado */
+
+  /* ---- Layout ---- */
+  --sidebar-w: 248px;
+  --maxw: 1280px;
+  --gutter: clamp(16px, 4vw, 40px);
+}
+
+/* Gradiente de marca (uso pontual: hero de login, faixas) */
+:root { --grad-wine: linear-gradient(135deg, #3C1013 0%, #57191C 55%, #7A2328 100%); }
