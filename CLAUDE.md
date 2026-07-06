@@ -44,8 +44,14 @@ Fornecida pelo cliente (não é a marca da Onda). Base: mockups do SAW HUB — t
 10. **E10 · Painel Administrativo & Métricas** *(Médio)* — mentorados ativos, mentorias/eventos realizados, receita, crescimento, distribuição por plano, atividades.
 11. **E11 · Gestão Admin** *(Grande)* — CRUD de mentorados por plano, criação de mentorias (individual/grupo), curadoria de conteúdos e gestão de eventos.
 
+### Gestão interna da SAW (back-office) — solicitado pelo cliente
+> Área Admin ampliada para a SAW gerir o próprio negócio (não é ERP do restaurante do mentorado).
+13. **E13 · Comercial & Vendas** *(Grande)* — dashboard comercial: leads (solicitações de acesso), funil/pipeline, taxa de conversão, vendas por plano, MRR, vendas da loja, metas e ranking do time comercial.
+14. **E14 · Financeiro & DRE** *(Grande · risco alto)* — lançamento de receitas/despesas por categoria, contas a pagar/receber, fluxo de caixa, **DRE** por período e **dashboard de faturamento** (recorrência por plano, loja, eventos; MRR/churn; margem/lucro).
+15. **E15 · Gestão de Time (SAW)** *(Médio)* — cadastro da equipe interna (mentores, comercial, atendimento), papéis e permissões, carteira de clientes por mentor, metas e desempenho por colaborador (mentorias realizadas, conversões).
+
 ### Transversal
-12. **E12 · Avisos & Notificações** *(Pequeno)* — avisos importantes, convites e notificações in-app/e-mail.
+16. **E16 · Avisos & Notificações** *(Pequeno)* — avisos importantes, convites e notificações in-app/e-mail.
 
 ## Máquinas de estado principais
 - **Mentoria:** `Agendada → Confirmada → Realizada` (gera ata) · desvio: `→ Cancelada`.
@@ -53,6 +59,8 @@ Fornecida pelo cliente (não é a marca da Onda). Base: mockups do SAW HUB — t
 - **Meta:** `Ativa {No prazo | Atenção | Atrasada} → Concluída` · desvio: `→ Pausada`.
 - **Pedido (Loja):** `Carrinho → Aguardando pagamento → Pago → Liberado` · desvios: `Cancelado`, `Reembolsado`.
 - **Inscrição em evento:** `Disponível → Inscrito → Participado` · desvio: `Cancelada`.
+- **Lead comercial:** `Solicitação → Em contato → Proposta → Fechado` · desvio: `Perdido`.
+- **Lançamento financeiro:** `Previsto → Realizado` · conta: `A pagar/A receber → Pago/Recebido` (ou `Vencido`).
 
 ## Planos
 `Gratuito · Básico · Essencial · Profissional` — controlam acesso a conteúdos, nº de mentorias e recursos. Cobrança recorrente (assinatura).

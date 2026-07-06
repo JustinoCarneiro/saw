@@ -8,8 +8,10 @@
 
 ## Contexto
 Gere um **protótipo navegável de alta fidelidade** (dark mode) de um **SaaS de mentoria para donos de
-restaurante** chamado **SAW HUB**. Duas áreas: **Mentorado** e **Admin (SAW)**. Dados fictícios em
-pt-BR. Responsivo (desktop + mobile). Acessível (AA). Sidebar clicável navegando entre as telas.
+restaurante** chamado **SAW HUB**, com **20 telas**. Duas áreas: **Mentorado** (10 telas) e
+**Admin/SAW** (10 telas — inclui o back-office da SAW: comercial, financeiro/DRE, faturamento,
+lançamentos e gestão de time). Dados fictícios em pt-BR. Responsivo (desktop + mobile). Acessível
+(AA). Sidebar clicável navegando entre as telas.
 
 ## Identidade visual (obrigatória — não inventar cores)
 Tema **dark**, premium e sóbrio (vinho + dourado sobre near-black).
@@ -49,14 +51,21 @@ Mentor/fundador: **Matheus Brayan**. Metas típicas: "CMV abaixo de 30%", "Aumen
 9. **Loja SAW** — barra de categorias (Cursos/Planilhas/Templates/E-books/Ferramentas/Kits/Consultorias); "Destaques" e "Mais vendidos" (cards com preço, avaliação, carrinho); carrinho lateral com subtotal e "Finalizar compra"; selos de confiança.
 10. **Perfil** — cabeçalho com avatar, nome, restaurante, contato, áreas de interesse; abas Visão geral/Preferências/Segurança/Notificações/Integrações; "Minha jornada SAW" (nível Ouro, XP, barra); conquistas; "Resumo da conta" (plano, vencimento) e assinatura.
 
-## Telas — Área Admin / SAW (5)
+## Telas — Área Admin / SAW (10)
 11. **Dashboard administrativo** — KPIs (Mentorados ativos 1.248, Mentorias realizadas 243, Eventos 24, Receita do mês R$ 24.870) com variação; gráfico de crescimento de mentorados; rosca de distribuição por plano (Gratuito/Básico/Essencial/Profissional); atividades recentes; mentorias agendadas para hoje.
 12. **Mentorados** — tabela paginada (mentorado, plano, status Ativo/Inativo, cadastro, ações ver/editar/remover); busca + filtros por plano/status; "Exportar" e "Novo mentorado".
 13. **Nova mentoria** — formulário: tipo (Individual/Grupo), mentorado(s), título, descrição/pauta; detalhes (data, hora, duração, plataforma Google Meet, enviar convite por e-mail); "Criar mentoria".
 14. **Gestão de eventos** — tabela (evento, tipo, data, participantes, status Programado/Ao vivo/Realizado/Cancelado, ações); abas + filtros; "Novo evento".
 15. **Biblioteca de conteúdos** — tabela (conteúdo, tipo, categoria, acessos, data, status Publicado/Rascunho, ações); abas por tipo; "Exportar" e "Novo conteúdo".
 
+### Back-office interno da SAW (solicitado pelo cliente — gestão do próprio negócio)
+16. **Dashboard Comercial** — KPIs (novos mentorados no mês, taxa de conversão, MRR, vendas da loja) com variação; **funil de vendas** (Leads → Em contato → Proposta → Fechado); vendas por plano (barras); metas do mês x realizado; **ranking do time comercial**.
+17. **Financeiro — Lançamentos** — tabela de receitas e despesas (data, descrição, categoria, conta, valor, status Pago/Recebido/A pagar/A receber/Vencido); botão **"Novo lançamento"**; filtros por período/categoria/tipo; cartões de saldo, a receber e a pagar.
+18. **Financeiro — DRE** — demonstrativo por período: Receita bruta → deduções → receita líquida → custos → despesas (operacional, pessoal, marketing) → **resultado (lucro/EBITDA)**; comparativo mês a mês; gráfico de barras/linha; margem %.
+19. **Financeiro — Faturamento** — dashboard de faturamento: receita recorrente (assinaturas por plano), receita da loja e de eventos; **MRR, churn**; gráfico de faturamento mensal (linha) e composição da receita (rosca).
+20. **Gestão de Time (SAW)** — lista da equipe interna (mentor / comercial / atendimento) com foto, papel, carteira de clientes, mentorias realizadas, conversões e meta x realizado; ficha do colaborador; controle de papéis/permissões; "Novo membro".
+
 ## Instruções finais
 - Sidebar do Mentorado: Dashboard, Mentorias, Metas, Tarefas, Materiais, Dicas do Brayan, Eventos, Loja SAW, Avisos, Perfil, Suporte.
-- Sidebar do Admin: Dashboard, Mentorados, Mentorias, Eventos, Conteúdos, Relatórios, Financeiro, Configurações, Suporte.
-- Navegação clicável entre todas as telas. Mantenha consistência absoluta de espaçamento, cores e componentes entre as 15 telas.
+- Sidebar do Admin: Dashboard, Comercial, Financeiro (Lançamentos, DRE, Faturamento), Mentorados, Mentorias, Time, Eventos, Conteúdos, Relatórios, Configurações, Suporte.
+- Navegação clicável entre todas as telas. Mantenha consistência absoluta de espaçamento, cores e componentes entre as 20 telas.

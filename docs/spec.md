@@ -165,7 +165,49 @@
 
 ---
 
-## E12 · Avisos & Notificações  *(Pequeno · transversal)*
+## E13 · Comercial & Vendas (SAW)  *(Grande)*
+
+**H13.1** — Como SAW, quero um dashboard comercial para acompanhar as vendas.
+- **Dado** o painel comercial, **então** vejo novos mentorados no mês, taxa de conversão, MRR e vendas da loja, com variação.
+
+**H13.2** — Como SAW, quero um funil de vendas para saber onde perco negócios.
+- **Dado** leads (solicitações de acesso), **quando** avançam de etapa (Em contato → Proposta → Fechado/Perdido), **então** o funil e a conversão refletem a mudança.
+
+**H13.3** — Como SAW, quero acompanhar as metas e o ranking do time comercial.
+- **Dado** metas por vendedor, **então** vejo o realizado x meta e o ranking do time no período.
+
+---
+
+## E14 · Financeiro & DRE (SAW)  *(Grande · risco alto)*
+
+**H14.1** — Como SAW, quero lançar receitas e despesas para controlar o caixa.
+- **Dado** a tela de lançamentos, **quando** registro uma receita/despesa (valor, categoria, data, conta), **então** ela entra no fluxo de caixa e nos relatórios.
+
+**H14.2** — Como SAW, quero um DRE por período para ver o resultado do negócio.
+- **Dado** receitas e despesas classificadas, **quando** escolho um período, **então** vejo Receita bruta → líquida → custos → despesas → **resultado (lucro/EBITDA)**, com comparativo mês a mês.
+
+**H14.3** — Como SAW, quero um dashboard de faturamento.
+- **Dado** as fontes de receita (assinaturas por plano, loja, eventos), **então** vejo faturamento mensal, MRR, churn e composição da receita.
+
+**H14.4** — Como SAW, quero contas a pagar/receber com status.
+- **Dado** uma conta, **quando** o pagamento é feito, **então** ela passa de `A pagar/A receber` para `Pago/Recebido`; vencidas são sinalizadas.
+
+---
+
+## E15 · Gestão de Time (SAW)  *(Médio)*
+
+**H15.1** — Como SAW, quero cadastrar a equipe interna com papéis e permissões.
+- **Dado** um colaborador (mentor/comercial/atendimento), **quando** defino o papel, **então** ele acessa apenas as áreas permitidas.
+
+**H15.2** — Como SAW, quero ver a carteira de clientes por mentor.
+- **Dado** os mentores, **então** vejo quantos mentorados cada um atende e a distribuição da carteira.
+
+**H15.3** — Como SAW, quero acompanhar metas e desempenho do time.
+- **Dado** metas por colaborador, **então** vejo mentorias realizadas, conversões e realizado x meta no período.
+
+---
+
+## E16 · Avisos & Notificações  *(Pequeno · transversal)*
 
 **H12.1** — Como mentorado, quero receber avisos e convites importantes.
 - **Dado** um aviso publicado pelo Admin, **quando** acesso a plataforma, **então** ele aparece no sino de notificações e na seção de avisos.
