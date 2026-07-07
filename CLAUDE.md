@@ -58,10 +58,10 @@ O cliente foi claro: **este sistema é a espinha dorsal operacional da SAW**, n�
 - **Objetivo do momento:** ter uma versão apresentável pro cliente o mais rápido possível — prioriza os módulos do item 2 acima com profundidade suficiente pra demonstrar valor, não necessariamente 100% das histórias de cada épico de uma vez.
 - Ver "Diferenciais do MVP" abaixo para o que deve entrar já nesta primeira leva para gerar impacto na apresentação.
 
-## Diferenciais do MVP (proposta, aguardando confirmação do cliente/Onda)
-Cliente pediu explicitamente algo que "feche o projeto na hora". Candidato mais forte, dado que **upload de áudio da mentoria já é requisito confirmado** (E5):
-- **Transcrição + rascunho de ata automático via IA** a partir do áudio da mentoria — o mentor sobe o áudio, o sistema transcreve e gera um rascunho de ata (resumo, encaminhamentos sugeridos) pra revisão humana antes de publicar. Resolve uma dor real (escrever ata manualmente) e é coerente com o resto do produto usar IA (a própria Onda constrói com IA).
-- Ainda **não confirmado para construção** — precisa alinhar com o cliente/Marcos antes de entrar no MVP, por causa de custo de API de transcrição e escopo adicional.
+## Diferenciais do MVP
+Cliente pediu explicitamente algo que "feche o projeto na hora". **Confirmado para esta primeira leva** (07/07/2026):
+- **Transcrição + rascunho de ata automático via IA** a partir do áudio da mentoria (E5) — o mentor sobe o áudio, o sistema transcreve e gera um rascunho de ata (resumo, encaminhamentos sugeridos) pra revisão humana antes de publicar. Resolve uma dor real (escrever ata manualmente) e é coerente com o resto do produto usar IA.
+- Implica: endpoint de upload de áudio, integração com API de transcrição (ex.: Whisper), custo por uso a considerar no orçamento de infra.
 
 ## Épicos
 > Histórias de usuário completas e critérios de aceite BDD em `./docs/spec.md`.
