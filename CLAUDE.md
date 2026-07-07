@@ -43,10 +43,25 @@ Fornecida pelo cliente (não é a marca da Onda). Base: mockups do SAW HUB — t
 ## Princípios (não-funcionais críticos)
 - **Isolamento por tenant** decidido na modelagem: todo dado de mentorado é escopado por conta. Nunca vazar dados entre mentorados.
 - **Auth e Pagamento são os módulos de maior risco** — entram primeiro na esteira e passam por `revisor-seguranca` obrigatório.
-- **Responsivo** de verdade: desktop e mobile (o cliente exige acesso por computador e celular).
+- **Responsivo:** **fora do MVP** — cliente confirmou em reunião (07/07/2026) que o MVP não precisa funcionar em mobile; foco é desktop primeiro. Não fechar portas: evitar CSS que assuma só desktop (ex.: larguras fixas absurdas), mas não gastar esforço em mobile agora. Mobile volta como requisito pós-MVP.
+- **Escala:** 10–15 usuários esperados no MVP, mas a arquitetura (Postgres + Spring Boot stateless) já nasce pensada pra escalar além disso sem reescrita — não é otimização prematura, é não criar dívida óbvia.
 - **Acessibilidade AA** mesmo no tema dark (contraste do dourado sobre vinho verificado).
 - **Estados de carregamento e erro** tratados em toda tela que consome dados.
 - Papéis e permissões: Mentorado nunca acessa rotas de Admin; Admin não age “como” mentorado sem trilha.
+
+## MVP · Prioridade de construção (definida em reunião com o cliente, 07/07/2026)
+O cliente foi claro: **este sistema é a espinha dorsal operacional da SAW**, não só um produto pro mentorado. Prioridade do MVP, nessa ordem:
+1. **E1 · Autenticação** — pré-requisito de tudo, constrói primeiro independente da prioridade abaixo.
+2. **Núcleo do back-office**: **E13 · Comercial**, **E14 · Financeiro & DRE**, **E15 · Gestão de Time** (RBAC por área) — isso é o foco real do cliente, não os módulos do mentorado.
+3. **E17 · Painel Consolidado & Ranking** — depende de mentorados/tarefas existirem, mas pode rodar sobre dados seed enquanto o fluxo completo do mentorado não está pronto.
+4. Módulos do mentorado (E2–E9) entram depois, na ordem que já fazia sentido no núcleo (Dashboard → Metas/Tarefas → Mentorias → resto).
+- **Objetivo do momento:** ter uma versão apresentável pro cliente o mais rápido possível — prioriza os módulos do item 2 acima com profundidade suficiente pra demonstrar valor, não necessariamente 100% das histórias de cada épico de uma vez.
+- Ver "Diferenciais do MVP" abaixo para o que deve entrar já nesta primeira leva para gerar impacto na apresentação.
+
+## Diferenciais do MVP (proposta, aguardando confirmação do cliente/Onda)
+Cliente pediu explicitamente algo que "feche o projeto na hora". Candidato mais forte, dado que **upload de áudio da mentoria já é requisito confirmado** (E5):
+- **Transcrição + rascunho de ata automático via IA** a partir do áudio da mentoria — o mentor sobe o áudio, o sistema transcreve e gera um rascunho de ata (resumo, encaminhamentos sugeridos) pra revisão humana antes de publicar. Resolve uma dor real (escrever ata manualmente) e é coerente com o resto do produto usar IA (a própria Onda constrói com IA).
+- Ainda **não confirmado para construção** — precisa alinhar com o cliente/Marcos antes de entrar no MVP, por causa de custo de API de transcrição e escopo adicional.
 
 ## Épicos
 > Histórias de usuário completas e critérios de aceite BDD em `./docs/spec.md`.
@@ -56,7 +71,7 @@ Fornecida pelo cliente (não é a marca da Onda). Base: mockups do SAW HUB — t
 2. **E2 · Dashboard do Mentorado** *(Médio)* — visão geral: próxima reunião, meta semanal, tarefas abertas, evolução, compromissos, avisos, dica.
 3. **E3 · Metas Estratégicas** *(Médio)* — metas com progresso, prazo, status (No prazo/Atenção/Atrasada) e resumo.
 4. **E4 · Tarefas & Agenda** *(Médio)* — tarefas por encontro (encaminhamentos), lista/kanban, calendário, filtros, prioridade, vínculo a metas, **peso (1 ou 2) usado no ranking do E17**.
-5. **E5 · Mentorias & Atas** *(Médio)* — agenda, histórico, ata por mentoria, link Google Meet, materiais recomendados.
+5. **E5 · Mentorias & Atas** *(Médio)* — agenda, histórico, ata por mentoria (**individual e coletiva**, ver E11 para criação em grupo), link Google Meet, materiais recomendados, **upload do áudio gravado na mentoria** vinculado à ata.
 6. **E6 · Materiais & Dicas do Brayan** *(Médio)* — biblioteca multi-formato + vídeos, categorias, favoritos, indicadores de consumo.
 7. **E7 · Eventos & Inscrições** *(Médio)* — eventos ao vivo/presencial, inscrição, calendário.
 8. **E8 · Loja SAW** *(Grande · risco alto)* — catálogo, carrinho, checkout, gateway de pagamento, pedidos.
@@ -97,10 +112,12 @@ Fornecida pelo cliente (não é a marca da Onda). Base: mockups do SAW HUB — t
 - API REST `/api/v1`, JSON, erros padronizados.
 - Diretiva Primária na Fase 4: não alterar sintaxe de código existente.
 - Datas em `pt-BR`; moeda em `R$`.
-- Toda tela existe em desktop e mobile.
+- Responsivo mobile fica fora do MVP (ver Princípios) — não é mais requisito de toda tela por enquanto.
 
 ## Ponteiros
 - Histórias completas + BDD: `./docs/spec.md`
 - Blueprint técnico: `./ROADMAP.md` (Fase 3)
 - Identidade visual: `./design/tokens.css` + `./design/DESIGN.md` (Fase 2)
 - Referência visual do cliente: `onda-propostas/clientes/saw/SAW HUB.pdf` (15 telas)
+- **`design/prototipo/` está congelado** — protótipo estático da Fase 2b, não editar mais. Referência visual para a Fase 4, não o código de produção.
+- **Código real do MVP:** `frontend/` (React+Vite) e `backend/` (Spring Boot) na raiz do repositório, a partir da Fase 4.
