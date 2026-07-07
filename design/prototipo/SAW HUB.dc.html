@@ -26,6 +26,37 @@
   .saw-link:hover{color:#F8C85E !important}
   .saw-row:hover{background:#1B1917 !important}
   @media (prefers-reduced-motion: reduce){*{transition:none !important}}
+
+  /* ===== Responsivo (mobile) ===== */
+  .saw-mnav-btn,.saw-mnav-backdrop{display:none}
+  @media (max-width:820px){
+    .saw-mnav-btn{display:flex !important}
+    .saw-mnav-toggle:checked ~ .saw-mnav-backdrop{display:block !important}
+    .saw-mnav-toggle:checked ~ .saw-mnav-btn{opacity:0;pointer-events:none}
+    .saw-mnav-toggle:checked ~ aside{transform:translateX(0) !important}
+
+    aside{
+      position:fixed !important;
+      left:0 !important;top:0 !important;
+      width:82vw !important;max-width:300px !important;
+      height:100vh !important;
+      transform:translateX(-100%);
+      transition:transform .25s ease;
+      z-index:50;
+      overflow-y:auto;
+      box-shadow:20px 0 40px -20px rgba(0,0,0,.6);
+    }
+    .saw-mnav-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40}
+
+    main{padding-top:58px}
+
+    [style*="px 32px 40px"]{padding:64px 16px 32px !important}
+    [style*="min-width: 220px"],[style*="min-width:220px"]{min-width:0 !important;width:100% !important}
+
+    .saw-g1{grid-template-columns:1fr !important}
+    .saw-gtable{min-width:660px}
+    .saw-gtable-wrap{overflow-x:auto !important}
+  }
 </style>
 </helmet>
 
@@ -35,7 +66,7 @@
 <sc-if value="{{ showLogin }}" hint-placeholder-val="{{ true }}">
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px;background:radial-gradient(1200px 600px at 70% 30%, #57191C 0%, #3C1013 55%, #2A0B0D 100%)">
   <div style="width:min(1140px,100%);background:#0C0C0C;border:1px solid #2A2724;border-radius:24px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.8);display:flex;flex-direction:column">
-    <div style="display:grid;grid-template-columns:1fr 1.05fr;min-height:560px">
+    <div class="saw-g1" style="display:grid;grid-template-columns:1fr 1.05fr;min-height:560px">
       <!-- form -->
       <div style="padding:52px 56px;display:flex;flex-direction:column">
         <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:34px">
@@ -100,6 +131,10 @@
 <sc-if value="{{ showMentoradoApp }}" hint-placeholder-val="{{ true }}">
 <div style="display:flex;min-height:100vh">
 
+  <input type="checkbox" class="saw-mnav-toggle" id="mnavToggleMentorado" style="display:none">
+  <label for="mnavToggleMentorado" class="saw-mnav-btn" aria-label="Abrir menu" style="position:fixed;top:14px;left:14px;z-index:60;width:42px;height:42px;border-radius:10px;background:#141414;border:1px solid #2A2724;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F4EEE4" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></label>
+  <label for="mnavToggleMentorado" class="saw-mnav-backdrop" aria-hidden="true"></label>
+
   <!-- SIDEBAR -->
   <aside style="width:248px;flex:0 0 248px;background:#0C0C0C;border-right:1px solid #1E1B19;display:flex;flex-direction:column;padding:22px 16px;position:sticky;top:0;height:100vh">
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0 22px">
@@ -154,7 +189,7 @@
       </div>
 
       <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px 18px 14px">
           <div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px;font-weight:500"><span style="width:30px;height:30px;border-radius:9px;background:rgba(240,176,80,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F0B050" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></span>Próxima reunião</div>
           <div style="font-size:28px;font-weight:800;margin:12px 0 2px">28/06</div>
@@ -184,7 +219,7 @@
       </div>
 
       <!-- 2x2 grid -->
-      <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px">
 
         <!-- progress chart -->
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px 22px">
@@ -269,12 +304,12 @@
         <div style="padding:0 2px 12px;font-size:13.5px;color:#A9A29A;cursor:pointer">Todas</div>
       </div>
 
-      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
-        <div style="display:grid;grid-template-columns:2.4fr 1.5fr 1.2fr .9fr .9fr;gap:16px;padding:12px 22px;font-size:11px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19">
+      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
+        <div class="saw-gtable" style="display:grid;grid-template-columns:2.4fr 1.5fr 1.2fr .9fr .9fr;gap:16px;padding:12px 22px;font-size:11px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19">
           <div>Meta</div><div>Progresso</div><div>Prazo</div><div>Status</div><div style="text-align:right">Ação</div>
         </div>
         <sc-for list="{{ metas }}" as="m" hint-placeholder-count="5">
-        <div class="saw-row" style="display:grid;grid-template-columns:2.4fr 1.5fr 1.2fr .9fr .9fr;gap:16px;align-items:center;padding:16px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
+        <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2.4fr 1.5fr 1.2fr .9fr .9fr;gap:16px;align-items:center;padding:16px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="display:flex;gap:12px;align-items:center;min-width:0"><span style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:rgba(240,176,80,.1);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F0B050" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></span><div style="min-width:0"><div style="font-size:13.5px;font-weight:600">{{ m.title }}</div><div style="font-size:11.5px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.desc }}</div></div></div>
           <div><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px"><span>{{ m.pct }}</span></div><div style="height:6px;border-radius:999px;background:#2A2724;overflow:hidden"><div style="width:{{ m.pct }};height:100%;background:#F0B050;border-radius:999px"></div></div></div>
           <div><div style="font-size:12.5px;font-weight:500">{{ m.prazo }}</div><div style="font-size:11px;color:#6E6862">{{ m.dias }}</div></div>
@@ -282,7 +317,7 @@
           <div style="text-align:right"><a class="saw-link" href="#" onclick="return false" style="font-size:12px;color:#D9BE93;text-decoration:none;white-space:nowrap">Ver detalhes →</a></div>
         </div>
         </sc-for>
-        <div style="display:grid;grid-template-columns:2.4fr 1.5fr 1.2fr .9fr .9fr;gap:16px;align-items:center;padding:16px 22px;background:#0C0C0C">
+        <div class="saw-gtable" style="display:grid;grid-template-columns:2.4fr 1.5fr 1.2fr .9fr .9fr;gap:16px;align-items:center;padding:16px 22px;background:#0C0C0C">
           <div style="display:flex;gap:12px;align-items:center"><span style="width:36px;height:36px;border-radius:10px;background:rgba(240,176,80,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F0B050" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></span><div><div style="font-size:13.5px;font-weight:700">Resumo geral</div><div style="font-size:11.5px;color:#A9A29A">Você concluiu 1 de 5 metas.</div></div></div>
           <div><div style="font-size:18px;font-weight:800;color:#F0B050">20%</div><div style="font-size:11px;color:#6E6862">Conclusão geral</div></div>
           <div><div style="font-size:18px;font-weight:800">1</div><div style="font-size:11px;color:#6E6862">Concluídas</div></div>
@@ -305,22 +340,22 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(240,176,80,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B050" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg></span>Total de tarefas</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">24</div><div style="font-size:11px;color:#6E6862">100% do total</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(63,178,127,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3FB27F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>Concluídas</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#3FB27F">14</div><div style="font-size:11px;color:#6E6862">58% do total</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(90,169,230,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5AA9E6" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span>Em andamento</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#5AA9E6">7</div><div style="font-size:11px;color:#6E6862">29% do total</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(240,176,80,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B050" stroke-width="1.6"><circle cx="12" cy="12" r="8"/></svg></span>Pendentes</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#F0B050">3</div><div style="font-size:11px;color:#6E6862">13% do total</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
-        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid #1E1B19;flex-wrap:wrap">
             <div style="display:flex;gap:20px"><span style="font-size:13px;font-weight:600;color:#F0B050;padding-bottom:2px;border-bottom:2px solid #F0B050">Todas</span><span style="font-size:13px;color:#A9A29A">Pendentes</span><span style="font-size:13px;color:#A9A29A">Em andamento</span><span style="font-size:13px;color:#A9A29A">Concluídas</span></div>
             <div style="display:flex;gap:10px"><button class="saw-btn-out" style="height:32px;padding:0 12px;border:1px solid #2A2724;background:#0C0C0C;color:#A9A29A;border-radius:8px;font:500 12px Inter,sans-serif;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Filtrar</button><div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border:1px solid #2A2724;background:#0C0C0C;border-radius:8px;color:#6E6862;font-size:12px">Buscar tarefas...</div></div>
           </div>
-          <div style="display:grid;grid-template-columns:2fr 1.4fr .9fr .9fr .8fr;gap:12px;padding:10px 20px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Tarefa</div><div>Meta relacionada</div><div>Prazo</div><div>Status</div><div>Prioridade</div></div>
+          <div class="saw-gtable" style="display:grid;grid-template-columns:2fr 1.4fr .9fr .9fr .8fr;gap:12px;padding:10px 20px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Tarefa</div><div>Meta relacionada</div><div>Prazo</div><div>Status</div><div>Prioridade</div></div>
           <sc-for list="{{ tarefas }}" as="t" hint-placeholder-count="5">
-          <div class="saw-row" style="display:grid;grid-template-columns:2fr 1.4fr .9fr .9fr .8fr;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid #1E1B19;cursor:pointer">
+          <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2fr 1.4fr .9fr .9fr .8fr;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid #1E1B19;cursor:pointer">
             <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:18px;height:18px;flex:0 0 18px;border-radius:5px;border:1.5px solid {{ t.checkBorder }};background:{{ t.checkBg }};display:grid;place-items:center;color:#1A1206;font-size:11px;font-weight:800">{{ t.check }}</span><div style="font-size:13px;font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</div></div>
             <div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="width:6px;height:6px;border-radius:999px;background:#F0B050;flex:0 0 6px"></span><span style="font-size:12px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.meta }}</span></div>
             <div style="font-size:12px;color:#A9A29A">{{ t.prazo }}</div>
@@ -369,7 +404,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 300px;gap:16px">
         <div>
           <div style="display:flex;gap:24px;border-bottom:1px solid #1E1B19;margin-bottom:16px"><span style="font-size:13.5px;font-weight:600;color:#F0B050;padding-bottom:11px;border-bottom:2px solid #F0B050">Mentorias</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:11px">Minhas atas</span></div>
 
@@ -444,12 +479,12 @@
         <span style="font-size:13px;font-weight:600;color:#F0B050;padding-bottom:11px;border-bottom:2px solid #F0B050">Todos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Planilhas</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Templates</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Apresentações</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Documentos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Vídeos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">E-books</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Áudios</span>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
-        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
           <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #1E1B19"><div style="flex:1;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border:1px solid #2A2724;background:#0C0C0C;border-radius:8px;color:#6E6862;font-size:12.5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Buscar materiais...</div><span style="font-size:12px;color:#A9A29A;white-space:nowrap">Todas as categorias ⌄</span><span style="font-size:12px;color:#A9A29A;white-space:nowrap">Mais recentes ⌄</span></div>
-          <div style="display:grid;grid-template-columns:2.2fr 1fr .9fr .9fr .6fr;gap:12px;padding:10px 20px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Material</div><div>Categoria</div><div>Formato</div><div>Data</div><div style="text-align:right">Ações</div></div>
+          <div class="saw-gtable" style="display:grid;grid-template-columns:2.2fr 1fr .9fr .9fr .6fr;gap:12px;padding:10px 20px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Material</div><div>Categoria</div><div>Formato</div><div>Data</div><div style="text-align:right">Ações</div></div>
           <sc-for list="{{ materiais }}" as="mat" hint-placeholder-count="7">
-          <div class="saw-row" style="display:grid;grid-template-columns:2.2fr 1fr .9fr .9fr .6fr;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid #1E1B19;cursor:pointer">
+          <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2.2fr 1fr .9fr .9fr .6fr;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid #1E1B19;cursor:pointer">
             <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:34px;height:34px;flex:0 0 34px;border-radius:8px;background:{{ mat.iconBg }};display:grid;place-items:center;font-size:8px;font-weight:800;color:{{ mat.iconColor }}">{{ mat.ext }}</span><div style="min-width:0"><div style="font-size:13px;font-weight:600">{{ mat.title }}</div><div style="font-size:11px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mat.desc }}</div></div></div>
             <div><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ mat.iconBg }};color:{{ mat.iconColor }}">{{ mat.cat }}</span></div>
             <div style="font-size:12px;color:#A9A29A">{{ mat.ext }} · {{ mat.size }}</div>
@@ -491,7 +526,7 @@
 
       <div style="display:flex;gap:24px;border-bottom:1px solid #1E1B19;margin-bottom:16px"><span style="font-size:13.5px;font-weight:600;color:#F0B050;padding-bottom:11px;border-bottom:2px solid #F0B050">Todas</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:11px">Mais recentes</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:11px">Mais assistidas</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:11px">Favoritas</span></div>
 
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 300px;gap:16px">
         <div>
           <div style="display:flex;gap:12px;margin-bottom:14px"><div style="flex:1;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid #2A2724;background:#141414;border-radius:8px;color:#6E6862;font-size:12.5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Buscar dicas...</div><span style="display:flex;align-items:center;padding:0 12px;height:36px;border:1px solid #2A2724;background:#141414;border-radius:8px;font-size:12px;color:#A9A29A">Todas as categorias ⌄</span><span style="display:flex;align-items:center;padding:0 12px;height:36px;border:1px solid #2A2724;background:#141414;border-radius:8px;font-size:12px;color:#A9A29A">Mais recentes ⌄</span></div>
           <div style="display:flex;flex-direction:column;gap:12px">
@@ -527,7 +562,7 @@
           </div>
           <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px">
             <div style="font-size:13.5px;font-weight:600;margin-bottom:12px">Seus indicadores <span style="font-size:11px;color:#6E6862;font-weight:400">· últimos 30 dias</span></div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+            <div class="saw-g1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
               <div><div style="font-size:20px;font-weight:800">18</div><div style="font-size:10px;color:#6E6862">Dias assistidos</div><div style="font-size:10px;color:#3FB27F">↑ 20%</div></div>
               <div><div style="font-size:20px;font-weight:800">245</div><div style="font-size:10px;color:#6E6862">Minutos</div><div style="font-size:10px;color:#3FB27F">↑ 15%</div></div>
               <div><div style="font-size:20px;font-weight:800">7</div><div style="font-size:10px;color:#6E6862">Favoritas</div><div style="font-size:10px;color:#3FB27F">↑ 43%</div></div>
@@ -551,7 +586,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(240,176,80,.12);display:grid;place-items:center;color:#F0B050" style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Eventos programados</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">12</div><div style="font-size:11px;color:#6E6862">Nos próximos 90 dias</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(240,176,80,.12);display:grid;place-items:center;color:#F0B050" style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Total de participantes</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">1.248</div><div style="font-size:11px;color:#6E6862">Em todos os eventos</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(229,87,63,.12);display:grid;place-items:center;color:#E5573F">▶</span>Eventos ao vivo</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#E5573F">3</div><div style="font-size:11px;color:#6E6862">Acontecendo agora</div></div>
@@ -560,7 +595,7 @@
 
       <div style="display:flex;gap:24px;border-bottom:1px solid #1E1B19;margin-bottom:16px"><span style="font-size:13.5px;font-weight:600;color:#F0B050;padding-bottom:11px;border-bottom:2px solid #F0B050">Todos</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:11px">Próximos</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:11px">Ao vivo</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:11px">Realizados</span></div>
 
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 300px;gap:16px">
         <div style="display:flex;flex-direction:column;gap:12px">
           <sc-for list="{{ eventos }}" as="e" hint-placeholder-count="4">
           <div class="saw-row" style="display:flex;gap:14px;background:#141414;border:1px solid #2A2724;border-radius:14px;padding:14px;align-items:center;cursor:pointer">
@@ -617,7 +652,7 @@
 
       <div style="display:flex;gap:22px;border-bottom:1px solid #1E1B19;margin-bottom:18px;flex-wrap:wrap"><span style="font-size:13px;font-weight:600;color:#F0B050;padding-bottom:11px;border-bottom:2px solid #F0B050">Todos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Cursos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Ferramentas</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Mentorias</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Produtos físicos</span></div>
 
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
         <sc-for list="{{ produtos }}" as="p" hint-placeholder-count="6">
         <div class="saw-row" style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden;cursor:pointer">
           <div style="position:relative;height:150px;background:linear-gradient(135deg,#3C1013,#57191C)"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(0,0,0,0) 0 9px,rgba(0,0,0,.14) 9px 10px)"></div><div style="position:absolute;inset:0;display:grid;place-items:center;font-size:34px">{{ p.emoji }}</div><span style="position:absolute;top:10px;left:10px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:{{ p.tagBg }};color:{{ p.tagColor }}">{{ p.tag }}</span></div>
@@ -636,7 +671,7 @@
         <button aria-label="Notificações" style="position:relative;width:40px;height:40px;border-radius:999px;border:1px solid #2A2724;background:#141414;cursor:pointer;display:grid;place-items:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#A9A29A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></button>
       </div>
 
-      <div style="display:grid;grid-template-columns:300px 1fr;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:300px 1fr;gap:16px">
         <div style="display:flex;flex-direction:column;gap:16px">
           <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:22px;text-align:center">
             <span style="width:88px;height:88px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:800 30px Inter,sans-serif;color:#F4EEE4;margin:0 auto 14px">JS</span>
@@ -659,7 +694,7 @@
         <div style="display:flex;flex-direction:column;gap:16px">
           <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:22px">
             <div style="display:flex;gap:24px;border-bottom:1px solid #1E1B19;margin-bottom:20px"><span style="font-size:13.5px;font-weight:600;color:#F0B050;padding-bottom:12px;border-bottom:2px solid #F0B050">Dados pessoais</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:12px">Meu negócio</span><span style="font-size:13.5px;color:#A9A29A;padding-bottom:12px">Segurança</span></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="saw-g1" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
               <div><label style="font-size:12px;color:#A9A29A">Nome completo</label><input class="saw-in" value="João Silva" style="width:100%;height:42px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font:400 14px Inter,sans-serif"></div>
               <div><label style="font-size:12px;color:#A9A29A">E-mail</label><input class="saw-in" value="joao@saborearte.com.br" style="width:100%;height:42px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font:400 14px Inter,sans-serif"></div>
               <div><label style="font-size:12px;color:#A9A29A">Telefone</label><input class="saw-in" value="(11) 98765-4321" style="width:100%;height:42px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font:400 14px Inter,sans-serif"></div>
@@ -711,13 +746,13 @@
         <button class="saw-btn-gold" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;background:#F0B050;color:#1A1206;border:none;border-radius:999px;font:600 14px Inter,sans-serif;cursor:pointer"><span style="font-size:17px;line-height:1">+</span>Abrir chamado</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
         <div class="saw-row" style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px;cursor:pointer"><span style="width:44px;height:44px;border-radius:12px;background:rgba(63,178,127,.12);display:grid;place-items:center;font-size:20px">💬</span><div style="font-size:15px;font-weight:600;margin:12px 0 4px">Chat ao vivo</div><div style="font-size:12.5px;color:#A9A29A">Fale com nosso time em tempo real, seg–sex, 9h–18h.</div><div style="font-size:12px;color:#3FB27F;font-weight:600;margin-top:10px">● Online agora</div></div>
         <div class="saw-row" style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px;cursor:pointer"><span style="width:44px;height:44px;border-radius:12px;background:rgba(240,176,80,.12);display:grid;place-items:center;font-size:20px">✉</span><div style="font-size:15px;font-weight:600;margin:12px 0 4px">E-mail</div><div style="font-size:12.5px;color:#A9A29A">suporte@sawhub.com.br — resposta em até 24h.</div><div style="font-size:12px;color:#D9BE93;font-weight:600;margin-top:10px">Enviar e-mail →</div></div>
         <div class="saw-row" style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px;cursor:pointer"><span style="width:44px;height:44px;border-radius:12px;background:rgba(90,169,230,.12);display:grid;place-items:center;font-size:20px">📱</span><div style="font-size:15px;font-weight:600;margin:12px 0 4px">WhatsApp</div><div style="font-size:12.5px;color:#A9A29A">(11) 90000-0000 — atendimento prioritário.</div><div style="font-size:12px;color:#D9BE93;font-weight:600;margin-top:10px">Abrir conversa →</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:22px">
           <div style="font-size:15px;font-weight:600;margin-bottom:16px">Perguntas frequentes</div>
           <div style="display:flex;flex-direction:column">
@@ -762,6 +797,10 @@
 <sc-if value="{{ showAdminApp }}" hint-placeholder-val="{{ true }}">
 <div style="display:flex;min-height:100vh">
 
+  <input type="checkbox" class="saw-mnav-toggle" id="mnavToggleAdmin" style="display:none">
+  <label for="mnavToggleAdmin" class="saw-mnav-btn" aria-label="Abrir menu" style="position:fixed;top:14px;left:14px;z-index:60;width:42px;height:42px;border-radius:10px;background:#141414;border:1px solid #2A2724;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F4EEE4" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></label>
+  <label for="mnavToggleAdmin" class="saw-mnav-backdrop" aria-hidden="true"></label>
+
   <!-- ADMIN SIDEBAR -->
   <aside style="width:248px;flex:0 0 248px;background:#0C0C0C;border-right:1px solid #1E1B19;display:flex;flex-direction:column;padding:22px 16px;position:sticky;top:0;height:100vh">
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0 14px">
@@ -803,7 +842,7 @@
   <main style="flex:1;min-width:0;background:#0C0C0C;display:flex;flex-direction:column">
 
     <!-- ADMIN TOPBAR (compartilhada) -->
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 32px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 32px 0;flex-wrap:wrap">
       <div><div style="font-size:22px;font-weight:700">{{ adminTitle }}</div><div style="font-size:13.5px;color:#A9A29A;margin-top:3px">{{ adminSubtitle }}</div></div>
       <div style="display:flex;align-items:center;gap:14px">
         <div style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border:1px solid #2A2724;background:#141414;border-radius:999px;color:#6E6862;font-size:12.5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Buscar...</div>
@@ -815,14 +854,14 @@
     <!-- ADMIN DASHBOARD -->
     <sc-if value="{{ showADashboard }}" hint-placeholder-val="{{ true }}">
     <div style="padding:22px 32px 40px">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="width:34px;height:34px;border-radius:10px;background:rgba(240,176,80,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span style="font-size:11px;font-weight:600;color:#3FB27F">↑ 8.2%</span></div><div style="font-size:28px;font-weight:800;margin:12px 0 2px">1.248</div><div style="font-size:12px;color:#A9A29A">Mentorados ativos</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="width:34px;height:34px;border-radius:10px;background:rgba(90,169,230,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span><span style="font-size:11px;font-weight:600;color:#3FB27F">↑ 12%</span></div><div style="font-size:28px;font-weight:800;margin:12px 0 2px">243</div><div style="font-size:12px;color:#A9A29A">Mentorias realizadas</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="width:34px;height:34px;border-radius:10px;background:rgba(229,87,63,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span style="font-size:11px;font-weight:600;color:#3FB27F">↑ 4</span></div><div style="font-size:28px;font-weight:800;margin:12px 0 2px">24</div><div style="font-size:12px;color:#A9A29A">Eventos realizados</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="width:34px;height:34px;border-radius:10px;background:rgba(63,178,127,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg></span><span style="font-size:11px;font-weight:600;color:#3FB27F">↑ 15.4%</span></div><div style="font-size:28px;font-weight:800;margin:12px 0 2px">R$ 24.870</div><div style="font-size:12px;color:#A9A29A">Receita do mês</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px 22px">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px"><div><div style="font-size:15px;font-weight:600">Crescimento de mentorados</div><div style="font-size:12px;color:#A9A29A;margin-top:2px">Novos cadastros por mês</div></div><span style="font-size:12px;color:#A9A29A">Últimos 6 meses ⌄</span></div>
           <div style="display:flex;align-items:flex-end;gap:14px;height:180px;padding-top:10px">
@@ -845,7 +884,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:15px;font-weight:600">Atividades recentes</div><a class="saw-link" href="#" onclick="return false" style="font-size:12px;color:#D9BE93;text-decoration:none">Ver todas →</a></div>
           <div style="display:flex;flex-direction:column;gap:12px">
@@ -878,10 +917,10 @@
         <button class="saw-btn-gold" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;background:#F0B050;color:#1A1206;border:none;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><span style="font-size:16px">+</span>Novo mentorado</button>
       </div>
 
-      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
-        <div style="display:grid;grid-template-columns:2.2fr 1.2fr 1fr 1.2fr 1fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Mentorado</div><div>Plano</div><div>Status</div><div>Cadastro</div><div style="text-align:right">Ações</div></div>
+      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
+        <div class="saw-gtable" style="display:grid;grid-template-columns:2.2fr 1.2fr 1fr 1.2fr 1fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Mentorado</div><div>Plano</div><div>Status</div><div>Cadastro</div><div style="text-align:right">Ações</div></div>
         <sc-for list="{{ mentorados }}" as="u" hint-placeholder-count="8">
-        <div class="saw-row" style="display:grid;grid-template-columns:2.2fr 1.2fr 1fr 1.2fr 1fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
+        <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2.2fr 1.2fr 1fr 1.2fr 1fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:36px;height:36px;flex:0 0 36px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:700 12px Inter,sans-serif;color:#F4EEE4">{{ u.ini }}</span><div style="min-width:0"><div style="font-size:13px;font-weight:600">{{ u.name }}</div><div style="font-size:11px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.email }}</div></div></div>
           <div><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ u.planBg }};color:{{ u.planColor }}">{{ u.plan }}</span></div>
           <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:{{ u.statusColor }}"><span style="width:6px;height:6px;border-radius:999px;background:{{ u.statusColor }}"></span>{{ u.status }}</span></div>
@@ -897,7 +936,7 @@
     <!-- ADMIN NOVA MENTORIA -->
     <sc-if value="{{ showAMentorias }}" hint-placeholder-val="{{ true }}">
     <div style="padding:22px 32px 40px">
-      <div style="display:grid;grid-template-columns:1fr 320px;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 320px;gap:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:24px">
           <div style="font-size:16px;font-weight:700;margin-bottom:20px">Dados da mentoria</div>
           <div style="font-size:12px;color:#A9A29A;margin-bottom:8px">Tipo de mentoria</div>
@@ -910,7 +949,7 @@
           <div style="margin-bottom:20px"><label style="font-size:12px;color:#A9A29A">Descrição / pauta</label><textarea class="saw-in" style="width:100%;height:96px;margin-top:6px;padding:12px 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font:400 14px Inter,sans-serif;resize:none">Revisão de indicadores financeiros, análise de precificação do cardápio e definição do plano de ação para o próximo trimestre.</textarea></div>
 
           <div style="font-size:14px;font-weight:600;margin-bottom:14px">Detalhes do agendamento</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+          <div class="saw-g1" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
             <div><label style="font-size:12px;color:#A9A29A">Data</label><input class="saw-in" value="28/06/2024" style="width:100%;height:44px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font:400 14px Inter,sans-serif"></div>
             <div><label style="font-size:12px;color:#A9A29A">Hora</label><input class="saw-in" value="14:00" style="width:100%;height:44px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font:400 14px Inter,sans-serif"></div>
             <div><label style="font-size:12px;color:#A9A29A">Duração</label><div class="saw-in" style="display:flex;align-items:center;justify-content:space-between;height:44px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font-size:14px">1h 30min<span style="color:#6E6862">⌄</span></div></div>
@@ -943,10 +982,10 @@
         <div style="display:flex;gap:22px;border-bottom:1px solid #1E1B19"><span style="font-size:13px;font-weight:600;color:#F0B050;padding-bottom:11px;border-bottom:2px solid #F0B050">Todos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Programados</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Ao vivo</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Realizados</span></div>
         <button class="saw-btn-gold" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;background:#F0B050;color:#1A1206;border:none;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><span style="font-size:16px">+</span>Novo evento</button>
       </div>
-      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
-        <div style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr 1.1fr 1fr .6fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Evento</div><div>Tipo</div><div>Data</div><div>Participantes</div><div>Status</div><div style="text-align:right">Ações</div></div>
+      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
+        <div class="saw-gtable" style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr 1.1fr 1fr .6fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Evento</div><div>Tipo</div><div>Data</div><div>Participantes</div><div>Status</div><div style="text-align:right">Ações</div></div>
         <sc-for list="{{ adminEventos }}" as="e" hint-placeholder-count="6">
-        <div class="saw-row" style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr 1.1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
+        <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr 1.1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:36px;height:36px;flex:0 0 36px;border-radius:9px;background:rgba(240,176,80,.1);display:grid;place-items:center">🎤</span><div style="min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.title }}</div><div style="font-size:11px;color:#A9A29A">{{ e.local }}</div></div></div>
           <div style="font-size:12.5px;color:#A9A29A">{{ e.tipo }}</div>
           <div style="font-size:12.5px;color:#A9A29A">{{ e.date }}</div>
@@ -967,10 +1006,10 @@
         <div style="display:flex;gap:22px;border-bottom:1px solid #1E1B19"><span style="font-size:13px;font-weight:600;color:#F0B050;padding-bottom:11px;border-bottom:2px solid #F0B050">Todos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Vídeos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Documentos</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">Planilhas</span><span style="font-size:13px;color:#A9A29A;padding-bottom:11px">E-books</span></div>
         <div style="display:flex;gap:12px"><button class="saw-btn-out" style="height:40px;padding:0 16px;background:transparent;color:#F4EEE4;border:1px solid #2A2724;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar</button><button class="saw-btn-gold" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;background:#F0B050;color:#1A1206;border:none;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><span style="font-size:16px">+</span>Novo conteúdo</button></div>
       </div>
-      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
-        <div style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr .9fr 1fr 1fr .6fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Conteúdo</div><div>Tipo</div><div>Categoria</div><div>Acessos</div><div>Data</div><div>Status</div><div style="text-align:right">Ações</div></div>
+      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
+        <div class="saw-gtable" style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr .9fr 1fr 1fr .6fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Conteúdo</div><div>Tipo</div><div>Categoria</div><div>Acessos</div><div>Data</div><div>Status</div><div style="text-align:right">Ações</div></div>
         <sc-for list="{{ conteudos }}" as="c" hint-placeholder-count="7">
-        <div class="saw-row" style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr .9fr 1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
+        <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr .9fr 1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:34px;height:34px;flex:0 0 34px;border-radius:8px;background:{{ c.iconBg }};display:grid;place-items:center;font-size:14px">{{ c.icon }}</span><div style="font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.title }}</div></div>
           <div style="font-size:12.5px;color:#A9A29A">{{ c.tipo }}</div>
           <div><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ c.iconBg }};color:{{ c.iconColor }}">{{ c.cat }}</span></div>
@@ -993,14 +1032,14 @@
         <button class="saw-btn-gold" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;background:#F0B050;color:#1A1206;border:none;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar relatório</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Taxa de retenção</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">89,4%</div><div style="font-size:11px;color:#3FB27F">↑ 3.1% vs. mês anterior</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Presença em mentorias</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">92%</div><div style="font-size:11px;color:#3FB27F">↑ 1.8%</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">NPS médio</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">72</div><div style="font-size:11px;color:#3FB27F">↑ 5 pts</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Metas concluídas</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">1.842</div><div style="font-size:11px;color:#E5573F">↓ 2.4%</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px 22px">
           <div style="font-size:15px;font-weight:600;margin-bottom:4px">Engajamento por mês</div>
           <div style="font-size:12px;color:#A9A29A;margin-bottom:18px">Sessões acessadas na plataforma</div>
@@ -1038,14 +1077,14 @@
         <button class="saw-btn-gold" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;background:#F0B050;color:#1A1206;border:none;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar extrato</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
         <div style="background:linear-gradient(135deg,#221E1A,#141414);border:1px solid rgba(240,176,80,.3);border-radius:16px;padding:18px"><div style="font-size:12px;color:#D9BE93">Receita do mês</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#F0B050">R$ 24.870</div><div style="font-size:11px;color:#3FB27F">↑ 15.4%</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Receita recorrente (MRR)</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">R$ 18.240</div><div style="font-size:11px;color:#3FB27F">↑ 6.2%</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Ticket médio</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">R$ 197</div><div style="font-size:11px;color:#3FB27F">↑ 2.1%</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Inadimplência</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#E5573F">3,2%</div><div style="font-size:11px;color:#3FB27F">↓ 0.8%</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px 22px">
           <div style="font-size:15px;font-weight:600;margin-bottom:4px">Faturamento</div>
           <div style="font-size:12px;color:#A9A29A;margin-bottom:16px">Receita mensal (R$ mil)</div>
@@ -1061,11 +1100,11 @@
         </div>
       </div>
 
-      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
+      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid #1E1B19"><span style="font-size:15px;font-weight:600">Transações recentes</span><a class="saw-link" href="#" onclick="return false" style="font-size:12px;color:#D9BE93;text-decoration:none">Ver todas →</a></div>
-        <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 1fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Cliente</div><div>Plano</div><div>Valor</div><div>Data</div><div>Status</div></div>
+        <div class="saw-gtable" style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 1fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Cliente</div><div>Plano</div><div>Valor</div><div>Data</div><div>Status</div></div>
         <sc-for list="{{ transacoes }}" as="tr" hint-placeholder-count="6">
-        <div class="saw-row" style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 1fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
+        <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 1fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:32px;height:32px;flex:0 0 32px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:700 11px Inter,sans-serif;color:#F4EEE4">{{ tr.ini }}</span><span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tr.name }}</span></div>
           <div style="font-size:12.5px;color:#A9A29A">{{ tr.plan }}</div>
           <div style="font-size:13px;font-weight:600">{{ tr.valor }}</div>
@@ -1080,7 +1119,7 @@
     <!-- ADMIN CONFIGURAÇÕES -->
     <sc-if value="{{ showAConfig }}" hint-placeholder-val="{{ true }}">
     <div style="padding:22px 32px 40px">
-      <div style="display:grid;grid-template-columns:220px 1fr;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:220px 1fr;gap:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:12px;height:fit-content">
           <div style="display:flex;flex-direction:column;gap:3px">
             <span style="padding:10px 12px;border-radius:9px;font-size:13px;font-weight:600;background:#221E1A;color:#F0B050;box-shadow:inset 3px 0 0 #F0B050">Geral</span>
@@ -1094,7 +1133,7 @@
         <div style="display:flex;flex-direction:column;gap:16px">
           <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:22px">
             <div style="font-size:15px;font-weight:600;margin-bottom:18px">Informações da plataforma</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="saw-g1" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
               <div><label style="font-size:12px;color:#A9A29A">Nome da plataforma</label><input class="saw-in" value="SAW HUB" style="width:100%;height:42px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font:400 14px Inter,sans-serif"></div>
               <div><label style="font-size:12px;color:#A9A29A">E-mail de contato</label><input class="saw-in" value="contato@sawhub.com.br" style="width:100%;height:42px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font:400 14px Inter,sans-serif"></div>
               <div><label style="font-size:12px;color:#A9A29A">Fuso horário</label><div class="saw-in" style="display:flex;align-items:center;justify-content:space-between;height:42px;margin-top:6px;padding:0 14px;border:1px solid #2A2724;border-radius:10px;color:#F4EEE4;font-size:14px">(GMT-3) Brasília<span style="color:#6E6862">⌄</span></div></div>
@@ -1118,7 +1157,7 @@
     <!-- ADMIN SUPORTE -->
     <sc-if value="{{ showASuporte }}" hint-placeholder-val="{{ true }}">
     <div style="padding:22px 32px 40px">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Chamados abertos</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#F0B050">18</div><div style="font-size:11px;color:#6E6862">5 sem resposta</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Em atendimento</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#5AA9E6">7</div><div style="font-size:11px;color:#6E6862">3 prioritários</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Resolvidos (mês)</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#3FB27F">142</div><div style="font-size:11px;color:#3FB27F">↑ 12%</div></div>
@@ -1130,10 +1169,10 @@
         <div style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border:1px solid #2A2724;background:#141414;border-radius:10px;color:#6E6862;font-size:12.5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Buscar chamado...</div>
       </div>
 
-      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
-        <div style="display:grid;grid-template-columns:.7fr 2.2fr 1.4fr 1fr 1fr .8fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>ID</div><div>Assunto</div><div>Mentorado</div><div>Prioridade</div><div>Status</div><div>Atualizado</div></div>
+      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
+        <div class="saw-gtable" style="display:grid;grid-template-columns:.7fr 2.2fr 1.4fr 1fr 1fr .8fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>ID</div><div>Assunto</div><div>Mentorado</div><div>Prioridade</div><div>Status</div><div>Atualizado</div></div>
         <sc-for list="{{ chamados }}" as="c" hint-placeholder-count="7">
-        <div class="saw-row" style="display:grid;grid-template-columns:.7fr 2.2fr 1.4fr 1fr 1fr .8fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
+        <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:.7fr 2.2fr 1.4fr 1fr 1fr .8fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="font-size:12px;color:#6E6862;font-weight:600">#{{ c.id }}</div>
           <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:{{ c.iconBg }};display:grid;place-items:center;font-size:13px">{{ c.icon }}</span><div style="font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.assunto }}</div></div>
           <div style="font-size:12.5px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.mentorado }}</div>
@@ -1151,14 +1190,14 @@
     <!-- ADMIN COMERCIAL -->
     <sc-if value="{{ showAComercial }}" hint-placeholder-val="{{ true }}">
     <div style="padding:22px 32px 40px">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;color:#A9A29A">Novos leads (Mês)</span><span style="font-size:11px;font-weight:600;color:#3FB27F">↑ 14%</span></div><div style="font-size:28px;font-weight:800;margin:12px 0 2px">184</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;color:#A9A29A">Taxa de conversão</span><span style="font-size:11px;font-weight:600;color:#3FB27F">↑ 2.1%</span></div><div style="font-size:28px;font-weight:800;margin:12px 0 2px">18,4%</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;color:#A9A29A">Novo MRR</span><span style="font-size:11px;font-weight:600;color:#3FB27F">↑ 8%</span></div><div style="font-size:28px;font-weight:800;margin:12px 0 2px">R$ 5.420</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;color:#A9A29A">Vendas da Loja</span><span style="font-size:11px;font-weight:600;color:#E5573F">↓ 4%</span></div><div style="font-size:28px;font-weight:800;margin:12px 0 2px">R$ 3.850</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px 22px">
           <div style="font-size:15px;font-weight:600;margin-bottom:16px">Funil de Vendas</div>
           <div style="display:flex;gap:12px;height:120px">
@@ -1178,7 +1217,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px 22px">
           <div style="font-size:15px;font-weight:600;margin-bottom:16px">Metas do Mês</div>
           <div style="display:flex;flex-direction:column;gap:16px">
@@ -1215,16 +1254,16 @@
         <button class="saw-btn-gold" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;background:#F0B050;color:#1A1206;border:none;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><span style="font-size:16px">+</span>Novo lançamento</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Saldo Atual</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">R$ 42.850</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">A Receber</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#3FB27F">R$ 15.240</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">A Pagar</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#E5573F">R$ 8.450</div></div>
       </div>
 
-      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
-        <div style="display:grid;grid-template-columns:1fr 2fr 1.5fr 1fr 1fr 1fr .6fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Data</div><div>Descrição</div><div>Categoria</div><div>Conta</div><div>Valor</div><div>Status</div><div style="text-align:right">Ações</div></div>
+      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
+        <div class="saw-gtable" style="display:grid;grid-template-columns:1fr 2fr 1.5fr 1fr 1fr 1fr .6fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Data</div><div>Descrição</div><div>Categoria</div><div>Conta</div><div>Valor</div><div>Status</div><div style="text-align:right">Ações</div></div>
         <sc-for list="{{ lancamentos }}" as="l" hint-placeholder-count="6">
-        <div class="saw-row" style="display:grid;grid-template-columns:1fr 2fr 1.5fr 1fr 1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
+        <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:1fr 2fr 1.5fr 1fr 1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="font-size:12.5px;color:#A9A29A">{{ l.date }}</div>
           <div style="font-size:13px;font-weight:600">{{ l.desc }}</div>
           <div style="font-size:12.5px;color:#A9A29A">{{ l.cat }}</div>
@@ -1246,14 +1285,14 @@
         <button class="saw-btn-out" style="height:40px;padding:0 16px;background:transparent;color:#F4EEE4;border:1px solid #2A2724;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar PDF</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Receita Bruta</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">R$ 145.200</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Custos Variáveis</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#E5573F">R$ 38.400</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Despesas Fixas</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#E5573F">R$ 42.100</div></div>
         <div style="background:rgba(63,178,127,.05);border:1px solid rgba(63,178,127,.3);border-radius:16px;padding:18px"><div style="font-size:12px;color:#3FB27F">Lucro Líquido</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#3FB27F">R$ 64.700</div><div style="font-size:11px;color:#3FB27F">Margem 44,5%</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
           <div style="padding:16px 22px;border-bottom:1px solid #1E1B19;font-size:15px;font-weight:600">Demonstrativo Estruturado</div>
           <sc-for list="{{ dreLines }}" as="dl">
@@ -1282,14 +1321,14 @@
         <span style="display:flex;align-items:center;height:40px;padding:0 14px;border:1px solid #2A2724;background:#141414;border-radius:10px;font-size:12.5px;color:#A9A29A" style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Ano de 2024 ⌄</span>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Receita Recorrente (MRR)</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">R$ 18.240</div><div style="font-size:11px;color:#3FB27F">↑ 6.2%</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Loja SAW</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">R$ 4.100</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Eventos</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px">R$ 2.530</div></div>
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:18px"><div style="font-size:12px;color:#A9A29A">Churn Rate</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#E5573F">1,8%</div><div style="font-size:11px;color:#3FB27F">Bom (Alvo < 3%)</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+      <div class="saw-g1" style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
         <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px 22px">
           <div style="font-size:15px;font-weight:600;margin-bottom:16px">Faturamento por Mês e Categoria</div>
           <div style="display:flex;align-items:flex-end;gap:12px;height:240px">
@@ -1329,11 +1368,11 @@
         <button class="saw-btn-gold" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;background:#F0B050;color:#1A1206;border:none;border-radius:10px;font:600 13px Inter,sans-serif;cursor:pointer"><span style="font-size:16px">+</span>Novo membro</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
-        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden">
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr .6fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Colaborador</div><div>Papel</div><div>Carteira (Ment.)</div><div>Conversões</div><div style="text-align:right">Ações</div></div>
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 340px;gap:16px">
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
+          <div class="saw-gtable" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr .6fr;gap:14px;padding:12px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Colaborador</div><div>Papel</div><div>Carteira (Ment.)</div><div>Conversões</div><div style="text-align:right">Ações</div></div>
           <sc-for list="{{ timeList }}" as="t">
-          <div class="saw-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
+          <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
             <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:36px;height:36px;flex:0 0 36px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:700 12px Inter,sans-serif;color:#F4EEE4">{{ t.ini }}</span><div style="min-width:0"><div style="font-size:13px;font-weight:600">{{ t.name }}</div><div style="font-size:11px;color:#A9A29A">{{ t.email }}</div></div></div>
             <div><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ t.papelBg }};color:{{ t.papelColor }}">{{ t.papel }}</span></div>
             <div style="font-size:13px;font-weight:600">{{ t.carteira }}</div>
