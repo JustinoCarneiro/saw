@@ -63,6 +63,8 @@
     [style*="px 32px 40px"],[style*="px 32px 0"]{padding-left:16px !important;padding-right:16px !important}
     [style*="min-width: 220px"],[style*="min-width:220px"]{min-width:0 !important;width:100% !important}
 
+    .saw-login-remember{flex-direction:column;align-items:flex-start !important;gap:12px}
+
     .saw-g1{grid-template-columns:minmax(0,1fr) !important}
     .saw-gtable{min-width:660px}
     .saw-gtable-wrap{overflow-x:auto !important}
@@ -99,7 +101,7 @@
           <button onClick="{{ togglePw }}" aria-label="Mostrar senha" style="position:absolute;right:8px;top:8px;width:28px;height:28px;display:grid;place-items:center;background:none;border:none;cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6E6862" stroke-width="1.6"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
 
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+        <div class="saw-login-remember" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
           <button onClick="{{ toggleRemember }}" style="display:flex;align-items:center;gap:9px;background:none;border:none;cursor:pointer;color:#A9A29A;font:500 13px Inter,sans-serif">
             <span style="width:18px;height:18px;border-radius:5px;border:1px solid {{ rememberBorder }};background:{{ rememberBg }};display:grid;place-items:center;color:#1A1206;font-size:12px;font-weight:800">{{ rememberMark }}</span>
             Lembrar meu acesso
