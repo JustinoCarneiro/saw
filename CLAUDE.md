@@ -21,11 +21,18 @@ Decisão: **Hostinger VPS (KVM 2) com Coolify**, front e back no mesmo servidor 
 
 ## Segurança e persistência dos dados (dúvida recorrente do cliente)
 O cliente comparou o projeto com ferramentas no-code (ex.: Base44) e perguntou sobre risco de perder dados.
-Resposta de referência para reforçar com ele:
-- O que ele viu até agora (`design/prototipo/`) é **só a fachada visual da Fase 2** — dados 100% fictícios, sem banco, sem persistência. Ainda não há nada "real" para perder.
-- O sistema de verdade (Fase 4) usa **Postgres em VPS própria** (Hostinger, com backup automático) — a SAW é dona do banco, do código e do servidor, não depende da sobrevivência de uma ferramenta no-code de terceiros.
+- O sistema (Fase 4) usa **Postgres em VPS própria** (Hostinger, com backup automático) — a SAW é dona do banco, do código e do servidor, não depende da sobrevivência de uma ferramenta no-code de terceiros.
 - **Java + Spring Security** é a escolha para o backend justamente pela maturidade em regras de permissão complexas (RBAC por área no E15) — não é só uma preferência de conforto, é o ecossistema mais testado do mercado para esse tipo de controle de acesso.
-- Vale comunicar isso explicitamente antes de avançar para não deixar a dúvida em aberto.
+
+### Backup
+- Backup automático diário do Postgres (incluso no plano da VPS) + `pg_dump` agendado como segunda camada, armazenado fora do próprio servidor (não adianta backup que morre junto com a VPS).
+- Retenção mínima de 30 dias; restauração testada periodicamente (backup que nunca foi restaurado é uma suposição, não uma garantia).
+
+### Criptografia
+- **Em trânsito:** TLS em toda comunicação (front↔back↔cliente), via Coolify/Let's Encrypt — automático, renovação sem intervenção manual.
+- **Senhas:** nunca armazenadas em texto puro — hash via Spring Security (BCrypt), irreversível por design.
+- **Dados sensíveis em repouso** (financeiro do mentorado, dados pessoais): criptografia a nível de coluna no Postgres (`pgcrypto`) além da criptografia de disco da própria VPS — duas camadas, não uma só.
+- Vale comunicar isso explicitamente ao cliente antes de avançar para não deixar a dúvida em aberto.
 
 ## Perfil de projeto
 SaaS multi-tenant (1 tenant = 1 mentorado/restaurante) · perfis: **Mentorado** e **Admin (SAW)** · produto recorrente por assinatura (planos).
