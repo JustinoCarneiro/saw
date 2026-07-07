@@ -327,7 +327,7 @@
           <div style="display:flex;gap:12px;align-items:center;min-width:0"><span style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:rgba(240,176,80,.1);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F0B050" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></span><div style="min-width:0"><div style="font-size:13.5px;font-weight:600">{{ m.title }}</div><div style="font-size:11.5px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.desc }}</div></div></div>
           <div><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px"><span>{{ m.pct }}</span></div><div style="height:6px;border-radius:999px;background:#2A2724;overflow:hidden"><div style="width:{{ m.pct }};height:100%;background:#F0B050;border-radius:999px"></div></div></div>
           <div><div style="font-size:12.5px;font-weight:500">{{ m.prazo }}</div><div style="font-size:11px;color:#6E6862">{{ m.dias }}</div></div>
-          <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:{{ m.statusBg }};color:{{ m.statusColor }}"><span style="width:6px;height:6px;border-radius:999px;background:{{ m.statusColor }}"></span>{{ m.status }}</span></div>
+          <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:{{ m.statusBg }};color:{{ m.statusColor }};white-space:nowrap"><span style="width:6px;height:6px;border-radius:999px;background:{{ m.statusColor }}"></span>{{ m.status }}</span></div>
           <div style="text-align:right"><a class="saw-link" href="#" onclick="return false" style="font-size:12px;color:#D9BE93;text-decoration:none;white-space:nowrap">Ver detalhes →</a></div>
         </div>
         </sc-for>
@@ -373,7 +373,7 @@
             <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:18px;height:18px;flex:0 0 18px;border-radius:5px;border:1.5px solid {{ t.checkBorder }};background:{{ t.checkBg }};display:grid;place-items:center;color:#1A1206;font-size:11px;font-weight:800">{{ t.check }}</span><div style="font-size:13px;font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</div></div>
             <div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="width:6px;height:6px;border-radius:999px;background:#F0B050;flex:0 0 6px"></span><span style="font-size:12px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.meta }}</span></div>
             <div style="font-size:12px;color:#A9A29A">{{ t.prazo }}</div>
-            <div><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ t.statusBg }};color:{{ t.statusColor }}">{{ t.status }}</span></div>
+            <div><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ t.statusBg }};color:{{ t.statusColor }};white-space:nowrap">{{ t.status }}</span></div>
             <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{ t.prioColor }}">{{ t.prioArrow }} {{ t.prio }}</div>
             <div><span style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:{{ t.pesoBg }};color:{{ t.pesoColor }};white-space:nowrap">{{ t.peso }}</span></div>
           </div>
@@ -437,7 +437,7 @@
               <span style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:rgba(240,176,80,.1);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F0B050" stroke-width="1.6"><path d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2Z"/></svg></span>
               <div style="flex:1 1 170px;min-width:170px"><div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mt.title }}</div><div style="font-size:11.5px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mt.desc }}</div></div>
               <div style="font-size:11.5px;color:#6E6862;white-space:nowrap">{{ mt.date }}</div>
-              <span style="font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ mt.statusBg }};color:{{ mt.statusColor }}">{{ mt.status }}</span>
+              <span style="font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ mt.statusBg }};color:{{ mt.statusColor }};white-space:nowrap">{{ mt.status }}</span>
               <a class="saw-link" href="#" onclick="return false" style="font-size:12px;color:#D9BE93;text-decoration:none;white-space:nowrap">{{ mt.action }} →</a>
             </div>
             </sc-for>
@@ -501,7 +501,7 @@
           <sc-for list="{{ materiais }}" as="mat" hint-placeholder-count="7">
           <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2.2fr 1fr .9fr .9fr .6fr;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid #1E1B19;cursor:pointer">
             <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:34px;height:34px;flex:0 0 34px;border-radius:8px;background:{{ mat.iconBg }};display:grid;place-items:center;font-size:8px;font-weight:800;color:{{ mat.iconColor }}">{{ mat.ext }}</span><div style="min-width:0"><div style="font-size:13px;font-weight:600">{{ mat.title }}</div><div style="font-size:11px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mat.desc }}</div></div></div>
-            <div><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ mat.iconBg }};color:{{ mat.iconColor }}">{{ mat.cat }}</span></div>
+            <div><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ mat.iconBg }};color:{{ mat.iconColor }};white-space:nowrap">{{ mat.cat }}</span></div>
             <div style="font-size:12px;color:#A9A29A">{{ mat.ext }} · {{ mat.size }}</div>
             <div><div style="font-size:12px">{{ mat.date }}</div><div style="font-size:10.5px;color:#6E6862">{{ mat.time }}</div></div>
             <div style="text-align:right;color:#F0B050;font-size:15px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ⋮</div>
@@ -614,7 +614,7 @@
         <div style="display:flex;flex-direction:column;gap:12px">
           <sc-for list="{{ eventos }}" as="e" hint-placeholder-count="4">
           <div class="saw-row" style="display:flex;gap:14px;background:#141414;border:1px solid #2A2724;border-radius:14px;padding:14px;align-items:center;cursor:pointer;flex-wrap:wrap">
-            <div style="position:relative;width:120px;height:76px;flex:0 0 120px;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,#3C1013,#57191C)"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(0,0,0,0) 0 8px,rgba(0,0,0,.14) 8px 9px)"></div><span style="position:absolute;top:8px;left:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:999px;background:{{ e.tagBg }};color:{{ e.tagColor }}">{{ e.tag }}</span></div>
+            <div style="position:relative;width:120px;height:76px;flex:0 0 120px;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,#3C1013,#57191C)"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(0,0,0,0) 0 8px,rgba(0,0,0,.14) 8px 9px)"></div><span style="position:absolute;top:8px;left:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:999px;background:{{ e.tagBg }};color:{{ e.tagColor }};white-space:nowrap">{{ e.tag }}</span></div>
             <div style="flex:1 1 160px;min-width:160px"><div style="font-size:14px;font-weight:600">{{ e.title }}</div><div style="font-size:12px;color:#A9A29A;margin:3px 0 8px">{{ e.desc }}</div><div style="display:flex;gap:14px;font-size:11.5px;color:#6E6862;flex-wrap:wrap"><span style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> {{ e.date }}</span><span style="display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> {{ e.local }}</span><span style="display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> {{ e.parts }}</span></div></div>
             <div style="display:flex;flex-direction:column;gap:8px"><button class="saw-btn-gold" style="height:34px;padding:0 16px;background:#F0B050;color:#1A1206;border:none;border-radius:999px;font:600 12px Inter,sans-serif;cursor:pointer;white-space:nowrap">{{ e.cta }}</button><button class="saw-btn-out" style="height:34px;padding:0 16px;background:transparent;color:#F4EEE4;border:1px solid #2A2724;border-radius:999px;font:500 12px Inter,sans-serif;cursor:pointer;white-space:nowrap">Ver detalhes</button></div>
           </div>
@@ -670,7 +670,7 @@
       <div class="saw-g1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
         <sc-for list="{{ produtos }}" as="p" hint-placeholder-count="6">
         <div class="saw-row" style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden;cursor:pointer">
-          <div style="position:relative;height:150px;background:linear-gradient(135deg,#3C1013,#57191C)"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(0,0,0,0) 0 9px,rgba(0,0,0,.14) 9px 10px)"></div><div style="position:absolute;inset:0;display:grid;place-items:center;font-size:34px">{{ p.emoji }}</div><span style="position:absolute;top:10px;left:10px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:{{ p.tagBg }};color:{{ p.tagColor }}">{{ p.tag }}</span></div>
+          <div style="position:relative;height:150px;background:linear-gradient(135deg,#3C1013,#57191C)"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(0,0,0,0) 0 9px,rgba(0,0,0,.14) 9px 10px)"></div><div style="position:absolute;inset:0;display:grid;place-items:center;font-size:34px">{{ p.emoji }}</div><span style="position:absolute;top:10px;left:10px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:{{ p.tagBg }};color:{{ p.tagColor }};white-space:nowrap">{{ p.tag }}</span></div>
           <div style="padding:16px"><div style="font-size:11px;color:#D9BE93;font-weight:600;margin-bottom:4px">{{ p.cat }}</div><div style="font-size:14.5px;font-weight:600;line-height:1.3">{{ p.title }}</div><div style="font-size:12px;color:#A9A29A;margin:6px 0 12px">{{ p.desc }}</div><div style="display:flex;align-items:center;justify-content:space-between"><div><span style="font-size:18px;font-weight:800;color:#F0B050">{{ p.price }}</span> <span style="font-size:11px;color:#6E6862;text-decoration:line-through">{{ p.old }}</span></div><button class="saw-btn-gold" style="height:34px;padding:0 14px;background:#F0B050;color:#1A1206;border:none;border-radius:999px;font:600 12px Inter,sans-serif;cursor:pointer">Comprar</button></div></div>
         </div>
         </sc-for>
@@ -745,7 +745,7 @@
         <sc-for list="{{ avisos }}" as="a" hint-placeholder-count="6">
         <div class="saw-row" style="display:flex;gap:14px;align-items:flex-start;background:{{ a.bg }};border:1px solid {{ a.border }};border-radius:14px;padding:16px 18px;cursor:pointer">
           <span style="width:40px;height:40px;flex:0 0 40px;border-radius:11px;background:{{ a.iconBg }};display:grid;place-items:center;font-size:16px">{{ a.icon }}</span>
-          <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:14px;font-weight:600">{{ a.title }}</span><span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:{{ a.tagBg }};color:{{ a.tagColor }}">{{ a.tag }}</span></div><div style="font-size:12.5px;color:#A9A29A;margin-top:3px">{{ a.desc }}</div><div style="font-size:11px;color:#6E6862;margin-top:8px">{{ a.time }}</div></div>
+          <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:14px;font-weight:600">{{ a.title }}</span><span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:{{ a.tagBg }};color:{{ a.tagColor }};white-space:nowrap">{{ a.tag }}</span></div><div style="font-size:12.5px;color:#A9A29A;margin-top:3px">{{ a.desc }}</div><div style="font-size:11px;color:#6E6862;margin-top:8px">{{ a.time }}</div></div>
           <span style="width:8px;height:8px;border-radius:999px;background:{{ a.dot }};margin-top:6px"></span>
         </div>
         </sc-for>
@@ -938,7 +938,7 @@
         <sc-for list="{{ mentorados }}" as="u" hint-placeholder-count="8">
         <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2.2fr 1.2fr 1fr 1.2fr 1fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:36px;height:36px;flex:0 0 36px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:700 12px Inter,sans-serif;color:#F4EEE4">{{ u.ini }}</span><div style="min-width:0"><div style="font-size:13px;font-weight:600">{{ u.name }}</div><div style="font-size:11px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.email }}</div></div></div>
-          <div><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ u.planBg }};color:{{ u.planColor }}">{{ u.plan }}</span></div>
+          <div><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ u.planBg }};color:{{ u.planColor }};white-space:nowrap">{{ u.plan }}</span></div>
           <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:{{ u.statusColor }}"><span style="width:6px;height:6px;border-radius:999px;background:{{ u.statusColor }}"></span>{{ u.status }}</span></div>
           <div style="font-size:12.5px;color:#A9A29A">{{ u.date }}</div>
           <div style="text-align:right;color:#6E6862;font-size:15px;letter-spacing:4px">👁 ✎ ⋮</div>
@@ -1052,7 +1052,7 @@
           <div style="font-size:12.5px;color:#A9A29A">{{ e.tipo }}</div>
           <div style="font-size:12.5px;color:#A9A29A">{{ e.date }}</div>
           <div style="font-size:12.5px">{{ e.parts }}</div>
-          <div><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ e.statusBg }};color:{{ e.statusColor }}">{{ e.status }}</span></div>
+          <div><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ e.statusBg }};color:{{ e.statusColor }};white-space:nowrap">{{ e.status }}</span></div>
           <div style="text-align:right;color:#6E6862;letter-spacing:3px">✎ ⋮</div>
         </div>
         </sc-for>
@@ -1074,10 +1074,10 @@
         <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2.4fr 1fr 1.2fr .9fr 1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
           <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:34px;height:34px;flex:0 0 34px;border-radius:8px;background:{{ c.iconBg }};display:grid;place-items:center;font-size:14px">{{ c.icon }}</span><div style="font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.title }}</div></div>
           <div style="font-size:12.5px;color:#A9A29A">{{ c.tipo }}</div>
-          <div><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ c.iconBg }};color:{{ c.iconColor }}">{{ c.cat }}</span></div>
+          <div><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ c.iconBg }};color:{{ c.iconColor }};white-space:nowrap">{{ c.cat }}</span></div>
           <div style="font-size:12.5px">{{ c.acessos }}</div>
           <div style="font-size:12.5px;color:#A9A29A">{{ c.date }}</div>
-          <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:{{ c.statusColor }}"><span style="width:6px;height:6px;border-radius:999px;background:{{ c.statusColor }}"></span>{{ c.status }}</span></div>
+          <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:{{ c.statusColor }};white-space:nowrap"><span style="width:6px;height:6px;border-radius:999px;background:{{ c.statusColor }}"></span>{{ c.status }}</span></div>
           <div style="text-align:right;color:#6E6862;letter-spacing:3px">✎ ⋮</div>
         </div>
         </sc-for>
@@ -1239,7 +1239,7 @@
           <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:{{ c.iconBg }};display:grid;place-items:center;font-size:13px">{{ c.icon }}</span><div style="font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.assunto }}</div></div>
           <div style="font-size:12.5px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.mentorado }}</div>
           <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{ c.prioColor }}">{{ c.prioArrow }} {{ c.prio }}</div>
-          <div><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ c.statusBg }};color:{{ c.statusColor }}">{{ c.status }}</span></div>
+          <div><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ c.statusBg }};color:{{ c.statusColor }};white-space:nowrap">{{ c.status }}</span></div>
           <div style="font-size:12px;color:#6E6862">{{ c.time }}</div>
         </div>
         </sc-for>
@@ -1331,7 +1331,7 @@
           <div style="font-size:12.5px;color:#A9A29A">{{ l.cat }}</div>
           <div style="font-size:12.5px;color:#A9A29A">{{ l.conta }}</div>
           <div style="font-size:13px;font-weight:700;color:{{ l.valColor }}">{{ l.valor }}</div>
-          <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ l.statusBg }};color:{{ l.statusColor }}">{{ l.status }}</span></div>
+          <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ l.statusBg }};color:{{ l.statusColor }};white-space:nowrap">{{ l.status }}</span></div>
           <div style="text-align:right;color:#6E6862;letter-spacing:3px">✎ ⋮</div>
         </div>
         </sc-for>
@@ -1436,7 +1436,7 @@
           <sc-for list="{{ timeList }}" as="t">
           <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr .6fr;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px solid #1E1B19;cursor:pointer">
             <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:36px;height:36px;flex:0 0 36px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:700 12px Inter,sans-serif;color:#F4EEE4">{{ t.ini }}</span><div style="min-width:0"><div style="font-size:13px;font-weight:600">{{ t.name }}</div><div style="font-size:11px;color:#A9A29A">{{ t.email }}</div></div></div>
-            <div><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ t.papelBg }};color:{{ t.papelColor }}">{{ t.papel }}</span></div>
+            <div><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ t.papelBg }};color:{{ t.papelColor }};white-space:nowrap">{{ t.papel }}</span></div>
             <div style="font-size:13px;font-weight:600">{{ t.carteira }}</div>
             <div style="font-size:13px;font-weight:600;color:#3FB27F">{{ t.conv }}</div>
             <div style="text-align:right;color:#6E6862;letter-spacing:3px">✎ ⋮</div>
