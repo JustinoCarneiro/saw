@@ -367,14 +367,15 @@
             <div style="display:flex;gap:20px"><span style="font-size:13px;font-weight:600;color:#F0B050;padding-bottom:2px;border-bottom:2px solid #F0B050">Todas</span><span style="font-size:13px;color:#A9A29A">Pendentes</span><span style="font-size:13px;color:#A9A29A">Em andamento</span><span style="font-size:13px;color:#A9A29A">Concluídas</span></div>
             <div style="display:flex;gap:10px"><button class="saw-btn-out" style="height:32px;padding:0 12px;border:1px solid #2A2724;background:#0C0C0C;color:#A9A29A;border-radius:8px;font:500 12px Inter,sans-serif;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Filtrar</button><div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border:1px solid #2A2724;background:#0C0C0C;border-radius:8px;color:#6E6862;font-size:12px">Buscar tarefas...</div></div>
           </div>
-          <div class="saw-gtable" style="display:grid;grid-template-columns:2fr 1.4fr .9fr .9fr .8fr;gap:12px;padding:10px 20px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Tarefa</div><div>Meta relacionada</div><div>Prazo</div><div>Status</div><div>Prioridade</div></div>
+          <div class="saw-gtable" style="display:grid;grid-template-columns:2fr 1.4fr .9fr .9fr .8fr .7fr;gap:12px;padding:10px 20px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Tarefa</div><div>Meta relacionada</div><div>Prazo</div><div>Status</div><div>Prioridade</div><div>Peso</div></div>
           <sc-for list="{{ tarefas }}" as="t" hint-placeholder-count="5">
-          <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2fr 1.4fr .9fr .9fr .8fr;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid #1E1B19;cursor:pointer">
+          <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:2fr 1.4fr .9fr .9fr .8fr .7fr;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid #1E1B19;cursor:pointer">
             <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:18px;height:18px;flex:0 0 18px;border-radius:5px;border:1.5px solid {{ t.checkBorder }};background:{{ t.checkBg }};display:grid;place-items:center;color:#1A1206;font-size:11px;font-weight:800">{{ t.check }}</span><div style="font-size:13px;font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</div></div>
             <div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="width:6px;height:6px;border-radius:999px;background:#F0B050;flex:0 0 6px"></span><span style="font-size:12px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.meta }}</span></div>
             <div style="font-size:12px;color:#A9A29A">{{ t.prazo }}</div>
             <div><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ t.statusBg }};color:{{ t.statusColor }}">{{ t.status }}</span></div>
             <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{ t.prioColor }}">{{ t.prioArrow }} {{ t.prio }}</div>
+            <div><span style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:{{ t.pesoBg }};color:{{ t.pesoColor }};white-space:nowrap">{{ t.peso }}</span></div>
           </div>
           </sc-for>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;font-size:12px;color:#6E6862"><span>Mostrando 1 a 5 de 24 tarefas</span><div style="display:flex;gap:6px"><span style="width:28px;height:28px;display:grid;place-items:center;border-radius:7px;background:#F0B050;color:#1A1206;font-weight:700">1</span><span style="width:28px;height:28px;display:grid;place-items:center;border-radius:7px;border:1px solid #2A2724">2</span><span style="width:28px;height:28px;display:grid;place-items:center;border-radius:7px;border:1px solid #2A2724">3</span><span style="width:28px;height:28px;display:grid;place-items:center">…</span><span style="width:28px;height:28px;display:grid;place-items:center;border-radius:7px;border:1px solid #2A2724">5</span></div></div>
@@ -837,6 +838,7 @@
       </sc-if>
 
       <button class="saw-nav" onClick="{{ anav.amentorados.onClick }}" style="{{ anav.amentorados.style }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 3-5 6-5s6 1.7 6 5"/><circle cx="17.5" cy="9" r="2.2"/><path d="M17.5 13.5c2 .4 3.5 1.7 3.5 4"/></svg>Mentorados</button>
+      <button class="saw-nav" onClick="{{ anav.aconsolidado.onClick }}" style="{{ anav.aconsolidado.style }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17v-5M8 17v-3"/></svg>Painel Consolidado</button>
       <button class="saw-nav" onClick="{{ anav.amentorias.onClick }}" style="{{ anav.amentorias.style }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>Mentorias</button>
       <button class="saw-nav" onClick="{{ anav.atime.onClick }}" style="{{ anav.atime.style }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>Time</button>
       <button class="saw-nav" onClick="{{ anav.aeventos.onClick }}" style="{{ anav.aeventos.style }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10.5 8.5l5 3.5-5 3.5Z"/></svg>Eventos</button>
@@ -943,6 +945,52 @@
         </div>
         </sc-for>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 22px;font-size:12px;color:#6E6862"><span>Mostrando 1 a 8 de 1.248 mentorados</span><div style="display:flex;gap:6px"><span style="width:28px;height:28px;display:grid;place-items:center;border-radius:7px;background:#F0B050;color:#1A1206;font-weight:700">1</span><span style="width:28px;height:28px;display:grid;place-items:center;border-radius:7px;border:1px solid #2A2724">2</span><span style="width:28px;height:28px;display:grid;place-items:center;border-radius:7px;border:1px solid #2A2724">3</span><span style="width:28px;height:28px;display:grid;place-items:center">…</span><span style="width:28px;height:28px;display:grid;place-items:center;border-radius:7px;border:1px solid #2A2724">156</span></div></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ADMIN PAINEL CONSOLIDADO -->
+    <sc-if value="{{ showAConsolidado }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:22px 32px 40px">
+
+      <div class="saw-g1" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(63,178,127,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3FB27F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>Em dia</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#3FB27F">3</div><div style="font-size:11px;color:#6E6862">de 6 mentorados</div></div>
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(240,176,80,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B050" stroke-width="1.6"><circle cx="12" cy="12" r="8"/></svg></span>Em atenção</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#F0B050">1</div><div style="font-size:11px;color:#6E6862">de 6 mentorados</div></div>
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(229,87,63,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E5573F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span>Atrasados</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#E5573F">2</div><div style="font-size:11px;color:#6E6862">de 6 mentorados</div></div>
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:16px 18px"><div style="display:flex;align-items:center;gap:10px;color:#A9A29A;font-size:12.5px"><span style="width:28px;height:28px;border-radius:8px;background:rgba(90,169,230,.12);display:grid;place-items:center" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5AA9E6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17v-5M8 17v-3"/></svg></span>Progresso médio</div><div style="font-size:26px;font-weight:800;margin:8px 0 2px;color:#5AA9E6">53%</div><div style="font-size:11px;color:#6E6862">encaminhamentos ponderados por peso</div></div>
+      </div>
+
+      <div style="display:flex;gap:22px;border-bottom:1px solid #1E1B19;margin-bottom:16px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden"><span style="font-size:13px;font-weight:600;color:#F0B050;white-space:nowrap;padding-bottom:11px;border-bottom:2px solid #F0B050">Todos</span><span style="font-size:13px;color:#A9A29A;white-space:nowrap;padding-bottom:11px">Em dia</span><span style="font-size:13px;color:#A9A29A;white-space:nowrap;padding-bottom:11px">Em atenção</span><span style="font-size:13px;color:#A9A29A;white-space:nowrap;padding-bottom:11px">Atrasados</span></div>
+
+      <div class="saw-g1" style="display:grid;grid-template-columns:1fr 320px;gap:16px">
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden" class="saw-gtable-wrap">
+          <div class="saw-gtable" style="display:grid;grid-template-columns:1.8fr .8fr 1fr 1fr .9fr .9fr;gap:12px;padding:12px 20px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Mentorado</div><div>Progresso</div><div>Encaminhamentos</div><div>Ferramentas</div><div>Faturamento</div><div>Status</div></div>
+          <sc-for list="{{ mentoradosConsolidado }}" as="m" hint-placeholder-count="6">
+          <div class="saw-row saw-gtable" style="display:grid;grid-template-columns:1.8fr .8fr 1fr 1fr .9fr .9fr;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid #1E1B19;cursor:pointer">
+            <div style="display:flex;gap:11px;align-items:center;min-width:0"><span style="width:34px;height:34px;flex:0 0 34px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:700 12px Inter,sans-serif;color:#F4EEE4">{{ m.ini }}</span><div style="min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</div><div style="font-size:11px;color:#A9A29A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.neg }}</div></div></div>
+            <div style="font-size:13px;font-weight:700">{{ m.progresso }}</div>
+            <div style="font-size:12.5px;color:#A9A29A;white-space:nowrap">{{ m.encCump }}/{{ m.encTotal }}</div>
+            <div style="font-size:12.5px;color:#A9A29A">{{ m.ferrPct }}</div>
+            <div style="font-size:13px;font-weight:700;color:{{ m.crescColor }}">{{ m.cresc }}</div>
+            <div><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ m.statusBg }};color:{{ m.statusColor }};white-space:nowrap">{{ m.status }}</span></div>
+          </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;padding:20px 22px;height:fit-content">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">Ranking · Crescimento de Faturamento</div>
+          <div style="font-size:11.5px;color:#6E6862;margin-bottom:16px">Comparado ao período anterior</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ rankingFaturamento }}" as="rf">
+            <div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid #1E1B19">
+              <div style="font-size:13px;font-weight:700;color:#F0B050;width:14px">{{ rf.pos }}</div>
+              <span style="width:32px;height:32px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:700 11px Inter,sans-serif;color:#F4EEE4">{{ rf.ini }}</span>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rf.name }}</div></div>
+              <div style="font-size:13px;font-weight:700;color:#3FB27F;white-space:nowrap">{{ rf.cresc }}</div>
+            </div>
+            </sc-for>
+          </div>
+        </div>
       </div>
     </div>
     </sc-if>
@@ -1400,7 +1448,7 @@
           <div style="text-align:center;margin-bottom:20px">
             <span style="width:80px;height:80px;border-radius:999px;background:linear-gradient(135deg,#7A2328,#57191C);display:grid;place-items:center;font:800 24px Inter,sans-serif;color:#F4EEE4;margin:0 auto 12px">MB</span>
             <div style="font-size:18px;font-weight:700">Matheus Brayan</div>
-            <span style="display:inline-block;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(240,176,80,.14);color:#F0B050;margin-top:6px">Administrador / Mentor</span>
+            <span style="display:inline-block;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(240,176,80,.14);color:#F0B050;margin-top:6px">Fundador</span>
           </div>
           
           <div style="font-size:14px;font-weight:600;margin-bottom:12px">Performance Mensal</div>
@@ -1417,6 +1465,23 @@
             <div style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="color:#3FB27F">✓</span> Configurações da Plataforma</div>
           </div>
         </div>
+      </div>
+
+      <div style="background:#141414;border:1px solid #2A2724;border-radius:16px;overflow:hidden;margin-top:16px" class="saw-gtable-wrap">
+        <div style="padding:16px 22px;border-bottom:1px solid #1E1B19"><div style="font-size:14px;font-weight:600">Matriz de permissões por área</div><div style="font-size:12px;color:#A9A29A;margin-top:2px">Cada colaborador acessa só as telas da própria área. O Fundador acessa tudo.</div></div>
+        <div class="saw-gtable" style="display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr .9fr .9fr .8fr 1.1fr;gap:10px;padding:10px 22px;font-size:10.5px;letter-spacing:.5px;color:#6E6862;text-transform:uppercase;border-bottom:1px solid #1E1B19"><div>Área</div><div>Dashboard</div><div>Comercial</div><div>Financeiro</div><div>Mentorados</div><div>Conteúdos</div><div>Time</div><div>Painel Consolidado</div></div>
+        <sc-for list="{{ permMatrix }}" as="pm">
+        <div class="saw-gtable" style="display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr .9fr .9fr .8fr 1.1fr;gap:10px;align-items:center;padding:12px 22px;border-bottom:1px solid #1E1B19">
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;white-space:nowrap"><span style="width:8px;height:8px;border-radius:999px;background:{{ pm.areaColor }};flex:0 0 8px"></span>{{ pm.area }}</div>
+          <div style="color:{{ pm.dash.c }};font-weight:700">{{ pm.dash.m }}</div>
+          <div style="color:{{ pm.com.c }};font-weight:700">{{ pm.com.m }}</div>
+          <div style="color:{{ pm.fin.c }};font-weight:700">{{ pm.fin.m }}</div>
+          <div style="color:{{ pm.ment.c }};font-weight:700">{{ pm.ment.m }}</div>
+          <div style="color:{{ pm.conteudo.c }};font-weight:700">{{ pm.conteudo.m }}</div>
+          <div style="color:{{ pm.time.c }};font-weight:700">{{ pm.time.m }}</div>
+          <div style="color:{{ pm.painel.c }};font-weight:700">{{ pm.painel.m }}</div>
+        </div>
+        </sc-for>
       </div>
     </div>
     </sc-if>
@@ -1495,12 +1560,14 @@ class Component extends DCLogic {
 
     const chk = { check:'✓', checkBg:'#3FB27F', checkBorder:'#3FB27F' };
     const unchk = { check:'', checkBg:'transparent', checkBorder:'#3A3632' };
+    const p1 = { peso:'Peso 1', pesoBg:'rgba(110,104,98,.18)', pesoColor:'#A9A29A' };
+    const p2 = { peso:'Peso 2', pesoBg:'rgba(240,176,80,.14)', pesoColor:'#F0B050' };
     const tarefas = [
-      { ...unchk, title:'Analisar cardápio e precificação', meta:'Aumentar ticket médio', prazo:'15/07/2024', status:'Pendente', statusBg:A.bg, statusColor:A.c, prio:'Alta', prioColor:'#E5573F', prioArrow:'↑' },
-      { ...chk, title:'Definir metas do trimestre', meta:'Planejamento estratégico', prazo:'02/07/2024', status:'Concluída', statusBg:G.bg, statusColor:G.c, prio:'Alta', prioColor:'#E5573F', prioArrow:'↑' },
-      { ...unchk, title:'Revisar indicadores da semana', meta:'Gestão financeira', prazo:'18/07/2024', status:'Em andamento', statusBg:B.bg, statusColor:B.c, prio:'Alta', prioColor:'#E5573F', prioArrow:'↑' },
-      { ...unchk, title:'Criar campanha nas redes sociais', meta:'Aumentar faturamento', prazo:'20/07/2024', status:'Pendente', statusBg:A.bg, statusColor:A.c, prio:'Média', prioColor:'#F0B050', prioArrow:'→' },
-      { ...chk, title:'Renegociar contrato de fornecedor', meta:'Reduzir custos', prazo:'28/06/2024', status:'Concluída', statusBg:G.bg, statusColor:G.c, prio:'Média', prioColor:'#F0B050', prioArrow:'→' },
+      { ...unchk, ...p2, title:'Analisar cardápio e precificação', meta:'Aumentar ticket médio', prazo:'15/07/2024', status:'Pendente', statusBg:A.bg, statusColor:A.c, prio:'Alta', prioColor:'#E5573F', prioArrow:'↑' },
+      { ...chk, ...p1, title:'Definir metas do trimestre', meta:'Planejamento estratégico', prazo:'02/07/2024', status:'Concluída', statusBg:G.bg, statusColor:G.c, prio:'Alta', prioColor:'#E5573F', prioArrow:'↑' },
+      { ...unchk, ...p2, title:'Revisar indicadores da semana', meta:'Gestão financeira', prazo:'18/07/2024', status:'Em andamento', statusBg:B.bg, statusColor:B.c, prio:'Alta', prioColor:'#E5573F', prioArrow:'↑' },
+      { ...unchk, ...p1, title:'Criar campanha nas redes sociais', meta:'Aumentar faturamento', prazo:'20/07/2024', status:'Pendente', statusBg:A.bg, statusColor:A.c, prio:'Média', prioColor:'#F0B050', prioArrow:'→' },
+      { ...chk, ...p2, title:'Renegociar contrato de fornecedor', meta:'Reduzir custos', prazo:'28/06/2024', status:'Concluída', statusBg:G.bg, statusColor:G.c, prio:'Média', prioColor:'#F0B050', prioArrow:'→' },
     ];
 
     const mentorias = [
@@ -1558,11 +1625,11 @@ class Component extends DCLogic {
     ];
 
     // ===== ADMIN =====
-    const aids = ['adashboard','acomercial','afinlancamentos','afindre','afinfaturamento','amentorados','amentorias','atime','aeventos','aconteudos','arelatorios','aconfig','asuporte'];
+    const aids = ['adashboard','acomercial','afinlancamentos','afindre','afinfaturamento','amentorados','aconsolidado','amentorias','atime','aeventos','aconteudos','arelatorios','aconfig','asuporte'];
     const anav = {};
     aids.forEach(id => { anav[id] = { style: this.anavStyle(id), onClick: () => this.setState({ ascreen: id }) }; });
     const as = this.state.ascreen;
-    const aBuilt = ['adashboard', 'acomercial', 'afinlancamentos', 'afindre', 'afinfaturamento', 'atime', 'amentorados','amentorias','aeventos','aconteudos','arelatorios','afinanceiro','aconfig','asuporte'];
+    const aBuilt = ['adashboard', 'acomercial', 'afinlancamentos', 'afindre', 'afinfaturamento', 'atime', 'amentorados','aconsolidado','amentorias','aeventos','aconteudos','arelatorios','afinanceiro','aconfig','asuporte'];
 
     const asubIds = ['afinlancamentos', 'afindre', 'afinfaturamento'];
     const asub = {};
@@ -1620,17 +1687,45 @@ class Component extends DCLogic {
       { m: 'Jun', h: '100%', hMRR: '72%', hLoja: '18%', hEventos: '10%' }
     ];
 
-    const pAdmin = { papel: 'Admin', papelBg: 'rgba(240,176,80,.14)', papelColor: '#F0B050' };
-    const pMentor = { papel: 'Mentor', papelBg: 'rgba(90,169,230,.14)', papelColor: '#5AA9E6' };
+    const pFundador = { papel: 'Fundador', papelBg: 'rgba(240,176,80,.14)', papelColor: '#F0B050' };
+    const pGestPerf = { papel: 'Gestão de Performance', papelBg: 'rgba(90,169,230,.14)', papelColor: '#5AA9E6' };
     const pComercial = { papel: 'Comercial', papelBg: 'rgba(63,178,127,.14)', papelColor: '#3FB27F' };
-    const pAtend = { papel: 'Atendimento', papelBg: 'rgba(110,104,98,.18)', papelColor: '#6E6862' };
+    const pMarketing = { papel: 'Marketing', papelBg: 'rgba(229,87,63,.14)', papelColor: '#E5573F' };
 
     const timeList = [
-      { ini: 'MB', name: 'Matheus Brayan', email: 'matheus@sawhub.com.br', carteira: '45', conv: '18,4%', ...pAdmin },
-      { ini: 'LA', name: 'Lucas Alves', email: 'lucas@sawhub.com.br', carteira: '38', conv: '15,2%', ...pMentor },
+      { ini: 'MB', name: 'Matheus Brayan', email: 'matheus@sawhub.com.br', carteira: '45', conv: '18,4%', ...pFundador },
+      { ini: 'LA', name: 'Lucas Alves', email: 'lucas@sawhub.com.br', carteira: '38', conv: '15,2%', ...pGestPerf },
       { ini: 'PM', name: 'Paula Mendes', email: 'paula@sawhub.com.br', carteira: '-', conv: '22,5%', ...pComercial },
-      { ini: 'RC', name: 'Ricardo Costa', email: 'ricardo@sawhub.com.br', carteira: '42', conv: '12,8%', ...pMentor },
-      { ini: 'JL', name: 'Juliana Lima', email: 'juliana@sawhub.com.br', carteira: '-', conv: '-', ...pAtend },
+      { ini: 'RC', name: 'Ricardo Costa', email: 'ricardo@sawhub.com.br', carteira: '42', conv: '12,8%', ...pGestPerf },
+      { ini: 'JL', name: 'Juliana Lima', email: 'juliana@sawhub.com.br', carteira: '-', conv: '-', ...pMarketing },
+    ];
+
+    const yes = { m:'✓', c:'#3FB27F' };
+    const no = { m:'–', c:'#3A3632' };
+    const permMatrix = [
+      { area:'Comercial', areaColor:'#3FB27F', dash:no, com:yes, fin:no, ment:no, conteudo:no, time:no, painel:no },
+      { area:'Marketing', areaColor:'#E5573F', dash:no, com:no, fin:no, ment:no, conteudo:yes, time:no, painel:no },
+      { area:'Gestão de Performance', areaColor:'#5AA9E6', dash:no, com:no, fin:no, ment:yes, conteudo:yes, time:no, painel:yes },
+      { area:'Fundador', areaColor:'#F0B050', dash:yes, com:yes, fin:yes, ment:yes, conteudo:yes, time:yes, painel:yes },
+    ];
+
+    const stEmDia = { status:'Em dia', statusBg:'rgba(63,178,127,.14)', statusColor:'#3FB27F' };
+    const stAtencao = { status:'Atenção', statusBg:'rgba(240,176,80,.14)', statusColor:'#F0B050' };
+    const stAtrasado = { status:'Atrasado', statusBg:'rgba(229,87,63,.14)', statusColor:'#E5573F' };
+
+    const mentoradosConsolidado = [
+      { ini:'JS', name:'João Silva', neg:'Restaurante Sabor & Arte', progresso:'82%', encCump:'9', encTotal:'10', ferrPct:'100%', cresc:'+18%', crescColor:'#3FB27F', ...stEmDia },
+      { ini:'AC', name:'Ana Costa', neg:'Cantina Ana Costa', progresso:'65%', encCump:'6', encTotal:'9', ferrPct:'67%', cresc:'+12%', crescColor:'#3FB27F', ...stEmDia },
+      { ini:'CM', name:'Carlos Menezes', neg:'Point do Carlos', progresso:'40%', encCump:'4', encTotal:'10', ferrPct:'33%', cresc:'+5%', crescColor:'#3FB27F', ...stAtencao },
+      { ini:'RG', name:'Rafael Gomes', neg:'Bistrô Gomes', progresso:'25%', encCump:'2', encTotal:'8', ferrPct:'0%', cresc:'-3%', crescColor:'#E5573F', ...stAtrasado },
+      { ini:'FL', name:'Fernanda Lima', neg:'Cantina da Fernanda', progresso:'90%', encCump:'10', encTotal:'10', ferrPct:'100%', cresc:'+24%', crescColor:'#3FB27F', ...stEmDia },
+      { ini:'MS', name:'Marina Souza', neg:'Sabor da Marina', progresso:'15%', encCump:'1', encTotal:'7', ferrPct:'0%', cresc:'-8%', crescColor:'#E5573F', ...stAtrasado },
+    ];
+
+    const rankingFaturamento = [
+      { pos:'1', ini:'FL', name:'Fernanda Lima', cresc:'+24%' },
+      { pos:'2', ini:'JS', name:'João Silva', cresc:'+18%' },
+      { pos:'3', ini:'AC', name:'Ana Costa', cresc:'+12%' },
     ];
 
 
@@ -1687,6 +1782,7 @@ class Component extends DCLogic {
       atime: ['Gestão de Time', 'Controle da equipe SAW, carteira e performance.'],
       adashboard: ['Dashboard administrativo', 'Visão geral da operação SAW.'],
       amentorados: ['Mentorados', 'Gerencie todos os mentorados da plataforma.'],
+      aconsolidado: ['Painel Consolidado', 'Progresso, encaminhamentos e ranking de todos os mentorados ao mesmo tempo.'],
       amentorias: ['Nova mentoria', 'Agende uma sessão de mentoria.'],
       aeventos: ['Gestão de eventos', 'Crie e acompanhe todos os eventos.'],
       aconteudos: ['Biblioteca de conteúdos', 'Gerencie os materiais da plataforma.'],
@@ -1773,6 +1869,8 @@ class Component extends DCLogic {
 
       showADashboard: as === 'adashboard',
       showAMentorados: as === 'amentorados',
+      showAConsolidado: as === 'aconsolidado',
+      mentoradosConsolidado, rankingFaturamento, permMatrix,
       showAMentorias: as === 'amentorias',
       showAEventos: as === 'aeventos',
       showAConteudos: as === 'aconteudos',

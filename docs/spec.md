@@ -65,6 +65,9 @@
 **H4.4** — Como sistema, quero sinalizar atraso.
 - **Dado** uma tarefa não concluída, **quando** o prazo vence, **então** ela passa a "Atrasada".
 
+**H4.5** — Como Admin, quero atribuir um peso (1 ou 2) a cada encaminhamento/tarefa gerado após uma mentoria.
+- **Dado** um encaminhamento novo, **quando** defino o peso, **então** ele fica visível para o mentorado e passa a contar na pontuação/ranking do painel consolidado (E17) quando concluído — peso 2 vale o dobro de peso 1.
+
 ---
 
 ## E5 · Mentorias & Atas  *(Médio)*
@@ -147,6 +150,8 @@
 **H10.3** — Como Admin, quero ver atividades recentes e mentorias do dia.
 - **Dado** o Dashboard admin, **então** vejo atividades recentes e as mentorias agendadas para hoje.
 
+> **Nota:** o painel *consolidado* de todos os mentorados (visão simultânea de progresso, não este resumo geral de KPIs) é o **E17**, não este épico.
+
 ---
 
 ## E11 · Gestão Admin  *(Grande)*
@@ -194,16 +199,47 @@
 
 ---
 
-## E15 · Gestão de Time (SAW)  *(Médio)*
+## E15 · Gestão de Time (SAW)  *(Médio · risco alto pelo escopo de acesso)*
 
-**H15.1** — Como SAW, quero cadastrar a equipe interna com papéis e permissões.
-- **Dado** um colaborador (mentor/comercial/atendimento), **quando** defino o papel, **então** ele acessa apenas as áreas permitidas.
+**H15.1** — Como SAW, quero cadastrar a equipe interna com uma área definida (não um papel genérico).
+- **Dado** um colaborador novo, **quando** defino sua área (Comercial / Marketing / Gestão de Performance / Fundador), **então** o sistema aplica automaticamente as permissões daquela área.
 
-**H15.2** — Como SAW, quero ver a carteira de clientes por mentor.
+**H15.2** — Como colaborador do Comercial, quero acessar apenas o painel Comercial.
+- **Dado** minha área = Comercial, **quando** entro na Área Admin, **então** vejo apenas Dashboard Comercial, leads/funil e ranking comercial (E13); não vejo Financeiro, Mentorados ou Time.
+
+**H15.3** — Como colaborador de Marketing, quero acessar apenas as telas de marketing/conteúdo.
+- **Dado** minha área = Marketing, **quando** entro na Área Admin, **então** vejo apenas a curadoria de Conteúdos (E11); não vejo Financeiro, Comercial ou Mentorados.
+- *(Depende de validação — ver Suposições: hoje o protótipo não tem uma tela de "Marketing" separada de "Conteúdos".)*
+
+**H15.4** — Como colaborador de Gestão de Performance, quero acessar apenas a gestão de mentorados.
+- **Dado** minha área = Gestão de Performance, **quando** entro na Área Admin, **então** vejo Mentorados, Mentorias, Conteúdos e o Painel Consolidado (E17); não vejo Financeiro nem Comercial.
+
+**H15.5** — Como Fundador (cliente/sócio), quero acesso irrestrito a toda a Área Admin.
+- **Dado** minha área = Fundador, **então** vejo todas as telas administrativas sem restrição, incluindo Financeiro e Time.
+
+**H15.6** — Como SAW, quero ver a carteira de clientes por mentor.
 - **Dado** os mentores, **então** vejo quantos mentorados cada um atende e a distribuição da carteira.
 
-**H15.3** — Como SAW, quero acompanhar metas e desempenho do time.
+**H15.7** — Como SAW, quero acompanhar metas e desempenho do time.
 - **Dado** metas por colaborador, **então** vejo mentorias realizadas, conversões e realizado x meta no período.
+
+---
+
+## E17 · Painel Consolidado de Mentorados & Ranking  *(Grande · risco médio)*
+
+> Pedido do cliente após ver o protótipo: o E2/E10 mostram a visão *individual* (mentorado) ou KPIs *agregados* (Admin); falta uma visão que cruze todos os mentorados lado a lado.
+
+**H17.1** — Como Admin (Gestão de Performance ou Fundador), quero um painel único com o progresso de todos os mentorados ao mesmo tempo.
+- **Dado** a lista de mentorados ativos, **quando** abro o Painel Consolidado, **então** vejo cada um com % de progresso geral, encaminhamentos pendentes x cumpridos e status (Em dia / Atenção / Atrasado).
+
+**H17.2** — Como Admin, quero que o cumprimento de encaminhamentos gere uma pontuação ponderada por peso.
+- **Dado** os encaminhamentos concluídos de um mentorado (cada um com peso 1 ou 2, ver H4.5), **então** a pontuação do mentorado soma os pesos dos itens concluídos — peso 2 conta o dobro de peso 1.
+
+**H17.3** — Como Admin, quero um ranking de mentorados por crescimento percentual de faturamento.
+- **Dado** o faturamento declarado/registrado de cada mentorado por período, **quando** abro o ranking, **então** os mentorados aparecem ordenados pelo crescimento % de faturamento no período selecionado.
+
+**H17.4** — Como Admin, quero ver quem cumpriu, cumpriu parcialmente ou não cumpriu as ferramentas obrigatórias.
+- **Dado** a lista de ferramentas obrigatórias por mentorado (ex.: ficha técnica, DRE, manual da cultura), **então** vejo o % de conclusão de cada mentorado e posso filtrar por faixa (100% / 50–99% / <50%).
 
 ---
 
@@ -224,3 +260,8 @@
 4. **Origem dos vídeos** (upload próprio vs. YouTube/Vimeo não listado) das dicas e materiais.
 5. **Integração de agenda** — apenas Google Meet ou também Zoom/presencial com endereço.
 6. **App nativo** fica fora do MVP (web responsiva atende); confirmar.
+7. **Marketing como área própria (E15/H15.3)** — o protótipo hoje só tem "Conteúdos"; confirmar se Marketing reaproveita essa tela, ganha uma nova, ou é o mesmo que Comercial.
+8. **Lista fechada de "ferramentas obrigatórias" (E17/H17.4)** — cliente citou ficha técnica, DRE e manual da cultura; falta a lista completa e se ela é igual para todos os planos.
+9. **Escala de peso dos encaminhamentos (E4/H4.5, E17/H17.2)** — cliente falou em peso 1 e 2; confirmar se são só esses dois níveis ou se há mais.
+10. **Origem do dado de faturamento do mentorado (E17/H17.3)** — o mentorado informa manualmente, ou isso se conecta a alguma integração/planilha?
+11. **Mentorado nunca acessa a área de Time/Gestão de Performance** (E15) — confirmado como fora do MVP; cliente sinalizou que pode virar visão futura do mentorado ("gestão de performance" dele mesmo), não implementar agora.
