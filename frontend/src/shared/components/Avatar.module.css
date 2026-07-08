@@ -1,0 +1,10 @@
+.avatar {
+  flex: none;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, var(--wine-bright), var(--wine));
+  display: grid;
+  place-items: center;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: var(--text);
+}

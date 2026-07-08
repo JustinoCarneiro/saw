@@ -1,0 +1,153 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: radial-gradient(1200px 600px at 70% 30%, var(--wine) 0%, var(--wine-deep) 55%, #2a0b0d 100%);
+}
+
+.card {
+  width: min(480px, 100%);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-float);
+  padding: 44px 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logoBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: 2px;
+  line-height: 0.9;
+  color: var(--text);
+}
+
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: 3.5px;
+  color: var(--gold-soft);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.headline {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin: 0 0 22px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  height: 44px;
+  margin: 7px 0 16px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: 400 14px var(--font-ui);
+  display: block;
+  box-sizing: border-box;
+}
+
+.textarea {
+  width: 100%;
+  margin: 7px 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: 400 14px var(--font-ui);
+  display: block;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 12.5px;
+  margin: -6px 0 14px;
+}
+
+.submit {
+  width: 100%;
+  height: 46px;
+  background: var(--gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: var(--r-pill);
+  font: 600 15px var(--font-ui);
+  cursor: pointer;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.submit:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.outlineButton {
+  width: 100%;
+  height: 46px;
+  margin-top: 12px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font: 600 14px var(--font-ui);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.confirmacao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.confirmacaoTexto {
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.5;
+  margin: 0 0 24px;
+}

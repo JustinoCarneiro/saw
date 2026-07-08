@@ -1,0 +1,38 @@
+.wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+  align-items: center;
+}
+
+.headerCell {
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid:first-child {
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.row {
+  padding: 13px 22px;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: default;
+}
+
+.row:last-child {
+  border-bottom: none;
+}

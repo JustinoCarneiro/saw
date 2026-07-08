@@ -1,0 +1,196 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: radial-gradient(1200px 600px at 70% 30%, var(--wine) 0%, var(--wine-deep) 55%, #2a0b0d 100%);
+}
+
+.card {
+  width: min(1140px, 100%);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-float);
+  display: flex;
+  flex-direction: column;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  min-height: 560px;
+}
+
+.form {
+  padding: 52px 56px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logoBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 34px;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: 2px;
+  line-height: 0.9;
+  color: var(--text);
+}
+
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: 3.5px;
+  color: var(--gold-soft);
+}
+
+.headline {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 26px;
+}
+
+.headlineAccent {
+  color: var(--gold-soft);
+}
+
+.label {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  height: 44px;
+  margin: 7px 0 16px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: 400 14px var(--font-ui);
+  display: block;
+}
+
+.passwordWrap {
+  position: relative;
+}
+
+.passwordWrap .input {
+  padding-right: 60px;
+}
+
+.togglePw {
+  position: absolute;
+  right: 10px;
+  top: 15px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 12.5px;
+  margin: -6px 0 14px;
+}
+
+.submit {
+  width: 100%;
+  height: 46px;
+  background: var(--gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: var(--r-pill);
+  font: 600 15px var(--font-ui);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.submit:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.outlineButton {
+  width: 100%;
+  height: 46px;
+  margin-top: 12px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font: 600 14px var(--font-ui);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.hero {
+  position: relative;
+  background: var(--grad-wine);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 56px 52px;
+}
+
+.heroQuoteMark {
+  font-family: var(--font-display);
+  font-size: 66px;
+  line-height: 0.7;
+  color: var(--gold);
+  opacity: 0.55;
+  margin-bottom: 6px;
+}
+
+.heroQuote {
+  font-size: 29px;
+  font-weight: 600;
+  line-height: 1.28;
+  color: var(--text);
+  max-width: 360px;
+}
+
+.heroQuoteAccent {
+  color: var(--gold);
+}
+
+.heroAuthor {
+  margin-top: 36px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text);
+}
+
+.heroRole {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--gold-soft);
+  margin-top: 4px;
+}
+
+.footer {
+  padding: 16px 40px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--text-faint);
+}

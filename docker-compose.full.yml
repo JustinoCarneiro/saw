@@ -1,0 +1,46 @@
+# Stack completa containerizada (infra + backend + frontend) — pra testar o sistema
+# "como vai rodar em produção" (front e back atrás da mesma origem, path-based, igual à
+# config real do Coolify) antes de dar deploy. NÃO é o fluxo de dev diário: pra isso,
+# use scripts/dev-up.sh (roda nativo, hot-reload de verdade).
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.full.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.full.yml down
+#
+# Não rode isso ao mesmo tempo que scripts/dev-up.sh — as portas 8080/5432/6379 colidem.
+
+services:
+  backend:
+    build: ./backend
+    container_name: ${PROJECT_NAME:-sawhub}_backend
+    environment:
+      DB_HOST: db
+      REDIS_HOST: redis
+      POSTGRES_USER: ${POSTGRES_USER:-sawhub_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sawhub_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-sawhub_db}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-sawhub_redis_pass}
+      # O front daqui é servido em :8081 (Nginx), não :5173 — o browser manda header
+      # Origin em todo POST (mesmo sendo "mesma origem" do ponto de vista do Nginx),
+      # e o CorsFilter do Spring rejeita com 403 se não reconhecer a origem.
+      CORS_ALLOWED_ORIGINS: http://localhost:8081
+      # SEED_DEMO_DATA e BOOTSTRAP_FUNDADOR_SENHA não têm default no application.yml
+      # (fail-closed em produção — achado H1 da revisão de segurança). Setados aqui
+      # explicitamente só porque esta stack é pra teste/demo, nunca pra produção real.
+      SEED_DEMO_DATA: "true"
+      BOOTSTRAP_FUNDADOR_SENHA: trocar-no-primeiro-login
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: ${PROJECT_NAME:-sawhub}_frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend

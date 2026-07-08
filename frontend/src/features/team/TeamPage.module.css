@@ -1,0 +1,153 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.content {
+  padding: 22px 32px 40px;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.loading {
+  padding: 20px 22px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+}
+
+.person {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  min-width: 0;
+}
+
+.personText {
+  min-width: 0;
+}
+
+.personName {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.personEmail {
+  font-size: 11px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.metricGood {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.profileBlock {
+  text-align: center;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.profileName {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.permList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.permRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.matrixCard {
+  overflow-x: auto;
+}
+
+.matrixHeader {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.matrixSubtitle {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+.matrixScroll {
+  overflow-x: auto;
+}
+
+.matrixGrid {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--line-soft);
+  min-width: 760px;
+}
+
+.matrixHeadCell {
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.matrixAreaCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  flex: none;
+}
+
+.matrixMark {
+  font-weight: 700;
+}

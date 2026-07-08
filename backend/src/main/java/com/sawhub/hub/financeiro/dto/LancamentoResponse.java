@@ -1,0 +1,31 @@
+package com.sawhub.hub.financeiro.dto;
+
+import com.sawhub.hub.financeiro.LancamentoFinanceiro;
+import com.sawhub.hub.financeiro.OrigemReceita;
+import com.sawhub.hub.financeiro.StatusLancamento;
+import com.sawhub.hub.financeiro.TipoLancamento;
+import com.sawhub.hub.mentorado.Plano;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record LancamentoResponse(
+        UUID id,
+        TipoLancamento tipo,
+        CategoriaResumo categoria,
+        String descricao,
+        BigDecimal valor,
+        LocalDate dataCompetencia,
+        StatusLancamento status,
+        Plano planoReferencia
+) {
+    public record CategoriaResumo(UUID id, String nome, OrigemReceita origemReceita) {
+    }
+
+    public static LancamentoResponse from(LancamentoFinanceiro l) {
+        var categoria = new CategoriaResumo(l.getCategoria().getId(), l.getCategoria().getNome(),
+                l.getCategoria().getOrigemReceita());
+        return new LancamentoResponse(l.getId(), l.getTipo(), categoria, l.getDescricao(), l.getValor(),
+                l.getDataCompetencia(), l.getStatus(), l.getPlanoReferencia());
+    }
+}

@@ -1,0 +1,53 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 32px 0;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.subtitle {
+  font-size: 13.5px;
+  color: var(--text-soft);
+  margin-top: 3px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.userChip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 4px 14px 4px 4px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.userText {
+  line-height: 1.2;
+}
+
+.userName {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.userRole {
+  display: block;
+  font-size: 11px;
+  color: var(--text-soft);
+}

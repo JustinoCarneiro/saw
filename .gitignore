@@ -13,3 +13,6 @@ build/
 .idea/
 .vscode/
 *.swp
+
+# Scripts de dev (logs/PIDs do dev-up.sh / dev-down.sh)
+.dev/

@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: saw-hub-backend
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${POSTGRES_DB:sawhub_db}
+    username: ${POSTGRES_USER:sawhub_user}
+    password: ${POSTGRES_PASSWORD:sawhub_pass}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:sawhub_redis_pass}
+
+  session:
+    store-type: redis
+    timeout: 8h
+    redis:
+      namespace: sawhub:session
+      repository-type: default
+
+server:
+  port: ${SERVER_PORT:8080}
+  # Atrás do proxy do Coolify o TLS é terminado antes de chegar aqui — sem isto,
+  # request.isSecure() sempre reporta false e o cookie de sessão/CSRF nunca ganha o
+  # atributo Secure, mesmo em produção (achado M1 da revisão de segurança).
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        name: SAWHUB_SESSION
+        http-only: true
+        same-site: lax
+
+sawhub:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  # Default FALSE de propósito (achado H1 da revisão de segurança): sem isso, um deploy que
+  # esqueça de configurar a env sobe em produção com 4+ contas ADMIN de senha conhecida.
+  # Dev/demo local precisa setar SEED_DEMO_DATA=true explicitamente (ver scripts/dev-up.sh).
+  seed-demo-data: ${SEED_DEMO_DATA:false}
+  bootstrap:
+    fundador-nome: ${BOOTSTRAP_FUNDADOR_NOME:Matheus Brayan}
+    fundador-email: ${BOOTSTRAP_FUNDADOR_EMAIL:matheus@sawhub.com.br}
+    # Sem fallback de propósito (achado H1): a app falha no boot se a env não existir, em vez
+    # de silenciosamente criar o Fundador com uma senha conhecida/versionada.
+    fundador-senha: ${BOOTSTRAP_FUNDADOR_SENHA}
+
+logging:
+  level:
+    com.sawhub.hub: DEBUG

@@ -1,0 +1,8 @@
+# Overrides só pro contexto de teste. BOOTSTRAP_FUNDADOR_SENHA não tem default em
+# src/main/resources/application.yml de propósito (achado H1 da revisão de segurança —
+# fail-closed em produção); testes que sobem o contexto Spring completo (@SpringBootTest)
+# precisam de um valor aqui pra não falhar o boot.
+sawhub:
+  bootstrap:
+    fundador-senha: senha-de-teste-nunca-usar-em-producao
+  seed-demo-data: false

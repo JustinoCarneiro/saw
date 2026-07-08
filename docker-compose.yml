@@ -1,22 +1,38 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
-    container_name: ${PROJECT_NAME:-onda_db}
+    container_name: ${PROJECT_NAME:-sawhub}_db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-onda_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onda_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-onda_db}
+      POSTGRES_USER: ${POSTGRES_USER:-sawhub_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sawhub_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-sawhub_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sawhub_user} -d ${POSTGRES_DB:-sawhub_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${PROJECT_NAME:-sawhub}_redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-sawhub_redis_pass}"]
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-sawhub_redis_pass}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   pgadmin:
     image: dpage/pgadmin4
-    container_name: ${PROJECT_NAME:-onda}_pgadmin
+    container_name: ${PROJECT_NAME:-sawhub}_pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@onda.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
