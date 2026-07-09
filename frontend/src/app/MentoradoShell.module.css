@@ -64,6 +64,27 @@
   border-color: var(--gold-soft);
 }
 
+.nav {
+  display: flex;
+  gap: 22px;
+  padding: 14px 32px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.navItem {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-decoration: none;
+  padding-bottom: 11px;
+  border-bottom: 2px solid transparent;
+}
+
+.navItemActive {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
 .content {
   flex: 1;
   min-width: 0;

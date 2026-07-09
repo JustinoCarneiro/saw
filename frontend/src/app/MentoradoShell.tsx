@@ -1,12 +1,17 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { NavLink, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthContext';
 import { Avatar } from '../shared/components/Avatar';
 import styles from './MentoradoShell.module.css';
 
+const NAV_ITEMS = [
+  { to: '/mentorado', label: 'Dashboard', end: true },
+  { to: '/mentorado/metas', label: 'Metas', end: false },
+];
+
 // M08 — primeira rota de verdade do perfil MENTORADO (antes disso só existia um placeholder
-// pós-login). Sem navegação multi-página ainda: só o Dashboard existe nesta leva; cresce quando
-// E3/E4/etc. entrarem (CLAUDE.md § MVP: Dashboard → Metas/Tarefas → Mentorias → resto). Por isso
-// não reusa Sidebar (é exclusiva do Modulo/RBAC por área do Admin/E15 — Mentorado não tem área).
+// pós-login). M09 acrescenta a 2ª página (Metas) — navegação cresce conforme E4/etc. entrarem
+// (CLAUDE.md § MVP: Dashboard → Metas/Tarefas → Mentorias → resto). Não reusa Sidebar (é
+// exclusiva do Modulo/RBAC por área do Admin/E15 — Mentorado não tem área).
 export function MentoradoShell() {
   const { user, loading, logout } = useAuth();
 
@@ -38,6 +43,18 @@ export function MentoradoShell() {
           </button>
         </div>
       </header>
+      <nav className={styles.nav}>
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
       <main className={styles.content}>
         <Outlet />
       </main>

@@ -36,6 +36,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M06** | **E11 · Gestão Admin + E5 · Mentorias & Atas + diferencial de IA** | **Grande** | **6d + ~2-3d (IA)** | **H11.1–H11.4 + H5.1–H5.3** |
 | **M07** | **Google OAuth (fast-follow do E1)** | **Pequeno** | **1.5d** | **H1.2** |
 | **M08** | **E2 · Dashboard do Mentorado** | **Médio** | **3.5d** | **H2.1–H2.3** |
+| **M09** | **E3 · Metas Estratégicas** | **Médio** | **3.5d** | **H3.1–H3.3** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -879,6 +880,103 @@ verificação ao vivo via curl com 3 contas reais (Rafael/João/Admin: dado corr
 regressão. Sem pendência de credencial externa nesta leva (diferente de M06/M07) — módulo
 inteiramente verificável neste ambiente.
 
+### M09 — E3 · Metas Estratégicas
+
+**Por que Médio:** primeira entidade nova desde o M06 (`Meta`, migração Flyway V6), mas é um único
+CRUD self-service com máquina de estado simples (3 estados persistidos) — mesmo porte de
+`Conteudo`/`Evento` no M06, não a complexidade de um módulo com múltiplos agregados como
+Financeiro/Comercial.
+
+**Achado ao inspecionar `design/prototipo/index.html` (mockup congelado):** a tela de Metas tem um
+botão **"+ Nova meta"** — o mentorado cria e gerencia as próprias metas. **Suposição, não coberta
+pelo `spec.md`:** H3.1–H3.3 só descrevem visualizar/filtrar/resumir, nenhuma história de criação;
+Metas também não aparecem no escopo do E11 (Gestão Admin lista mentorados/mentorias/conteúdos/
+eventos, não Metas). Adotado: Meta é **inteiramente self-service do mentorado** — criar, editar
+(título/descrição/prazo/progresso), pausar, reativar, concluir — sem curadoria do Admin, ao
+contrário de Conteúdos/Eventos. `progressoPct` é **editado manualmente** pelo mentorado; nada no
+`spec.md` ou no mockup sugere um checklist de sub-itens ou cálculo automático.
+
+**Máquina de estado (CLAUDE.md):** `Ativa {No prazo | Atenção | Atrasada} → Concluída` · desvio
+`→ Pausada`. Só `ATIVA`, `CONCLUIDA`, `PAUSADA` são persistidos — o sub-status (`No prazo`/
+`Atenção`/`Atrasada`) só existe enquanto `ATIVA` e é **calculado no response**, nunca gravado (mesmo
+padrão do E17: status derivado de dado bruto, não uma coluna própria que pode ficar dessincronizada).
+**Suposição de limiar a validar com o cliente** (não especificado em `spec.md` nem no mockup):
+`Atrasada` = prazo já passou; `Atenção` = prazo a 7 dias ou menos; `No prazo` = caso contrário.
+
+**Isolamento por tenant:** mesmo padrão do M08 — toda operação resolve o `Mentorado` a partir de
+`principal.getUsuarioId()` (nunca de path/query), então create/edit/transição só operam sobre metas
+do próprio mentorado autenticado (achado a confirmar explicitamente no `revisor-seguranca`: um
+mentorado não pode editar/concluir a meta de outro só trocando o `{id}` na URL).
+
+## Modelagem de banco (M09)
+
+```sql
+-- V6__metas.sql
+CREATE TABLE meta (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mentorado_id    UUID NOT NULL REFERENCES mentorado(id),
+    titulo          VARCHAR(255) NOT NULL,
+    descricao       VARCHAR(1000),
+    prazo           DATE NOT NULL,
+    progresso_pct   SMALLINT NOT NULL DEFAULT 0,
+    status          VARCHAR(20) NOT NULL DEFAULT 'ATIVA',
+    criado_em       TIMESTAMP NOT NULL DEFAULT now(),
+    versao          BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_meta_status CHECK (status IN ('ATIVA','CONCLUIDA','PAUSADA')),
+    CONSTRAINT chk_meta_progresso CHECK (progresso_pct BETWEEN 0 AND 100)
+);
+
+CREATE INDEX idx_meta_mentorado ON meta(mentorado_id);
+CREATE INDEX idx_meta_status ON meta(status);
+```
+
+## Contratos de API (M09)
+
+```jsonc
+POST /api/v1/mentorado/metas             // hasRole("MENTORADO")
+{ "titulo": "Reduzir CMV em 5%", "descricao": "Renegociar 3 fornecedores principais", "prazo": "2026-09-30" }
+// 201 -> MetaResponse (progressoPct=0, status=ATIVA)
+
+GET /api/v1/mentorado/metas?status=ATIVA  // status opcional (ATIVA|CONCLUIDA|PAUSADA); omitido = Todas
+[{
+  "id": "uuid", "titulo": "Reduzir CMV em 5%", "descricao": "...",
+  "prazo": "2026-09-30", "diasRestantes": 83, "progressoPct": 40,
+  "status": "ATIVA", "subStatus": "NO_PRAZO"   // subStatus null quando status != ATIVA
+}]
+
+GET /api/v1/mentorado/metas/resumo        // H3.3 — sempre sobre TODAS as metas, ignora o filtro da tela
+{ "conclusaoMediaPct": 20, "concluidas": 1, "noPrazo": 3, "atrasadas": 1 }
+
+PUT /api/v1/mentorado/metas/{id}          // edita título/descrição/prazo/progresso — só ATIVA/PAUSADA
+{ "titulo": "...", "descricao": "...", "prazo": "2026-10-15", "progressoPct": 55 }
+
+PATCH /api/v1/mentorado/metas/{id}/status // { "novoStatus": "CONCLUIDA" | "PAUSADA" | "ATIVA" }
+```
+
+## Rastreabilidade história ↔ módulo (M09)
+
+| História | Cobertura |
+|---|---|
+| H3.1 — ver metas com %, prazo, dias restantes, status | `GET /mentorado/metas` (`progressoPct`, `prazo`, `diasRestantes`, `status`/`subStatus`) |
+| H3.2 — filtrar por Ativas/Concluídas/Pausadas/Todas | `GET /mentorado/metas?status=` |
+| H3.3 — resumo geral | `GET /mentorado/metas/resumo` |
+
+**Status: ✅ M09 concluído** (2026-07-09) — backend (165/165 testes, incluindo `MetaResponseTest` e
+`MetaServiceTest` novos), primeira entidade nova desde o M06 (`Meta`, migração `V6__metas.sql`) —
+um mismatch real de schema (`SMALLINT` na migração vs `Integer` puro na entidade) foi achado e
+corrigido antes do commit, via `contextLoads`/schema-validation do Hibernate. `revisor-seguranca`
+sem achado bloqueante — segundo módulo seguido com revisão limpa (M08 foi o primeiro), agora com o
+risco maior de ser o primeiro módulo do Mentorado com caminhos de escrita (criar/editar/pausar/
+reativar/concluir), não só leitura. Isolamento por tenant confirmado ponto a ponto: toda operação
+resolve o dono via `principal.getUsuarioId()`, checagem de posse (`buscarDoUsuario`) cobre PUT e
+PATCH sem exceção, 404 genérico (não 403) pra meta de outro mentorado. Frontend (`MetasPage` +
+navegação Dashboard/Metas no `MentoradoShell`) e E2E (`metas.spec.ts`, 3 testes; achado um
+test-data-collision real — mesma classe do M05 — corrigido com título único por execução +
+`data-testid` opcional novo em `DataGridRow`) — 32/32 verde na suíte completa. Sem pendência de
+credencial externa. **Pendência de produto, não técnica**: limiar de "Atenção" (7 dias) e o
+próprio modelo de Meta como self-service do mentorado (achado no mockup, não no `spec.md`) ainda
+precisam de validação com o cliente — ver Suposições na seção do Blueprint acima.
+
 ## Fórmula de prazo
 
 ```
@@ -909,7 +1007,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo |
 | 4 | Google OAuth (fast-follow do E1) | Pequeno | 1.5d | ✅ Concluído — backend (141/141 testes) + `revisor-seguranca` (2 achados corrigidos: oráculo de enumeração de contas + nota pendurada) + frontend (botão condicional + tradução de erro) + E2E (24/24, `google-oauth.spec.ts`). Fluxo real (redirect→consentimento→callback) verificado só até a borda — sem app Google Cloud Console configurado neste ambiente |
 | 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ✅ Concluído — backend (152/152 testes) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado) + frontend (primeira rota `/mentorado` de verdade) + E2E (29/29, `dashboard-mentorado.spec.ts`) |
-| 6 | E3 · Metas Estratégicas | Médio | 3.5d | ⬜ |
+| 6 | E3 · Metas Estratégicas | Médio | 3.5d | ✅ Concluído — backend (165/165 testes, 1ª entidade nova desde o M06) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado nos caminhos de escrita) + frontend (`MetasPage` self-service) + E2E (32/32, `metas.spec.ts`) |
 | 7 | E4 · Tarefas & Agenda | Médio | 3.5d | ⬜ Backend parcial já existe (`Encaminhamento`, peso 1/2, usado pelo E17) |
 | 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ⬜ |
 | 9 | E7 · Eventos & Inscrições | Médio | 3.5d | ⬜ |

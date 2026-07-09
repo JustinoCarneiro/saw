@@ -38,9 +38,13 @@ export function DataGrid({ columns, headers, children, lastColumnAlign = 'left' 
   );
 }
 
-export function DataGridRow({ columns, children }: { columns: string; children: ReactNode }) {
+export function DataGridRow({ columns, children, testId }: { columns: string; children: ReactNode; testId?: string }) {
   return (
-    <div className={`${styles.grid} ${styles.row}`} style={{ gridTemplateColumns: toGridTemplate(columns) }}>
+    <div
+      className={`${styles.grid} ${styles.row}`}
+      style={{ gridTemplateColumns: toGridTemplate(columns) }}
+      data-testid={testId}
+    >
       {children}
     </div>
   );

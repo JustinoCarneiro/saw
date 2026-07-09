@@ -274,6 +274,28 @@ export interface DashboardMentoradoResponse {
   avisos: string[];
 }
 
+// M09 · E3 (Metas Estratégicas)
+export type StatusMeta = 'ATIVA' | 'CONCLUIDA' | 'PAUSADA';
+export type SubStatusMeta = 'NO_PRAZO' | 'ATENCAO' | 'ATRASADA';
+
+export interface Meta {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  prazo: string;
+  diasRestantes: number;
+  progressoPct: number;
+  status: StatusMeta;
+  subStatus: SubStatusMeta | null;
+}
+
+export interface ResumoMetas {
+  conclusaoMediaPct: number;
+  concluidas: number;
+  noPrazo: number;
+  atrasadas: number;
+}
+
 export type TipoEvento = 'AO_VIVO' | 'PRESENCIAL';
 export type StatusEvento = 'PROGRAMADO' | 'AO_VIVO' | 'REALIZADO' | 'CANCELADO';
 
