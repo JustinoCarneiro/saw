@@ -17,6 +17,7 @@ import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.evento.Evento;
 import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.InscricaoEventoRepository;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
 import com.sawhub.hub.financeiro.ContaPagarReceber;
@@ -85,6 +86,8 @@ class DemoDataSeederTest {
     @Mock
     private EventoRepository eventoRepository;
     @Mock
+    private InscricaoEventoRepository inscricaoEventoRepository;
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private DemoDataSeeder seeder() {
@@ -92,7 +95,7 @@ class DemoDataSeederTest {
                 encaminhamentoRepository, categoriaFinanceiraRepository, lancamentoFinanceiroRepository,
                 contaPagarReceberRepository, leadRepository, metaComercialRepository, mentoriaRepository,
                 ataRepository, ataEncaminhamentoSugeridoRepository, conteudoRepository, eventoRepository,
-                passwordEncoder);
+                inscricaoEventoRepository, passwordEncoder);
     }
 
     @BeforeEach

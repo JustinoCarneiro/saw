@@ -10,6 +10,8 @@ import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.conteudo.TipoConteudo;
 import com.sawhub.hub.evento.Evento;
 import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.InscricaoEvento;
+import com.sawhub.hub.evento.InscricaoEventoRepository;
 import com.sawhub.hub.evento.TipoEvento;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
@@ -73,6 +75,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final AtaEncaminhamentoSugeridoRepository ataEncaminhamentoSugeridoRepository;
     private final ConteudoRepository conteudoRepository;
     private final EventoRepository eventoRepository;
+    private final InscricaoEventoRepository inscricaoEventoRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(UsuarioRepository usuarioRepository, ColaboradorRepository colaboradorRepository,
@@ -87,6 +90,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                            AtaEncaminhamentoSugeridoRepository ataEncaminhamentoSugeridoRepository,
                            ConteudoRepository conteudoRepository,
                            EventoRepository eventoRepository,
+                           InscricaoEventoRepository inscricaoEventoRepository,
                            PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.colaboradorRepository = colaboradorRepository;
@@ -102,6 +106,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.ataEncaminhamentoSugeridoRepository = ataEncaminhamentoSugeridoRepository;
         this.conteudoRepository = conteudoRepository;
         this.eventoRepository = eventoRepository;
+        this.inscricaoEventoRepository = inscricaoEventoRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -117,6 +122,8 @@ public class DemoDataSeeder implements ApplicationRunner {
         seedConteudos();
         seedMentoriasEAtas();
         seedEventos();
+        // M13: precisa que eventos e mentorados já existam.
+        seedInscricoesEventos();
     }
 
     private void seedColaboradores() {
@@ -397,5 +404,35 @@ public class DemoDataSeeder implements ApplicationRunner {
                 Instant.parse("2026-06-20T14:00:00Z"), "Expo Center Norte", null, 150);
         cancelado.cancelar();
         eventoRepository.save(cancelado);
+    }
+
+    // M13 (H7.2) — João inscrito no Encontro Nacional (fixture pra "próximos eventos"/"inscrito"),
+    // Carlos inscrito no Workshop — dado real pra E2E, não só endpoint funcional sem uso.
+    private void seedInscricoesEventos() {
+        if (inscricaoEventoRepository.count() > 0) {
+            return;
+        }
+        Evento encontro = buscarEventoPorTitulo("Encontro Nacional SAW 2026");
+        Evento workshop = buscarEventoPorTitulo("Workshop de Gestão Financeira");
+        Mentorado joao = buscarMentoradoPorNome("João Silva");
+        Mentorado carlos = buscarMentoradoPorNome("Carlos Menezes");
+        if (encontro == null || workshop == null || joao == null || carlos == null) {
+            return;
+        }
+
+        encontro.ocuparVaga();
+        eventoRepository.save(encontro);
+        inscricaoEventoRepository.save(new InscricaoEvento(joao, encontro));
+
+        workshop.ocuparVaga();
+        eventoRepository.save(workshop);
+        inscricaoEventoRepository.save(new InscricaoEvento(carlos, workshop));
+    }
+
+    private Evento buscarEventoPorTitulo(String titulo) {
+        return eventoRepository.findAll().stream()
+                .filter(e -> e.getTitulo().equals(titulo))
+                .findFirst()
+                .orElse(null);
     }
 }

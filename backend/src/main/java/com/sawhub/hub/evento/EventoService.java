@@ -12,9 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class EventoService {
 
     private final EventoRepository eventoRepository;
+    private final InscricaoEventoRepository inscricaoEventoRepository;
 
-    public EventoService(EventoRepository eventoRepository) {
+    public EventoService(EventoRepository eventoRepository, InscricaoEventoRepository inscricaoEventoRepository) {
         this.eventoRepository = eventoRepository;
+        this.inscricaoEventoRepository = inscricaoEventoRepository;
     }
 
     @Transactional
@@ -41,11 +43,23 @@ public class EventoService {
         Evento evento = buscar(id);
         switch (novoStatus) {
             case AO_VIVO -> evento.iniciar();
-            case REALIZADO -> evento.finalizar();
+            case REALIZADO -> {
+                evento.finalizar();
+                marcarParticipacoes(evento);
+            }
             case CANCELADO -> evento.cancelar();
             case PROGRAMADO -> throw new IllegalArgumentException("Não é possível mover um evento de volta para Programado.");
         }
         return eventoRepository.save(evento);
+    }
+
+    // H7.2 (M13) — sem tela de check-in no Admin nesta leva: se o evento aconteceu e o mentorado
+    // não cancelou a inscrição, participou. Ver javadoc de InscricaoEvento.
+    private void marcarParticipacoes(Evento evento) {
+        for (InscricaoEvento inscricao : inscricaoEventoRepository.findByEventoIdAndStatus(evento.getId(), StatusInscricao.INSCRITA)) {
+            inscricao.marcarParticipacao();
+            inscricaoEventoRepository.save(inscricao);
+        }
     }
 
     private Evento buscar(UUID id) {

@@ -33,6 +33,14 @@ public class Evento extends BaseEntity {
 
     private Integer vagas;
 
+    // M13 (H7.2) — contador, não COUNT(*) ao vivo de propósito: mutado só dentro de
+    // ocuparVaga()/liberarVaga(), na mesma transação que salva a InscricaoEvento. Como Evento já
+    // tem @Version (BaseEntity), duas inscrições concorrentes na última vaga fazem a 2ª save()
+    // estourar ObjectOptimisticLockingFailureException (409, já mapeado desde o E14) em vez de
+    // estourar a capacidade silenciosamente — um COUNT(*) não teria essa proteção de graça.
+    @Column(name = "vagas_ocupadas", nullable = false)
+    private Integer vagasOcupadas = 0;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusEvento status;
@@ -85,6 +93,21 @@ public class Evento extends BaseEntity {
         }
     }
 
+    /** H7.2 — chamado dentro de EventoMentoradoService.inscrever(), mesma transação que salva a
+     * InscricaoEvento. Lança se não há vaga — a checagem de "tem vaga" é invariante do próprio
+     * Evento, não do service. */
+    public void ocuparVaga() {
+        if (vagas != null && vagasOcupadas >= vagas) {
+            throw new IllegalStateException("Evento sem vagas disponíveis.");
+        }
+        this.vagasOcupadas++;
+    }
+
+    /** Cancelamento de inscrição libera a vaga pra outro mentorado. */
+    public void liberarVaga() {
+        this.vagasOcupadas--;
+    }
+
     public String getTitulo() {
         return titulo;
     }
@@ -111,6 +134,15 @@ public class Evento extends BaseEntity {
 
     public Integer getVagas() {
         return vagas;
+    }
+
+    public Integer getVagasOcupadas() {
+        return vagasOcupadas;
+    }
+
+    /** null = sem limite de capacidade (mesmo significado de vagas == null). */
+    public Integer getVagasDisponiveis() {
+        return vagas == null ? null : vagas - vagasOcupadas;
     }
 
     public StatusEvento getStatus() {

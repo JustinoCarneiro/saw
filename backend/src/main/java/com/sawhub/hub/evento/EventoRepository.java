@@ -13,4 +13,16 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
             + "AND (:status IS NULL OR e.status = :status) "
             + "ORDER BY e.dataHora ASC")
     List<Evento> buscarComFiltro(@Param("tipo") TipoEvento tipo, @Param("status") StatusEvento status);
+
+    // M13 (H7.1) — spec.md diz "Dado eventos programados": só PROGRAMADO/AO_VIVO, diferente do
+    // buscarComFiltro acima (admin-wide, qualquer status). Status como lista vinculada (não
+    // literal de enum na query) — forma garantidamente suportada pelo Hibernate 6, mesmo padrão
+    // do resto do projeto (sempre parâmetro, nunca literal hardcoded em JPQL). Filtro de tema em
+    // memória no service — mesmo padrão de dataset pequeno já usado no resto do pacote (de/ate em
+    // MentoriaService).
+    @Query("SELECT e FROM Evento e "
+            + "WHERE e.status IN :statuses "
+            + "AND (:tipo IS NULL OR e.tipo = :tipo) "
+            + "ORDER BY e.dataHora ASC")
+    List<Evento> buscarPorStatusIn(@Param("statuses") List<StatusEvento> statuses, @Param("tipo") TipoEvento tipo);
 }

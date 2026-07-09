@@ -40,6 +40,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M10** | **E4 · Tarefas & Agenda** | **Médio** | **3.5d** | **H4.1–H4.5** |
 | **M11** | **E6 · Materiais & Dicas do Brayan** | **Médio** | **3.5d** | **H6.1–H6.3** |
 | **M12** | **E5 · Mentorias & Atas (lado mentorado)** | **Médio** | **4d** | **H5.1–H5.3** |
+| **M13** | **E7 · Eventos & Inscrições (lado mentorado)** | **Médio** | **4.5d** | **H7.1–H7.3** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -1370,6 +1371,138 @@ usá-lo — associar materiais recomendados a uma mentoria hoje só é possível
 uma leva futura, mesma categoria da pendência do H6.3 (M11): o dado/endpoint existe, falta só a UI
 de curadoria. Sem pendência de credencial externa.
 
+### M13 — E7 · Eventos & Inscrições (lado mentorado)
+
+**Por que Médio (na borda de Grande):** diferente de M12 (só leitura sobre dado que já existia),
+aqui H7.2 ("Inscrever-se") não tem NENHUM precedente no código — `Evento` (M06) é só CRUD admin,
+sem tabela de inscrição, sem contagem de ocupação. Este módulo cria uma entidade nova com máquina
+de estado própria (`InscricaoEvento`), uma migração nova, e uma corrida de concorrência real
+(duas inscrições simultâneas na última vaga) que precisa do mesmo tratamento de lock otimista já
+padronizado desde o E14 — não é só "mais uma tela de leitura" como M12.
+
+**Decisões de escopo & Suposições assumidas:**
+- **`InscricaoEvento` é uma entidade nova, com `@EmbeddedId(mentoradoId, eventoId)`** — mesmo
+  padrão de `ConteudoMentorado` (M11): unicidade natural (não faz sentido duas inscrições do mesmo
+  mentorado no mesmo evento), sem `BaseEntity` (incompatível com `@EmbeddedId`), `@Version` manual
+  replicado (mesmo motivo do M11: proteger contra corrida). Estados:
+  `StatusInscricao { INSCRITA, CANCELADA, PARTICIPOU }` — bate exatamente com a máquina do
+  `CLAUDE.md` § Máquinas de estado ("Disponível → Inscrito → Participado · desvio: → Cancelada"),
+  onde "Disponível" nunca é persistido (é só "a linha ainda não existe"). Cancelar e reinscrever
+  reaproveitam a MESMA linha (a chave composta impede duplicata) — cancelar não é permanente.
+- **`PARTICIPOU` é automático, não manual:** não existe (nem entra nesta leva) uma tela de check-in
+  de presença no Admin — construir isso seria escopo novo do lado Admin bem além de H7. Em vez
+  disso, `EventoService.finalizar()` (existente, `AO_VIVO → REALIZADO`) ganha um hook: toda
+  `InscricaoEvento` ainda `INSCRITA` daquele evento vira `PARTICIPOU` na mesma transição. Simples,
+  automático, consistente — se o evento aconteceu e o mentorado não cancelou, participou.
+- **Corrida na última vaga — mesmo padrão de lock otimista do E14/M11, não uma trava nova:**
+  `Evento` ganha um campo novo `vagasOcupadas` (contador, não `COUNT(*)` ao vivo) mutado só dentro
+  de `inscrever()`/`cancelar()`, na MESMA transação que salva a `InscricaoEvento` — como `Evento` já
+  tem `@Version` (`BaseEntity`), duas inscrições concorrentes na última vaga fazem a segunda `save()`
+  do `Evento` estourar `ObjectOptimisticLockingFailureException` (409, já mapeado em
+  `GlobalExceptionHandler` desde o E14), não um estouro silencioso de vaga. Um `COUNT(*)` ao vivo
+  não teria essa proteção de graça — só um campo mutado dentro do `@Version` já existente tem.
+- **Sem endpoint de calendário separado (H7.3):** mesma decisão do M12 (sem rota de detalhe) — a
+  escala é pequena (poucos eventos, ver seed), `GET /mentorado/eventos` já traz `dataHora` de cada
+  um, e o frontend agrupa por dia num componente de calendário sem round-trip extra.
+  "Próximos eventos" (H7.2, pós-inscrição) também não é endpoint separado: a mesma lista já traz um
+  campo `inscrito: boolean` por evento, e o frontend separa/realça client-side — mesmo padrão de
+  agenda/histórico do M12.
+- **Escopo de leitura limitado a `PROGRAMADO`/`AO_VIVO`:** `spec.md` H7.1 diz "Dado eventos
+  **programados**" — diferente de M12 (que tem histórico explícito em H5.2), H7 não pede uma visão
+  de eventos passados. `GET /mentorado/eventos` só retorna esses dois status; `REALIZADO`/
+  `CANCELADO` ficam de fora por decisão consciente, não esquecimento.
+- **`linkOnline` ganha `@Pattern(regexp = "^https?://.+")` proativamente**, antes mesmo do
+  `revisor-seguranca` apontar — mesma lição do M12 (achado 2): `Evento.linkOnline` nunca foi
+  validado, e este módulo é a primeira vez que ele vira link clicável pro mentorado (Admin só usava
+  internamente até aqui). Aplicar o padrão já conhecido de cara evita reabrir o mesmo achado pela
+  terceira vez.
+
+## Modelagem de banco (M13)
+
+```sql
+-- V10__inscricao_evento.sql
+ALTER TABLE evento ADD COLUMN vagas_ocupadas INT NOT NULL DEFAULT 0;
+
+CREATE TABLE inscricao_evento (
+    mentorado_id    UUID NOT NULL REFERENCES mentorado(id) ON DELETE CASCADE,
+    evento_id       UUID NOT NULL REFERENCES evento(id) ON DELETE CASCADE,
+    status          VARCHAR(20) NOT NULL DEFAULT 'INSCRITA',
+    versao          BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (mentorado_id, evento_id),
+    CONSTRAINT chk_inscricao_status CHECK (status IN ('INSCRITA','CANCELADA','PARTICIPOU'))
+);
+-- Sem criado_em de propósito, mesmo padrão do ConteudoMentorado (M11): não estende BaseEntity
+-- (@EmbeddedId incompatível), e nenhuma história pede "desde quando" — não adicionar campo sem
+-- uso concreto.
+
+-- evento nunca ganhou esses dois índices no V5 (M06) — aproveitado aqui já que este módulo é o
+-- primeiro a filtrar/ordenar por eles em volume (agenda + calendário do mentorado).
+CREATE INDEX idx_evento_status ON evento(status);
+CREATE INDEX idx_evento_data_hora ON evento(data_hora);
+CREATE INDEX idx_inscricao_evento_mentorado ON inscricao_evento(mentorado_id);
+```
+
+## Contratos de API (M13)
+
+```jsonc
+// hasRole("MENTORADO") — só PROGRAMADO/AO_VIVO (ver Suposições acima)
+GET /api/v1/mentorado/eventos?tipo=&tema=
+[{
+  "id": "uuid", "titulo": "Encontro Nacional SAW 2026", "tipo": "AO_VIVO", "tema": "Gestão de restaurantes",
+  "dataHora": "2026-09-10T19:00:00Z", "local": null, "linkOnline": "https://meet.google.com/encontro-saw",
+  "vagas": 200, "vagasDisponiveis": 198, "status": "PROGRAMADO", "inscrito": true
+}]
+// vagasDisponiveis é null se vagas for null (evento sem limite de capacidade)
+
+POST /api/v1/mentorado/eventos/{id}/inscricao
+// 201 -> mesma forma acima, "inscrito": true
+// 409 (IllegalStateException) se vagasDisponiveis <= 0, ou se o evento não está PROGRAMADO/AO_VIVO
+// 404 se o evento não existe
+
+DELETE /api/v1/mentorado/eventos/{id}/inscricao
+// 204 — cancela a própria inscrição (nunca a de outro mentorado: sempre resolvida por
+// mentorado+evento, nunca por um id de InscricaoEvento vindo de fora)
+// 404 se não existe inscrição ativa (INSCRITA) deste mentorado nesse evento
+```
+
+## Rastreabilidade história ↔ módulo (M13)
+
+| História | Cobertura |
+|---|---|
+| H7.1 — ver eventos ao vivo/presenciais, filtrar tipo/tema, ver data/local/participantes | `GET /mentorado/eventos?tipo=&tema=` (`vagasDisponiveis` cobre "participantes") |
+| H7.2 — inscrever-se num evento com vagas | `POST /mentorado/eventos/{id}/inscricao`, campo `inscrito` reflete "Próximos eventos" |
+| H7.3 — calendário de eventos por dia | `GET /mentorado/eventos` (frontend agrupa por `dataHora`, sem rota nova) |
+
+**Status: ✅ M13 concluído** (2026-07-09) — backend (226/226 testes, incluindo `InscricaoEvento`/
+`StatusInscricao` novos, `EventoMentoradoServiceTest` com 12 testes cobrindo listar/inscrever/
+cancelar/corrida de vaga/reinscrição, `EventoServiceTest` com o hook de participação novo) +
+frontend (`EventosMentoradoPage`, rota `/mentorado/eventos` + nav no `MentoradoShell`, calendário
+mensal construído do zero — sem precedente nem lib externa) + E2E (`eventos.spec.ts`, 4 testes) —
+**46/46 verde na suíte completa**.
+
+**Achado ao vivo, antes do `revisor-seguranca`:** mesma classe de drift do M12 (lição 4) — o
+evento seedado "Workshop de Gestão Financeira" estava `REALIZADO` no banco de dev, não
+`PROGRAMADO` como o `DemoDataSeeder` atual sempre gera, resquício de uma verificação ao vivo bem
+anterior nesta sessão (M06). Corrigido resetando a linha pra bater com o seeder — não era bug do
+código novo, o filtro `PROGRAMADO`/`AO_VIVO` estava correto desde o início.
+
+**`revisor-seguranca`: sem achado bloqueante** — primeira revisão totalmente limpa desde M08/M09/
+M10 (a proatividade de aplicar `@Pattern` em `linkOnline` antes mesmo da revisão, lição do M12,
+compensou). Duas notas informativas, nenhuma bloqueante: (1) validação de `linkOnline` não cobre
+retroativamente eventos hipotéticos criados antes desta migração num banco de produção futuro —
+não é falha deste código, é cuidado de dado ao implantar; (2) janela de corrida genuína, baixo
+impacto: se uma inscrição for criada exatamente durante a transação que marca um evento como
+`REALIZADO`, essa inscrição pode ficar presa em `INSCRITA` sem nunca virar `PARTICIPOU` (não vaza
+dado nem quebra RBAC, só deixa um registro histórico raro e levemente inconsistente).
+
+**Pendências reais, documentadas, não escondidas:** (1) a janela de corrida `inscrever()` vs.
+`marcarParticipacoes()` acima — aceitável nesta escala (10-15 usuários), sem tela de check-in
+manual no Admin nesta leva, revisitar se o volume crescer; (2) sem UI de edição no Admin pra
+`Evento` (endpoint `PUT /admin/eventos/{id}` já existia desde o M06, mas o frontend Admin nunca
+ligou um formulário de edição a ele) — achado ao ler `EventosPage.tsx` (Admin) durante o Blueprint,
+não é escopo deste módulo mentee-facing, só registrado pra não se perder. Sem pendência de
+credencial externa.
+
 ## Fórmula de prazo
 
 ```
@@ -1397,14 +1530,14 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | — | E17 · Painel Consolidado & Ranking | Grande · risco médio | — | ✅ Concluído |
 | 1 | **E14 · Financeiro & DRE** | Grande · risco alto | 6d | ✅ Concluído |
 | 2 | E13 · Comercial & Vendas | Grande | 6d + ~1d (H1.3) | ✅ Concluído — backend (90/90 testes) + `revisor-seguranca` (M1/M2/L2/L3 corrigidos) + frontend (dashboard/funil/ranking) + E2E (17/17, `comercial.spec.ts`) |
-| 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas (lado Admin) + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo. H5.1-H5.3 são histórias do mentorado (não do Admin) — dado pronto aqui, tela deferida pra quando os módulos do mentorado entrassem no pipeline; ver linha 9 (M12) |
+| 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas (lado Admin) + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo. H5.1-H5.3 (Mentorias) e H7.1-H7.3 (Eventos) são histórias do mentorado (não do Admin) — dado/CRUD pronto aqui, tela deferida pra quando os módulos do mentorado entrassem no pipeline; ver linha 9 (M12) e linha 10 (M13) |
 | 4 | Google OAuth (fast-follow do E1) | Pequeno | 1.5d | ✅ Concluído — backend (141/141 testes) + `revisor-seguranca` (2 achados corrigidos: oráculo de enumeração de contas + nota pendurada) + frontend (botão condicional + tradução de erro) + E2E (24/24, `google-oauth.spec.ts`). Fluxo real (redirect→consentimento→callback) verificado só até a borda — sem app Google Cloud Console configurado neste ambiente |
 | 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ✅ Concluído — backend (152/152 testes) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado) + frontend (primeira rota `/mentorado` de verdade) + E2E (29/29, `dashboard-mentorado.spec.ts`) |
 | 6 | E3 · Metas Estratégicas | Médio | 3.5d | ✅ Concluído — backend (165/165 testes, 1ª entidade nova desde o M06) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado nos caminhos de escrita) + frontend (`MetasPage` self-service) + E2E (32/32, `metas.spec.ts`) |
 | 7 | E4 · Tarefas & Agenda | Médio | 3.5d | ✅ Concluído — backend (178/178 testes) + `revisor-seguranca` (sem achado bloqueante: peso do ranking protegido, isolamento Tarefa→Meta confirmado, migração idempotente, máquina de estado com guardas, JPQL seguro) + frontend (`TarefasPage` self-service) + E2E (35/35, `tarefas.spec.ts`) |
 | 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ✅ Concluído — backend (183/183 testes) + `revisor-seguranca` (4 achados corrigidos: reverse tabnabbing, `Plano.ordinal()` duplicado, corrida de criação concorrente, `url` sem validação de esquema) + frontend (`MateriaisPage`) + E2E (38/38, `materiais.spec.ts`). Indicadores agregados de consumo (H6.3) não implementados — pendência real |
 | 9 | E5 · Mentorias & Atas (lado mentorado) | Médio | 4d | ✅ Concluído — backend (213/213 testes) + `revisor-seguranca` (2 achados corrigidos: injeção de CR solto no .ics, `linkOnline` sem validação de esquema) + frontend (`MentoriasPage`) + E2E (42/42, `mentorias.spec.ts`). Fecha H5.1-H5.3, deferidas desde o M06. Achado ao vivo: `LazyInitializationException` na listagem Admin, corrigido. Pendência: UI de curadoria de materiais recomendados no Admin (endpoint existe, tela não) |
-| 10 | E7 · Eventos & Inscrições | Médio | 3.5d | ⬜ |
+| 10 | E7 · Eventos & Inscrições (lado mentorado) | Médio | 4.5d | ✅ Concluído — backend (226/226 testes) + `revisor-seguranca` (sem achado bloqueante — primeira revisão limpa desde M08-M10) + frontend (`EventosMentoradoPage`, calendário próprio) + E2E (46/46, `eventos.spec.ts`). Fecha H7.1-H7.3, deferidas desde o M06. Nova entidade `InscricaoEvento` com corrida de última vaga protegida por `@Version`. Pendência: janela de corrida rara em `marcarParticipacoes` (baixo impacto) |
 | 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ⬜ `revisor-seguranca` obrigatório, mesmo tratamento do Auth |
 | 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ⬜ |
 | 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ⬜ |

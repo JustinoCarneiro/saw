@@ -372,3 +372,19 @@ export interface Evento {
   vagas: number | null;
   status: StatusEvento;
 }
+
+// M13 · E7 (lado mentorado) — mentee-facing, com vagasDisponiveis (derivado) e inscrito (estado
+// do mentorado atual), nenhum dos dois existe na visão Admin acima.
+export interface EventoMentorado {
+  id: string;
+  titulo: string;
+  tipo: TipoEvento;
+  tema: string | null;
+  dataHora: string;
+  local: string | null;
+  linkOnline: string | null;
+  vagas: number | null;
+  vagasDisponiveis: number | null;
+  status: StatusEvento;
+  inscrito: boolean;
+}

@@ -1,0 +1,256 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: var(--text-soft);
+  margin-top: -16px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.select,
+.searchInput {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.searchInput {
+  min-width: 220px;
+}
+
+.error {
+  color: var(--danger);
+  padding: 12px;
+  background: var(--danger-bg);
+  border-radius: 6px;
+}
+
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-soft);
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mesLabel {
+  font-weight: 600;
+  color: var(--text);
+  min-width: 160px;
+}
+
+.navButton,
+.clearButton {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text-soft);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.clearButton {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.navButton:hover,
+.clearButton:hover {
+  color: var(--text);
+  border-color: var(--text-soft);
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.weekdayLabel {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 4px 0;
+}
+
+.emptyCell {
+  visibility: hidden;
+}
+
+.dayCell {
+  position: relative;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px 0;
+  color: var(--text-soft);
+  cursor: default;
+  font-size: 13px;
+}
+
+.dayCellWithEvent {
+  color: var(--text);
+  cursor: pointer;
+  border-color: var(--line);
+}
+
+.dayCellWithEvent:hover {
+  border-color: var(--gold);
+}
+
+.dayCellSelected {
+  background: var(--gold);
+  color: var(--on-gold);
+  border-color: var(--gold);
+}
+
+.dayDot {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.dayCellSelected .dayDot {
+  background: var(--on-gold);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tipo {
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.titulo {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.dataHora {
+  font-size: 14px;
+  color: var(--gold);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.localLine {
+  font-size: 13px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.vagasLine {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 8px;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.subscribeButton {
+  background: var(--gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.subscribeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  background: transparent;
+  border: 1px solid var(--success);
+  color: var(--success);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionButton {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text-soft);
+  text-decoration: none;
+}
+
+.actionButton:hover {
+  border-color: var(--text-soft);
+  color: var(--text);
+}
