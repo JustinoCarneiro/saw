@@ -1,9 +1,19 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { apiClient } from '../../shared/lib/apiClient';
 import { firstPermittedRoute } from '../../shared/lib/moduloRoutes';
+import type { OAuth2ConfigResponse } from '../../shared/lib/types';
 import styles from './LoginPage.module.css';
+
+const OAUTH_ERROR_LABEL: Record<string, string> = {
+  email_nao_verificado: 'Seu e-mail do Google não está verificado. Tente outra conta ou entre com e-mail e senha.',
+  // Mensagem propositalmente genérica (H1.1) — não confirma nem nega se existe conta SAW HUB
+  // pra esse e-mail (achado do revisor-seguranca: oráculo de enumeração de contas).
+  login_nao_permitido: 'Não foi possível entrar com essa conta Google. Tente e-mail e senha ou solicite acesso abaixo.',
+  erro_desconhecido: 'Não foi possível entrar com o Google agora. Tente novamente.',
+};
 
 export function LoginPage() {
   const { user, loading, login } = useAuth();
@@ -13,9 +23,36 @@ export function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+
+  useEffect(() => {
+    apiClient.get<OAuth2ConfigResponse>('/auth/oauth2-config')
+      .then((res) => setGoogleEnabled(res.data.googleEnabled))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
+
+  useEffect(() => {
+    const codigo = new URLSearchParams(window.location.search).get('erroOAuth');
+    if (codigo) {
+      setError(OAUTH_ERROR_LABEL[codigo] ?? OAUTH_ERROR_LABEL.erro_desconhecido);
+    }
+  }, []);
 
   if (!loading && user?.perfil === 'ADMIN') {
     return <Navigate to={firstPermittedRoute(user.modulosPermitidos)} replace />;
+  }
+
+  // MENTORADO autentica com sucesso (e-mail/senha ou Google), mas ainda não tem área própria —
+  // E2+ não construído (ver ROADMAP.md M07). Mensagem clara em vez de deixar a tela travada
+  // sem explicação nenhuma.
+  if (!loading && user?.perfil === 'MENTORADO') {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card} style={{ padding: 48, textAlign: 'center' }}>
+          <p>Você entrou, {user.nome}. A área do mentorado ainda está em construção.</p>
+        </div>
+      </div>
+    );
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -102,6 +139,13 @@ export function LoginPage() {
             <button className={styles.submit} type="submit" disabled={submitting}>
               {submitting ? 'Entrando…' : 'Entrar'}
             </button>
+            {googleEnabled && (
+              // Redirect de navegador de verdade (não uma chamada do apiClient) — o fluxo OAuth2
+              // precisa sair da SPA e ir pro Google, não dá pra fazer via AJAX.
+              <a className={styles.outlineButton} href="/oauth2/authorization/google">
+                Entrar com Google
+              </a>
+            )}
             <Link className={styles.outlineButton} to="/solicitar-acesso">
               Solicitar acesso
             </Link>

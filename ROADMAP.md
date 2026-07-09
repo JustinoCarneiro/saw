@@ -34,6 +34,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M04** | **E14 · Financeiro & DRE** | **Grande · risco alto** | **6d** | **H14.1–H14.4** |
 | **M05** | **E13 · Comercial & Vendas** | **Grande** | **6d + ~1d (fast-follow H1.3)** | **H13.1–H13.3 + H1.3** |
 | **M06** | **E11 · Gestão Admin + E5 · Mentorias & Atas + diferencial de IA** | **Grande** | **6d + ~2-3d (IA)** | **H11.1–H11.4 + H5.1–H5.3** |
+| **M07** | **Google OAuth (fast-follow do E1)** | **Pequeno** | **1.5d** | **H1.2** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -683,6 +684,92 @@ o pipeline de IA foi verificado só até a borda (falha limpa e clara sem `OPENA
 por falta de credenciais neste ambiente; validar com chaves reais antes de qualquer demo que
 dependa da transcrição funcionar de fato.
 
+### M07 — Google OAuth (fast-follow do E1)
+
+**Por que Pequeno:** cai na máquina de sessão/RBAC já pronta (`SecurityContextRepository`,
+`AppUserPrincipal`, `CustomUserDetailsService`) — não precisa de estado novo, só um segundo jeito
+de chegar no mesmo `AppUserPrincipal`.
+
+**H1.2 do `spec.md`:** "Como mentorado, quero entrar com o Google... se for o 1º acesso, minha
+conta é vinculada." **Decisão de escopo:** contas nascem por ação do Admin (E11, `POST
+.../a-partir-do-lead`), não por auto-cadastro — então "vincular" aqui significa **casar pelo
+e-mail com uma conta que já existe**, nunca criar uma nova. Login Google com e-mail sem `Usuario`
+correspondente é rejeitado com mensagem apontando pra "Solicitar acesso" (H1.3, já existe desde o
+M05), não silenciosamente cria conta. Reaproveita `CustomUserDetailsService.loadUserByUsername`
+tal qual — mesmo cálculo de authorities pra ADMIN e MENTORADO, zero lógica duplicada.
+
+**Suposição, não coberta pelo `spec.md`:** a história é escrita "como mentorado", mas nada impede
+Admin de usar Google também (o lookup por e-mail é agnóstico de perfil) — implementado pros dois.
+Pós-login: ADMIN cai em `/admin` (o `LoginPage` já resolve o primeiro módulo permitido); MENTORADO
+autentica com sucesso mas **não tem área própria ainda** (E2+ não construído) — mesmo "buraco
+esperado" já documentado no M06 pra H5.1/H5.3, não uma falha desta leva.
+
+**Decisão de arquitetura — sem credencial, sem risco pro que já funciona:** declarar
+`spring.security.oauth2.client.registration.google.client-id` vazio no `application.yml` faz o
+Spring Boot falhar o *boot* (`ClientRegistration.validate()` exige client-id não-vazio assim que a
+propriedade existe). Por isso o `ClientRegistrationRepository` é montado **programaticamente**
+(`CommonOAuth2Provider.GOOGLE` + client-id/secret vindos de env) só dentro de um `if` no
+`SecurityConfig`, e `.oauth2Login(...)` só entra no filter chain quando as duas envs
+(`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`) existem. Sem elas, `/oauth2/authorization/google`
+não tem nenhum filtro do Spring Security registrado pra tratá-la — cai no mesmo comportamento
+padrão de qualquer rota inexistente da aplicação (401 genérico via `JsonAuthEntryPoint`, não um
+404 "puro" do container, porque o forward pro `/error` volta a passar pelo filter chain e cai em
+`anyRequest().authenticated()` — comportamento preexistente, não específico do OAuth2). Login
+e-mail/senha continua idêntico, nada quebra, nenhuma etapa do fluxo OAuth2 fica exposta.
+`GET /api/v1/auth/oauth2-config` (público) expõe se está habilitado, pro frontend só mostrar o
+botão "Entrar com Google" quando fizer sentido — sem botão morto em dev/demo sem credencial.
+
+**Pendência explícita, mesma classe do M06:** sem app OAuth registrado no Google Cloud Console
+(Marcos confirmou que ainda não tem), o fluxo real (redirect pro Google, consentimento, callback)
+nunca roda de ponta a ponta neste ambiente. Verificado até a borda: lookup de e-mail
+(`GoogleOAuth2UserService`, testado com atributos OAuth2 mockados), rejeição de e-mail não
+verificado, rejeição de e-mail sem conta, e que o boot/login e-mail-senha não quebram com ou sem
+as envs configuradas. Validar o redirect real quando houver credencial.
+
+**Achado da revisão de segurança (`revisor-seguranca`), corrigido:** o código de erro
+`conta_nao_encontrada` (rejeição de e-mail do Google sem `Usuario` correspondente) era um oráculo
+de enumeração de contas — violava o mesmo princípio do H1.1 ("mensagem de erro clara sem revelar
+qual campo falhou") que o login e-mail/senha já respeita via `AuthFailureHandler` +
+`CustomUserDetailsService` (mensagem genérica "Credenciais inválidas" tanto pra `Usuario` quanto
+`Colaborador`/`Mentorado` ausente). Corrigido: código renomeado pra `login_nao_permitido` com
+mensagem neutra ("Não foi possível concluir o login com esta conta Google"), sem confirmar nem
+negar existência de conta — o link "Solicitar acesso" já fica sempre visível na tela de login
+independente do motivo da rejeição. `email_nao_verificado` ficou como estava (não revela nada
+sobre a existência de conta SAW HUB, só o estado de verificação no próprio Google).
+
+## Contratos de API (M07)
+
+```jsonc
+GET /api/v1/auth/oauth2-config          // público
+{ "googleEnabled": false }
+
+GET /oauth2/authorization/google        // só existe se googleEnabled=true; gerenciado pelo Spring Security
+GET /login/oauth2/code/google           // callback do Google; gerenciado pelo Spring Security
+// Sucesso: redireciona pro frontend autenticado (cookie de sessão já setado no redirect).
+// Falha (e-mail não verificado: código email_nao_verificado; sem Usuario correspondente: código
+// login_nao_permitido, mensagem genérica de propósito — ver achado do revisor-seguranca abaixo):
+// redireciona pro /login?erroOAuth=<código>, frontend traduz pra mensagem amigável.
+```
+
+## Rastreabilidade história ↔ módulo (M07)
+
+| História | Cobertura |
+|---|---|
+| H1.2 — entrar com Google | `GET /oauth2/authorization/google` + `GoogleOAuth2UserService` (casa por e-mail com `Usuario` existente) |
+
+**Status: ✅ M07 concluído** (2026-07-09) — backend (141/141 testes, incluindo `GoogleOAuth2UserServiceTest`
+e `contextLoads` provando que o boot não quebra sem credenciais Google configuradas), 2 achados do
+`revisor-seguranca` corrigidos (oráculo de enumeração de contas no código de erro
+`conta_nao_encontrada` → `login_nao_permitido`, mais esta própria nota de achado que estava
+pendurada sem conteúdo — ambos detalhados na seção do Blueprint acima), frontend (botão condicional
++ tradução de erro + mensagem de "área em construção" pro Mentorado), verificação ao vivo via curl
+(boot sem credenciais, `oauth2-config` retornando `{"googleEnabled":false}`, login e-mail/senha
+íntegro, `/oauth2/authorization/google` corretamente inacessível sem credencial) e E2E
+(`google-oauth.spec.ts`, 3 testes) — 24/24 verde na suíte completa. **Pendência explícita, mesma
+classe do M06**: sem app OAuth registrado no Google Cloud Console, o fluxo real (redirect →
+consentimento → callback) nunca rodou de ponta a ponta neste ambiente; validar com credenciais
+reais antes de qualquer demo que dependa do login Google funcionar de fato.
+
 ## Fórmula de prazo
 
 ```
@@ -711,7 +798,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 1 | **E14 · Financeiro & DRE** | Grande · risco alto | 6d | ✅ Concluído |
 | 2 | E13 · Comercial & Vendas | Grande | 6d + ~1d (H1.3) | ✅ Concluído — backend (90/90 testes) + `revisor-seguranca` (M1/M2/L2/L3 corrigidos) + frontend (dashboard/funil/ranking) + E2E (17/17, `comercial.spec.ts`) |
 | 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo |
-| 4 | Google OAuth (fast-follow do E1) | Pequeno | 1.5d | ⬜ Cai na mesma máquina de sessão/RBAC já pronta |
+| 4 | Google OAuth (fast-follow do E1) | Pequeno | 1.5d | ✅ Concluído — backend (141/141 testes) + `revisor-seguranca` (2 achados corrigidos: oráculo de enumeração de contas + nota pendurada) + frontend (botão condicional + tradução de erro) + E2E (24/24, `google-oauth.spec.ts`). Fluxo real (redirect→consentimento→callback) verificado só até a borda — sem app Google Cloud Console configurado neste ambiente |
 | 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ⬜ |
 | 6 | E3 · Metas Estratégicas | Médio | 3.5d | ⬜ |
 | 7 | E4 · Tarefas & Agenda | Médio | 3.5d | ⬜ Backend parcial já existe (`Encaminhamento`, peso 1/2, usado pelo E17) |

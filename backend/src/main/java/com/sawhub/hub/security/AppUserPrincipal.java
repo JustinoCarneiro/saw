@@ -8,10 +8,12 @@ import com.sawhub.hub.team.Area;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 
 /**
  * Principal próprio guardado na sessão — nunca a entidade JPA crua (o proxy do Hibernate
@@ -23,9 +25,14 @@ import org.springframework.security.core.userdetails.UserDetails;
  * UsernamePasswordAuthenticationToken, exigem os mixins de SecurityJackson2Modules).
  * getAuthorities()/getPassword()/getUsername() (exigidos pela interface UserDetails) ficam
  * @JsonIgnore porque colidem em nome/tipo com os getters "reais" usados pelo Jackson.
+ *
+ * Implementa também {@link OAuth2User} (M07 — Google OAuth): o mesmo principal serve pros dois
+ * fluxos de login (e-mail/senha via {@code DaoAuthenticationProvider} e Google via
+ * {@code oauth2Login()}), então todo o resto do app (ModuloAccessAspect, @AuthenticationPrincipal
+ * AppUserPrincipal nos controllers) funciona igual não importa por qual caminho a sessão nasceu.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public final class AppUserPrincipal implements UserDetails {
+public final class AppUserPrincipal implements UserDetails, OAuth2User {
 
     private final UUID usuarioId;
     private final String email;
@@ -107,6 +114,23 @@ public final class AppUserPrincipal implements UserDetails {
     @JsonIgnore
     @Override
     public String getUsername() {
+        return email;
+    }
+
+    // OAuth2User (M07): não guardamos os atributos crus do Google na sessão — depois do login
+    // ninguém no app lê getAttributes() do principal já autenticado (mesmo raciocínio do
+    // getPasswordHash() acima), e evita carregar PII do Google (nome/foto/locale) no Redis à toa.
+    @JsonIgnore
+    @Override
+    public Map<String, Object> getAttributes() {
+        return Map.of();
+    }
+
+    // AuthenticatedPrincipal#getName() — usado por Spring Security internamente (ex.: logs de
+    // auditoria), não pelo resto do app (que já usa getEmail()/getUsuarioId()).
+    @JsonIgnore
+    @Override
+    public String getName() {
         return email;
     }
 }

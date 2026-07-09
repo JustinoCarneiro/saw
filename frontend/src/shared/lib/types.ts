@@ -18,6 +18,11 @@ export interface MeResponse {
   modulosPermitidos: Modulo[];
 }
 
+// M07 · Google OAuth
+export interface OAuth2ConfigResponse {
+  googleEnabled: boolean;
+}
+
 export interface Colaborador {
   id: string;
   nome: string;
