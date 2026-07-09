@@ -1,0 +1,79 @@
+import { expect, test } from '@playwright/test';
+import { loginAs } from './helpers';
+
+test.describe('M10 — E4 Tarefas & Agenda', () => {
+  test('mentorado cria uma tarefa, inicia, conclui, reabre, filtra e busca', async ({ page }) => {
+    // Título único por execução — mesma razão do M09 (Meta/Tarefa não têm endpoint de exclusão).
+    const titulo = `Renegociar fornecedor X ${Date.now()}`;
+
+    await loginAs(page, 'marina@sabordamarina.com.br');
+    await expect(page).toHaveURL(/\/mentorado/);
+
+    await page.getByRole('link', { name: 'Tarefas' }).click();
+    await expect(page).toHaveURL(/\/mentorado\/tarefas/);
+
+    // Criar
+    await page.getByRole('button', { name: 'Nova tarefa' }).click();
+    await page.getByLabel('Título').fill(titulo);
+    await page.getByLabel('Prazo').fill('2026-12-31');
+    await page.getByLabel('Prioridade').selectOption('ALTA');
+    await page.getByRole('button', { name: 'Criar tarefa' }).click();
+
+    const linha = () => page.locator('[data-testid^="tarefa-row-"]', { hasText: titulo });
+    await expect(linha()).toBeVisible();
+    await expect(linha().getByText('Pendente')).toBeVisible();
+    await expect(linha().getByText('Alta')).toBeVisible();
+
+    // Filtrar por Pendentes -> aparece
+    await page.getByRole('button', { name: 'Pendentes' }).click();
+    await expect(linha()).toBeVisible();
+
+    // Buscar por um trecho do título único -> aparece; busca por algo que não bate -> some
+    await page.getByRole('button', { name: 'Todas' }).click();
+    await page.getByPlaceholder('Buscar tarefas...').fill(titulo);
+    await expect(linha()).toBeVisible();
+    await page.getByPlaceholder('Buscar tarefas...').fill('xxxxxxxxxxxxxxxxxxxxnaoexiste');
+    await expect(page.getByText('Nenhuma tarefa encontrada.')).toBeVisible();
+    await page.getByPlaceholder('Buscar tarefas...').fill('');
+
+    // Iniciar -> Em andamento
+    await linha().getByRole('button', { name: 'Iniciar' }).click();
+    await expect(linha().getByText('Em andamento')).toBeVisible();
+
+    // Concluir -> o filtro atual é "Todas" (nunca saiu dele desde a busca acima), então a linha
+    // CONTINUA visível — só o pill de status muda. Essa espera (em vez de checar count(0), que só
+    // "passaria" por coincidência durante o instante em que tarefas===null/Carregando) é o que
+    // sincroniza com o recarregamento disparado por avancarStatus() antes do próximo clique.
+    await linha().getByRole('button', { name: 'Concluir' }).click();
+    await expect(linha().getByText('Concluída')).toBeVisible();
+    await page.getByRole('button', { name: 'Concluídas' }).click();
+    await expect(linha()).toBeVisible();
+    await expect(linha().getByRole('button', { name: 'Editar' })).toHaveCount(0);
+
+    // Reabrir -> volta pra Pendente
+    await linha().getByRole('button', { name: 'Reabrir' }).click();
+    await expect(page.getByText(titulo)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Todas' }).click();
+    await expect(linha().getByText('Pendente')).toBeVisible();
+  });
+
+  test('resumo reflete o dado real seedado de Fernanda Lima (10 tarefas, todas concluídas)', async ({ page }) => {
+    // DemoDataSeeder: Fernanda tem 10 encaminhamentos, todos concluído=true no seed original.
+    await loginAs(page, 'fernanda@cantinadafernanda.com.br');
+    await page.getByRole('link', { name: 'Tarefas' }).click();
+    await expect(page.getByText('10 tarefa(s) no total.')).toBeVisible();
+  });
+
+  test('isolamento por tenant: mentorado só vê as próprias tarefas seedadas', async ({ page }) => {
+    // Carlos Menezes: 10 encaminhamentos do seedMentorados + 1 materializado via ata do M06
+    // (AtaService.publicar -> "Revisar precificação do buffet", mentoria em grupo com Ana) = 11.
+    // Se a query vazasse dado de outro mentorado, o total não bateria com o seed conhecido.
+    await loginAs(page, 'carlos@pointdocarlos.com.br');
+    await expect(page).toHaveURL(/\/mentorado/);
+
+    const res = await page.request.get('/api/v1/mentorado/tarefas');
+    expect(res.status()).toBe(200);
+    const tarefas = await res.json();
+    expect(tarefas).toHaveLength(11);
+  });
+});

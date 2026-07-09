@@ -6,11 +6,12 @@ import styles from './MentoradoShell.module.css';
 const NAV_ITEMS = [
   { to: '/mentorado', label: 'Dashboard', end: true },
   { to: '/mentorado/metas', label: 'Metas', end: false },
+  { to: '/mentorado/tarefas', label: 'Tarefas', end: false },
 ];
 
 // M08 — primeira rota de verdade do perfil MENTORADO (antes disso só existia um placeholder
-// pós-login). M09 acrescenta a 2ª página (Metas) — navegação cresce conforme E4/etc. entrarem
-// (CLAUDE.md § MVP: Dashboard → Metas/Tarefas → Mentorias → resto). Não reusa Sidebar (é
+// pós-login). M09 acrescentou Metas, M10 acrescenta Tarefas — navegação cresce conforme E5/etc.
+// entrarem (CLAUDE.md § MVP: Dashboard → Metas/Tarefas → Mentorias → resto). Não reusa Sidebar (é
 // exclusiva do Modulo/RBAC por área do Admin/E15 — Mentorado não tem área).
 export function MentoradoShell() {
   const { user, loading, logout } = useAuth();

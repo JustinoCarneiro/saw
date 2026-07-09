@@ -16,9 +16,9 @@ public interface ConsolidatedRepository extends Repository<Mentorado, UUID> {
                 m.id, m.nome, m.negocio, m.crescimentoFaturamentoPct,
                 m.ferramentasConcluidas, m.ferramentasTotal,
                 COUNT(e),
-                SUM(CASE WHEN e.concluido = true THEN 1L ELSE 0L END),
+                SUM(CASE WHEN e.status = com.sawhub.hub.mentorado.StatusTarefa.CONCLUIDA THEN 1L ELSE 0L END),
                 COALESCE(SUM(CAST(e.peso AS long)), 0L),
-                COALESCE(SUM(CASE WHEN e.concluido = true THEN CAST(e.peso AS long) ELSE 0L END), 0L)
+                COALESCE(SUM(CASE WHEN e.status = com.sawhub.hub.mentorado.StatusTarefa.CONCLUIDA THEN CAST(e.peso AS long) ELSE 0L END), 0L)
             )
             FROM Mentorado m LEFT JOIN Encaminhamento e ON e.mentorado = m
             GROUP BY m.id, m.nome, m.negocio, m.crescimentoFaturamentoPct, m.ferramentasConcluidas, m.ferramentasTotal

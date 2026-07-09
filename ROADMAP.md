@@ -1075,25 +1075,104 @@ PATCH /api/v1/mentorado/tarefas/{id}/status // { "novoStatus": "EM_ANDAMENTO" | 
 | H4.5 — Admin atribui peso | já satisfeita desde o M06 (`AtualizarSugestaoRequest`) |
 
 **Status: ✅ M10 concluído** (2026-07-09) — backend (178/178 testes, incluindo `TarefaServiceTest` novo
-e `ConsolidatedRepositoryTest` reconfirmado pós-migração de `e.concluido` → `e.status`), evolução de
-schema em entidade compartilhada (`Encaminhamento`, migração `V7__tarefas.sql`) sem regressão em M08
-em M06/E17. `revisor-seguranca` sem achado bloqueante — **6 pontos escrutinados, nenhuma falha real**:
-(1) peso do ranking protegido: `CriarTarefaRequest`/`AtualizarTarefaRequest` sem campo `peso`,
-construtor self-service fixa `peso = 1` hardcoded, único caminho de `peso = 2` permanece exclusivo do
-fluxo Admin/ata (`@RequiresModulo(Modulo.MENTORADOS)`, rota `/api/v1/admin/**`); (2) isolamento
-`Tarefa→Meta` confirmado em `criar()` e `atualizar()` sem exceção (`resolverMetaDoUsuario()` filtra
-por `mentorado.getId()`, 404 genérico se meta de outro mentorado); (3) isolamento da própria tarefa:
-`buscarDoMentorado()` bloqueia edição/transição de tarefa alheia, mesmo padrão 404 genérico; (4)
-migração idempotente — `concluido` era `NOT NULL DEFAULT FALSE` desde V1, sem NULL ambíguo, DDL
-transacional Postgres, sem janela de inconsistência; (5) máquina de estado com guardas explícitas e
-`switch` sem `default` silencioso; (6) JPQL `buscarPorMentorado` usa bind parameters (`@Param`)
-incluindo dentro de `CAST(:busca AS string)` e `LIKE/CONCAT` — sem risco de injeção. 2 bugs reais
-corrigidos durante verificação ao vivo: `LazyInitializationException` em `Meta` após `save()`/`merge()`
-(corrigido com `@Transactional` em `TarefaService.criar()`/`atualizar()` + fetch join na query de
-busca) e `Invalid Date` no frontend quando `prazo` é `null` (corrigido com guard `prazo ? ... : null`
-em `TarefaCard.tsx`). Frontend (`TarefasPage` + rota + nav no `MentoradoShell`) e E2E (`tarefas.spec.ts`,
-3 testes, achado e corrigido test-data-collision com dado poluído de execuções anteriores) — **35/35
-verde na suíte completa**. Sem pendência de credencial externa.
+e `ConsolidatedServiceTest`/`MentoradoConsolidadoResponseTest` reconfirmados pós-migração de
+`e.concluido` → `e.status`), evolução de schema em entidade compartilhada (`Encaminhamento`, migração
+`V7__tarefas.sql`) sem regressão em M06/E17/M08. `revisor-seguranca` sem achado bloqueante — **6
+pontos escrutinados, nenhuma falha real**: (1) peso do ranking protegido: `CriarTarefaRequest`/
+`AtualizarTarefaRequest` sem campo `peso`, construtor self-service fixa `peso = 1` hardcoded, único
+caminho de `peso = 2` permanece exclusivo do fluxo Admin/ata (`@RequiresModulo(Modulo.MENTORADOS)`,
+rota `/api/v1/admin/**`); (2) isolamento `Tarefa→Meta` confirmado em `criar()` e `atualizar()` sem
+exceção (`resolverMetaDoUsuario()` filtra por `mentorado.getId()`, 404 genérico se meta de outro
+mentorado); (3) isolamento da própria tarefa: `buscarDoMentorado()` bloqueia edição/transição de
+tarefa alheia, mesmo padrão 404 genérico; (4) migração idempotente — `concluido` era
+`NOT NULL DEFAULT FALSE` desde V1, sem NULL ambíguo, DDL transacional Postgres, sem janela de
+inconsistência; (5) máquina de estado com guardas explícitas e `switch` sem `default` silencioso;
+(6) JPQL `buscarPorMentorado` usa bind parameters (`@Param`) incluindo dentro de
+`CAST(:busca AS string)` e `LIKE/CONCAT` — sem risco de injeção.
+
+**3 bugs reais corrigidos durante verificação ao vivo** (nenhum pego pelos testes com mock — mesma
+classe de achado do M05, ver `LeadRepositoryTest`): (1) `LazyInitializationException` em `Meta` ao
+ler `tarefa.getMeta().getTitulo()` a partir do RETORNO de `encaminhamentoRepository.save(tarefa)` —
+`save()` numa entidade já persistida faz `merge()`, que devolve um objeto gerenciado num contexto de
+persistência NOVO, onde a associação volta a proxy LAZY não inicializado mesmo com FETCH JOIN na
+busca original; corrigido em `TarefaService.atualizar()`/`avancarStatus()` retornando a referência
+pré-save (já com `meta` carregada), não o valor de `save()` — regressão travada em
+`EncaminhamentoRepositoryTest` (`@DataJpaTest`, RED+GREEN); (2) `Invalid Date` visível no frontend
+quando `prazo` é `null` (comum em encaminhamentos antigos/gerados por ata) — `formatarPrazo()` em
+`TarefasPage.tsx` não tinha guard pra esse caso, corrigido pra mostrar "Sem prazo"; (3) race condition
+de fetch fora de ordem em `TarefasPage.tsx` — cliques rápidos em sequência (ex.: Concluir logo após
+trocar filtro) disparavam `carregar()` mais de uma vez em paralelo, e a resposta mais antiga podia
+sobrescrever a mais nova; corrigido com um `requestIdRef` que só aplica a resposta do fetch mais
+recente (mesmo risco estrutural existe em `MetasPage.tsx`/M09, não retrabalhado nesta leva — ver
+memória de metodologia). Também achado e corrigido um bug no próprio E2E: uma asserção assumia que
+concluir uma tarefa a removeria da view, mas o filtro ativo no momento era "Todas" (mostra todo
+status) — a asserção só "passava" por coincidência ao pegar a janela de `tarefas === null`
+(estado de carregamento); corrigida pra checar a mudança do pill de status em vez da ausência da
+linha.
+
+Frontend (`TarefasPage` + rota + nav no `MentoradoShell`) e E2E (`tarefas.spec.ts`, 3 testes) —
+**35/35 verde na suíte completa**, confirmado com `--repeat-each=10` no teste de ciclo de vida após
+a correção acima. Sem pendência de credencial externa.
+
+### M11 — E6 · Materiais & Dicas do Brayan
+
+**Por que Médio:** Módulo do lado do mentorado, focado em leitura, curadoria (favoritos) e consumo (assistido) de entidades `Conteudo` já criadas e gerenciadas pelo Admin desde o M06. A complexidade fica na junção de dados globais (o catálogo) com estado local por tenant (o que o mentorado atual favoritou/consumiu).
+
+**Decisões de escopo & Suposições assumidas:**
+- **Categorias (H6.1):** O `spec.md` cita filtro por "categoria e formato", mas `Conteudo` tem apenas `tipo` (formato: VIDEO, DOCUMENTO, etc.). Por ora, o filtro será por `tipo`. Se a SAW solicitar categorização temática no futuro (ex: Vendas, Gestão), será adicionada uma nova coluna.
+- **Indicadores de consumo (H6.3):** "dias assistidos, minutos, favoritas" - Sem metadado de 'duração' no `Conteudo` atual, assumimos a contagem simples de conteúdos assistidos para os indicadores nesta fase.
+- **Isolamento de estado:** A tabela `conteudo_mentorado` guardará o estado de 'favorito' e 'assistido' isolado por `mentorado_id`.
+
+## Modelagem de banco (M11)
+
+```sql
+-- V8__conteudo_mentorado.sql
+CREATE TABLE conteudo_mentorado (
+    mentorado_id    UUID NOT NULL REFERENCES mentorado(id),
+    conteudo_id     UUID NOT NULL REFERENCES conteudo(id),
+    favorito        BOOLEAN NOT NULL DEFAULT false,
+    assistido       BOOLEAN NOT NULL DEFAULT false,
+    data_consumo    TIMESTAMP,
+    PRIMARY KEY (mentorado_id, conteudo_id)
+);
+
+CREATE INDEX idx_conteudo_mentorado_favorito ON conteudo_mentorado(mentorado_id, favorito);
+```
+
+## Contratos de API (M11)
+
+```jsonc
+// hasRole("MENTORADO") - Traz catálogo filtrado pelo planoMinimo <= planoAtual
+GET /api/v1/mentorado/conteudos?tipo=&favorito=
+[{
+  "id": "uuid",
+  "titulo": "Ficha Técnica Completa",
+  "tipo": "PLANILHA",
+  "url": "https://...",
+  "favorito": true,
+  "assistido": false
+}]
+
+// Retorna apenas tipo=VIDEO, ordenado pelos mais recentes (Proxy para Dicas do Brayan)
+GET /api/v1/mentorado/conteudos/dicas
+[{
+  "id": "uuid", "titulo": "...", "tipo": "VIDEO", "url": "...", "favorito": false, "assistido": true
+}]
+
+PATCH /api/v1/mentorado/conteudos/{id}/favorito
+{ "favorito": true }
+
+PATCH /api/v1/mentorado/conteudos/{id}/assistido
+{ "assistido": true }
+```
+
+## Rastreabilidade história ↔ módulo (M11)
+
+| História | Cobertura |
+|---|---|
+| H6.1 — navegar biblioteca por categoria e formato | `GET /mentorado/conteudos` |
+| H6.2 — favoritar materiais e dicas | `PATCH /mentorado/conteudos/{id}/favorito` |
+| H6.3 — assistir dicas e contar nos indicadores | `GET /mentorado/conteudos/dicas`, `PATCH /mentorado/conteudos/{id}/assistido` |
 
 ## Fórmula de prazo
 

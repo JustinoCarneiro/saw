@@ -296,6 +296,34 @@ export interface ResumoMetas {
   atrasadas: number;
 }
 
+// M10 · E4 (Tarefas & Agenda)
+export type StatusTarefa = 'PENDENTE' | 'EM_ANDAMENTO' | 'CONCLUIDA';
+export type Prioridade = 'ALTA' | 'MEDIA' | 'BAIXA';
+
+export interface MetaRelacionada {
+  id: string;
+  titulo: string;
+}
+
+export interface Tarefa {
+  id: string;
+  titulo: string;
+  metaRelacionada: MetaRelacionada | null;
+  prazo: string | null;
+  diasRestantes: number | null;
+  prioridade: Prioridade;
+  status: StatusTarefa;
+  atrasada: boolean;
+  peso: number;
+}
+
+export interface ResumoTarefas {
+  total: number;
+  concluidas: number;
+  emAndamento: number;
+  pendentes: number;
+}
+
 export type TipoEvento = 'AO_VIVO' | 'PRESENCIAL';
 export type StatusEvento = 'PROGRAMADO' | 'AO_VIVO' | 'REALIZADO' | 'CANCELADO';
 
