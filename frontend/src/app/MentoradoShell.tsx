@@ -7,12 +7,15 @@ const NAV_ITEMS = [
   { to: '/mentorado', label: 'Dashboard', end: true },
   { to: '/mentorado/metas', label: 'Metas', end: false },
   { to: '/mentorado/tarefas', label: 'Tarefas', end: false },
+  { to: '/mentorado/mentorias', label: 'Mentorias & Atas', end: false },
   { to: '/mentorado/materiais', label: 'Materiais & Dicas', end: false },
 ];
 
 // M08 — primeira rota de verdade do perfil MENTORADO (antes disso só existia um placeholder
-// pós-login). M09 acrescentou Metas, M10 acrescenta Tarefas — navegação cresce conforme E5/etc.
-// entrarem (CLAUDE.md § MVP: Dashboard → Metas/Tarefas → Mentorias → resto). Não reusa Sidebar (é
+// pós-login). M09 acrescentou Metas, M10 Tarefas, M12 Mentorias & Atas (posicionado antes de
+// Materiais nesta lista pra bater com a ordem pretendida pelo CLAUDE.md § MVP —
+// Dashboard → Metas/Tarefas → Mentorias → resto — mesmo Materiais/E6 tendo sido construído
+// primeiro nesta esteira, ver ROADMAP.md M11/M12). Não reusa Sidebar (é
 // exclusiva do Modulo/RBAC por área do Admin/E15 — Mentorado não tem área).
 export function MentoradoShell() {
   const { user, loading, logout } = useAuth();

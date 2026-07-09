@@ -202,6 +202,15 @@ export interface MentorResumo {
   nome: string;
 }
 
+// M12 — mesma forma usada tanto na visão Admin (MentoriaResponse, sem filtro) quanto na
+// mentee-facing (MentoriaMentorado, filtrada por publicado/plano — ver ROADMAP.md M12).
+export interface MaterialResumo {
+  id: string;
+  titulo: string;
+  tipo: TipoConteudo;
+  url: string;
+}
+
 export interface Mentoria {
   id: string;
   tipo: TipoMentoria;
@@ -212,6 +221,7 @@ export interface Mentoria {
   linkOnline: string | null;
   local: string | null;
   status: StatusMentoria;
+  materiaisRecomendados: MaterialResumo[];
 }
 
 export type StatusAta = 'RASCUNHO' | 'PUBLICADA';
@@ -234,6 +244,28 @@ export interface Ata {
   erroProcessamento: string | null;
   publicadaEm: string | null;
   sugestoes: SugestaoEncaminhamento[];
+}
+
+// M12 · E5 (lado mentorado) — deliberadamente mais enxuto que Ata (Admin) acima: nunca
+// transcricao/erroProcessamento/sugestoes (dado interno do pipeline de IA/pré-revisão humana),
+// só aparece quando a ata já está PUBLICADA (ver ROADMAP.md M12).
+export interface AtaResumoMentorado {
+  resumo: string | null;
+  publicadaEm: string;
+}
+
+export interface MentoriaMentorado {
+  id: string;
+  tipo: TipoMentoria;
+  mentorNome: string;
+  dataHora: string;
+  duracaoMin: number;
+  linkOnline: string | null;
+  local: string | null;
+  status: StatusMentoria;
+  podeEntrarAgora: boolean;
+  ata: AtaResumoMentorado | null;
+  materiaisRecomendados: MaterialResumo[];
 }
 
 export type TipoConteudo = 'DOCUMENTO' | 'VIDEO' | 'PLANILHA' | 'APRESENTACAO' | 'OUTRO';

@@ -19,20 +19,32 @@ public interface MentoriaRepository extends JpaRepository<Mentoria, UUID> {
     // Hibernate 6 vincula Instant dentro de uma função JPQL, não algo resolvível só ajustando a
     // query. O filtro de data/hora (de/ate) é feito em MentoriaService, em memória — mesmo padrão
     // já usado em LancamentoService (financeiro): dataset pequeno, endpoint admin autenticado,
-    // sem o volume que justificaria complicar a query SQL por isso.
+    // sem o volume que justificaria complicar a query SQL por isso. LEFT JOIN FETCH em
+    // materiaisRecomendados adicionado no M12 — mesmo achado ao vivo (E2E mentorados.spec.ts
+    // quebrou: MentoriaResponse.from() passou a ler getMateriaisRecomendados() e esta query nunca
+    // buscava essa coleção, LazyInitializationException fora da transação).
     @Query("SELECT DISTINCT m FROM Mentoria m LEFT JOIN FETCH m.mentor LEFT JOIN FETCH m.mentorados "
+            + "LEFT JOIN FETCH m.materiaisRecomendados "
             + "WHERE (:status IS NULL OR m.status = :status) "
             + "ORDER BY m.dataHora ASC")
     List<Mentoria> buscarPorStatus(@Param("status") StatusMentoria status);
 
-    @Query("SELECT DISTINCT m FROM Mentoria m LEFT JOIN FETCH m.mentor LEFT JOIN FETCH m.mentorados WHERE m.id = :id")
+    // LEFT JOIN FETCH em materiaisRecomendados adicionado no M12, mesmo motivo do buscarPorStatus
+    // acima — usado por avancarStatus/atualizarMateriais, cujo retorno também vira MentoriaResponse.
+    @Query("SELECT DISTINCT m FROM Mentoria m LEFT JOIN FETCH m.mentor LEFT JOIN FETCH m.mentorados "
+            + "LEFT JOIN FETCH m.materiaisRecomendados "
+            + "WHERE m.id = :id")
     Optional<Mentoria> buscarPorIdComDetalhes(@Param("id") UUID id);
 
-    // M08 — Dashboard do Mentorado (H2.2). MEMBER OF exige o tipo do elemento da coleção
-    // (Mentorado), não um UUID cru — o service já tem a entidade carregada, então passa ela.
-    // Status/data futura são filtrados em MentoradoDashboardService, mesmo padrão do resto do
-    // pacote (dataset pequeno por mentorado, sem o problema de inferência de tipo do Postgres).
+    // M08 — Dashboard do Mentorado (H2.2), reaproveitado pelo M12 (MentoriaMentoradoService).
+    // MEMBER OF exige o tipo do elemento da coleção (Mentorado), não um UUID cru — o service já
+    // tem a entidade carregada, então passa ela. Status/data futura são filtrados em
+    // MentoradoDashboardService/MentoriaMentoradoService, mesmo padrão do resto do pacote (dataset
+    // pequeno por mentorado, sem o problema de inferência de tipo do Postgres). LEFT JOIN FETCH em
+    // materiaisRecomendados adicionado no M12 — Set, não List, então múltiplos fetch joins de
+    // coleção na mesma query não disparam MultipleBagFetchException (isso só afeta List/bag).
     @Query("SELECT DISTINCT m FROM Mentoria m LEFT JOIN FETCH m.mentor LEFT JOIN FETCH m.mentorados "
+            + "LEFT JOIN FETCH m.materiaisRecomendados "
             + "WHERE :mentorado MEMBER OF m.mentorados "
             + "ORDER BY m.dataHora ASC")
     List<Mentoria> buscarPorMentorado(@Param("mentorado") Mentorado mentorado);

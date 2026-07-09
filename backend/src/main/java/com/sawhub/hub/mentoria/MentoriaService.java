@@ -1,5 +1,7 @@
 package com.sawhub.hub.mentoria;
 
+import com.sawhub.hub.conteudo.Conteudo;
+import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentoria.dto.CriarMentoriaRequest;
@@ -20,12 +22,14 @@ public class MentoriaService {
     private final MentoriaRepository mentoriaRepository;
     private final ColaboradorRepository colaboradorRepository;
     private final MentoradoRepository mentoradoRepository;
+    private final ConteudoRepository conteudoRepository;
 
     public MentoriaService(MentoriaRepository mentoriaRepository, ColaboradorRepository colaboradorRepository,
-                            MentoradoRepository mentoradoRepository) {
+                            MentoradoRepository mentoradoRepository, ConteudoRepository conteudoRepository) {
         this.mentoriaRepository = mentoriaRepository;
         this.colaboradorRepository = colaboradorRepository;
         this.mentoradoRepository = mentoradoRepository;
+        this.conteudoRepository = conteudoRepository;
     }
 
     @Transactional
@@ -73,5 +77,21 @@ public class MentoriaService {
     protected Mentoria buscar(UUID id) {
         return mentoriaRepository.buscarPorIdComDetalhes(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mentoria não encontrada."));
+    }
+
+    // M12 — pré-requisito de H5.2: sem isto, materiaisRecomendados nunca teria o que mostrar pro
+    // mentorado (ver Suposições do Blueprint M12 no ROADMAP.md). IllegalArgumentException (400)
+    // pra manter o mesmo padrão dos métodos irmãos desta classe (criar/buscar acima) — não o
+    // NoSuchElementException (404) usado do lado mentee-facing (MentoriaMentoradoService): são
+    // convenções diferentes por design, ver nota no ROADMAP.md M12.
+    @Transactional
+    public Mentoria atualizarMateriais(UUID id, List<UUID> conteudoIds) {
+        Mentoria mentoria = buscar(id);
+        List<Conteudo> conteudos = conteudoRepository.findAllById(conteudoIds);
+        if (conteudos.size() != conteudoIds.size()) {
+            throw new IllegalArgumentException("Um ou mais conteúdos não foram encontrados.");
+        }
+        mentoria.atualizarMateriaisRecomendados(new HashSet<>(conteudos));
+        return mentoriaRepository.save(mentoria);
     }
 }

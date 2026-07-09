@@ -33,12 +33,13 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | M03 | E17 · Painel Consolidado & Ranking | Grande · risco médio | — (já implementado, sem Blueprint formal) | H17.1–H17.4 |
 | **M04** | **E14 · Financeiro & DRE** | **Grande · risco alto** | **6d** | **H14.1–H14.4** |
 | **M05** | **E13 · Comercial & Vendas** | **Grande** | **6d + ~1d (fast-follow H1.3)** | **H13.1–H13.3 + H1.3** |
-| **M06** | **E11 · Gestão Admin + E5 · Mentorias & Atas + diferencial de IA** | **Grande** | **6d + ~2-3d (IA)** | **H11.1–H11.4 + H5.1–H5.3** |
+| **M06** | **E11 · Gestão Admin + E5 · Mentorias & Atas (lado Admin) + diferencial de IA** | **Grande** | **6d + ~2-3d (IA)** | **H11.1–H11.4 + H5.2 (dado, sem tela)** |
 | **M07** | **Google OAuth (fast-follow do E1)** | **Pequeno** | **1.5d** | **H1.2** |
 | **M08** | **E2 · Dashboard do Mentorado** | **Médio** | **3.5d** | **H2.1–H2.3** |
 | **M09** | **E3 · Metas Estratégicas** | **Médio** | **3.5d** | **H3.1–H3.3** |
 | **M10** | **E4 · Tarefas & Agenda** | **Médio** | **3.5d** | **H4.1–H4.5** |
 | **M11** | **E6 · Materiais & Dicas do Brayan** | **Médio** | **3.5d** | **H6.1–H6.3** |
+| **M12** | **E5 · Mentorias & Atas (lado mentorado)** | **Médio** | **4d** | **H5.1–H5.3** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -1223,6 +1224,152 @@ assistidos, minutos, favoritas)" — não implementado, só o toggle por item ex
 leva futura quando/se a SAW confirmar que precisa desse indicador agregado (ver Suposições do
 Blueprint acima). Sem pendência de credencial externa.
 
+### M12 — E5 · Mentorias & Atas (lado mentorado)
+
+**Por que Médio:** o dado já existe desde o M06 (`Mentoria`, `Ata`, `AtaEncaminhamentoSugerido`,
+todos admin-side) — o trabalho real é (a) uma tela de leitura pro mentorado por cima dessas mesmas
+entidades, com isolamento por tenant e filtragem de status que o lado Admin não precisa (rascunho de
+ata nunca visível), (b) uma janela de tempo computada ("posso entrar agora?") que não existe em
+lugar nenhum ainda, e (c) fechar um buraco de schema real descoberto na investigação: a tabela
+`mentoria_material_recomendado` existe desde o `V5__mentorias.sql` (M06) mas nunca foi mapeada em
+JPA nem exposta em endpoint algum, nem Admin nem mentorado — sem isso, H5.2 nunca teria o que
+mostrar no campo "materiais recomendados".
+
+**Decisões de escopo & Suposições assumidas:**
+- **Janela de "posso entrar agora" (H5.1):** `spec.md` só diz "quando chega o horário" sem definir
+  quanto antes o botão libera. Assumido: 10 minutos antes de `dataHora` até `dataHora + duracaoMin`
+  (fim previsto), exigindo `linkOnline` preenchido e `status` em `AGENDADA`/`CONFIRMADA` (uma
+  mentoria `CANCELADA` ou já `REALIZADA` nunca mostra o botão). Ajustável se a SAW pedir outro valor
+  — documentado aqui pra não virar "mágica" no código.
+- **`PATCH /admin/mentorias/{id}/materiais` é escopo novo do lado Admin, mas dentro deste módulo, não
+  fora dele:** é pré-requisito direto de H5.2 — sem uma forma de o Admin associar `Conteudo`s a uma
+  `Mentoria`, o array `materiaisRecomendados` seria sempre vazio e a história ficaria inverificável
+  por E2E. Pequena extensão do `MentoriaController` já existente (mesmo `@RequiresModulo`), não um
+  módulo novo.
+- **Materiais recomendados respeitam o mesmo `Plano.atendePlanoMinimo()` do M11**, mesmo sendo uma
+  recomendação direta do mentor: decisão consciente pra não abrir um segundo caminho que contorne o
+  paywall por plano (`CLAUDE.md` § Planos diz que planos "controlam acesso a conteúdos" sem ressalva).
+  Também exige `conteudo.isPublicado()` — mesmo invariante do M11, mesmo motivo (não vazar rascunho).
+- **Sem rota de detalhe separada.** `spec.md` descreve um fluxo "vejo a lista, abro uma, vejo a ata" —
+  mas com a escala do projeto (10–15 usuários, poucas mentorias cada, ver `CLAUDE.md` § Princípios ·
+  Escala) não compensa uma segunda chamada de API só pra abrir um item: `GET /mentorado/mentorias`
+  já devolve tudo (ata resumida + materiais) por item, e o frontend expande a linha/card já carregado.
+  Mesmo padrão de "lista completa, sem paginação" já usado em Metas/Tarefas.
+- **Ata exposta ao mentorado é um subconjunto deliberado de `AtaResponse` (admin):** só `resumo` e
+  `publicadaEm`. Nunca `transcricao`, `erroProcessamento` nem `sugestoes` — são dados internos do
+  pipeline de IA / pré-revisão humana, sem valor nem permissão pro mentorado ver. E só aparece quando
+  `status == PUBLICADA`; `AtaService.buscarPorMentoria`/`AtaRepository.findByMentoriaId` não filtram
+  por status hoje (correto pro Admin, que precisa ver rascunhos) — este é o primeiro caminho de
+  leitura de Ata pelo lado do mentorado, então o filtro de `PUBLICADA` nasce aqui, não é alteração
+  em código existente.
+- **Encaminhamentos gerados por uma ata publicada não precisam de trabalho novo aqui:**
+  `AtaService.publicar()` já materializa sugestões aceitas em `Encaminhamento` reais (um por
+  mentorado participante), e esses já aparecem na tela de Tarefas existente desde o M10
+  (`Encaminhamento.mentoria` como referência de origem). O laço já fecha ponta a ponta — este módulo
+  só cobre a ata em si (resumo) e a agenda/histórico da mentoria, não duplica a lista de tarefas.
+- **H5.3 (calendário) cobre as duas opções do "(.ics/Google)" da BDD sem duplicar lógica:** endpoint
+  dedicado gera e devolve um `.ics` pra download direto; o link "Adicionar ao Google Calendar" é
+  construído 100% no frontend a partir dos mesmos campos já presentes na resposta da lista (URL de
+  render do Google Calendar aceita todos os parâmetros por query string) — sem round-trip extra ao
+  backend só pra isso.
+
+## Modelagem de banco (M12)
+
+```sql
+-- Nenhuma migração nova. mentoria_material_recomendado já existe desde V5__mentorias.sql (M06):
+--   CREATE TABLE mentoria_material_recomendado (
+--       mentoria_id  UUID NOT NULL REFERENCES mentoria(id) ON DELETE CASCADE,
+--       conteudo_id  UUID NOT NULL REFERENCES conteudo(id),
+--       PRIMARY KEY (mentoria_id, conteudo_id)
+--   );
+-- — só nunca tinha sido mapeada em JPA. Este módulo adiciona o @ManyToMany em Mentoria.java
+-- apontando pra esta tabela existente, sem alterar schema.
+```
+
+## Contratos de API (M12)
+
+```jsonc
+// hasRole("MENTORADO") — todas as mentorias do mentorado autenticado (agenda + histórico juntos,
+// ordenado por dataHora ASC; front agrupa em "Agenda" vs "Histórico" e reordena cada grupo)
+GET /api/v1/mentorado/mentorias
+[{
+  "id": "uuid", "tipo": "INDIVIDUAL", "mentorNome": "Brayan Silva",
+  "dataHora": "2026-07-15T14:00:00Z", "duracaoMin": 60,
+  "linkOnline": "https://meet.google.com/abc-defg-hij", "local": null,
+  "status": "CONFIRMADA", "podeEntrarAgora": false,
+  "ata": null,
+  "materiaisRecomendados": []
+}, {
+  "id": "uuid2", "tipo": "INDIVIDUAL", "mentorNome": "Brayan Silva",
+  "dataHora": "2026-06-10T14:00:00Z", "duracaoMin": 60,
+  "linkOnline": "https://meet.google.com/xyz", "local": null,
+  "status": "REALIZADA", "podeEntrarAgora": false,
+  "ata": { "resumo": "Discutimos o DRE de junho e ajustamos metas.", "publicadaEm": "2026-06-10T15:30:00Z" },
+  "materiaisRecomendados": [{ "id": "uuid3", "titulo": "Ficha Técnica Completa", "tipo": "PLANILHA", "url": "https://..." }]
+}]
+
+// 404 se a mentoria não existe OU o mentorado autenticado não é participante — mesmo padrão de
+// oráculo de enumeração já usado no resto do projeto (não distingue "não existe" de "não é seu").
+GET /api/v1/mentorado/mentorias/{id}/calendario.ics
+// Content-Type: text/calendar; charset=utf-8 · Content-Disposition: attachment; filename="mentoria.ics"
+
+// Novo — extensão pequena do Admin, pré-requisito de H5.2 (ver Suposições acima).
+PATCH /api/v1/admin/mentorias/{id}/materiais
+{ "conteudoIds": ["uuid3", "uuid4"] }
+// Substitui a lista inteira (idempotente, não incremental). 400 (IllegalArgumentException) se a
+// mentoria ou algum conteudoId não existir — mesma convenção dos métodos irmãos de MentoriaService
+// (criar/buscar), não o 404 do lado mentee-facing: convenções diferentes por design, admin-only
+// não tem o mesmo risco de oráculo de enumeração que justificou o 404 nas rotas do mentorado.
+// Mesmo @RequiresModulo(Modulo.MENTORADOS) do resto de MentoriaController.
+```
+
+## Rastreabilidade história ↔ módulo (M12)
+
+| História | Cobertura |
+|---|---|
+| H5.1 — ver próxima mentoria e entrar na reunião | `GET /mentorado/mentorias` (campo `podeEntrarAgora`, ver Suposições) |
+| H5.2 — histórico e ata de cada mentoria | `GET /mentorado/mentorias` (`ata`, `materiaisRecomendados`), `PATCH /admin/mentorias/{id}/materiais` (curadoria, novo) |
+| H5.3 — adicionar ao calendário | `GET /mentorado/mentorias/{id}/calendario.ics` + link Google Calendar (frontend) |
+
+**Status: ✅ M12 concluído** (2026-07-09) — backend (213/213 testes, incluindo
+`MentoriaMentoradoResponseTest` novo para a janela de "posso entrar agora", `IcsGeneratorTest` novo,
+`MentoriaMentoradoServiceTest` novo, `MentoriaRepositoryTest` novo) + frontend (`MentoriasPage`, rota
+`/mentorado/mentorias` + nav no `MentoradoShell`, reposicionada antes de "Materiais & Dicas" pra bater
+com a ordem pretendida do CLAUDE.md) + E2E (`mentorias.spec.ts`, 4 testes) — **42/42 verde na suíte
+completa**.
+
+**Bug real achado na verificação ao vivo via curl, antes do `revisor-seguranca`:** ao rodar a suíte
+completa de E2E depois de fechar o módulo, `mentorados.spec.ts` (M06) quebrou — a listagem de
+mentorias do Admin (`GET /admin/mentorias`, que alimenta a tela de criar/confirmar mentoria)
+começou a estourar 500. Causa: `MentoriaResponse.from()` passou a ler
+`m.getMateriaisRecomendados()` (novo campo, H5.2), mas `MentoriaRepository.buscarPorStatus`/
+`buscarPorIdComDetalhes` (usadas pelo Admin) nunca faziam `LEFT JOIN FETCH` nessa coleção —
+`LazyInitializationException` fora da transação (open-in-view=false), mesma classe de bug do M05/
+M10 (ver `EncaminhamentoRepositoryTest`). `buscarPorMentorado` (mentee-facing) já tinha o fetch join
+certo, mas as duas queries do lado Admin não. Corrigido adicionando o mesmo `LEFT JOIN FETCH` às
+duas, com `MentoriaRepositoryTest` novo (`@DataJpaTest`, sessão real do Hibernate) provando que a
+coleção fica legível mesmo depois de `entityManager.clear()`.
+
+**Achados do `revisor-seguranca` (2, ambos corrigidos):** (1) **Medium** — `IcsGenerator.escapar()`
+tratava `\`, `,`, `;` e `\n`, mas nunca `\r` isolado; como o próprio gerador usa `\r\n` como
+terminador de linha, um `\r` cru dentro de um campo livre (`local` da mentoria, nome do mentor)
+virava um terminador de linha extra pra qualquer parser de calendário tolerante a CR solto,
+permitindo injetar propriedades/componentes forjados (ex.: um `VALARM` falso) dentro do `.ics` que
+o mentorado baixa confiando vir do SAW HUB — corrigido escapando `\r` (e `\r\n`) pro mesmo `\\n` do
+LF, com 2 testes de regressão novos provando que a string injetada vira texto inofensivo dentro do
+campo, nunca uma linha própria; (2) **Baixo/informativo** — `Mentoria.linkOnline` nunca teve
+validação de esquema de URL (diferente de `Conteudo.url`, corrigido no M11), e o M12 é a primeira
+vez que esse campo vira alvo recorrente de botão "Entrar na reunião"/.ics/Google Calendar pro
+mentorado (antes só um link discreto no dashboard do M08) — corrigido com o mesmo
+`@Pattern(regexp = "^https?://.+")` já usado em `Conteudo.url`, campo continua opcional (mentoria
+presencial não tem link).
+
+**Pendência real, documentada, não escondida:** o endpoint Admin `PATCH /admin/mentorias/{id}/materiais`
+existe e funciona (verificado via curl e testes), mas não há controle nenhum na tela do Admin pra
+usá-lo — associar materiais recomendados a uma mentoria hoje só é possível via API direta. Fica pra
+uma leva futura, mesma categoria da pendência do H6.3 (M11): o dado/endpoint existe, falta só a UI
+de curadoria. Sem pendência de credencial externa.
+
 ## Fórmula de prazo
 
 ```
@@ -1250,17 +1397,18 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | — | E17 · Painel Consolidado & Ranking | Grande · risco médio | — | ✅ Concluído |
 | 1 | **E14 · Financeiro & DRE** | Grande · risco alto | 6d | ✅ Concluído |
 | 2 | E13 · Comercial & Vendas | Grande | 6d + ~1d (H1.3) | ✅ Concluído — backend (90/90 testes) + `revisor-seguranca` (M1/M2/L2/L3 corrigidos) + frontend (dashboard/funil/ranking) + E2E (17/17, `comercial.spec.ts`) |
-| 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo |
+| 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas (lado Admin) + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo. H5.1-H5.3 são histórias do mentorado (não do Admin) — dado pronto aqui, tela deferida pra quando os módulos do mentorado entrassem no pipeline; ver linha 9 (M12) |
 | 4 | Google OAuth (fast-follow do E1) | Pequeno | 1.5d | ✅ Concluído — backend (141/141 testes) + `revisor-seguranca` (2 achados corrigidos: oráculo de enumeração de contas + nota pendurada) + frontend (botão condicional + tradução de erro) + E2E (24/24, `google-oauth.spec.ts`). Fluxo real (redirect→consentimento→callback) verificado só até a borda — sem app Google Cloud Console configurado neste ambiente |
 | 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ✅ Concluído — backend (152/152 testes) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado) + frontend (primeira rota `/mentorado` de verdade) + E2E (29/29, `dashboard-mentorado.spec.ts`) |
 | 6 | E3 · Metas Estratégicas | Médio | 3.5d | ✅ Concluído — backend (165/165 testes, 1ª entidade nova desde o M06) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado nos caminhos de escrita) + frontend (`MetasPage` self-service) + E2E (32/32, `metas.spec.ts`) |
 | 7 | E4 · Tarefas & Agenda | Médio | 3.5d | ✅ Concluído — backend (178/178 testes) + `revisor-seguranca` (sem achado bloqueante: peso do ranking protegido, isolamento Tarefa→Meta confirmado, migração idempotente, máquina de estado com guardas, JPQL seguro) + frontend (`TarefasPage` self-service) + E2E (35/35, `tarefas.spec.ts`) |
 | 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ✅ Concluído — backend (183/183 testes) + `revisor-seguranca` (4 achados corrigidos: reverse tabnabbing, `Plano.ordinal()` duplicado, corrida de criação concorrente, `url` sem validação de esquema) + frontend (`MateriaisPage`) + E2E (38/38, `materiais.spec.ts`). Indicadores agregados de consumo (H6.3) não implementados — pendência real |
-| 9 | E7 · Eventos & Inscrições | Médio | 3.5d | ⬜ |
-| 10 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ⬜ `revisor-seguranca` obrigatório, mesmo tratamento do Auth |
-| 11 | E9 · Perfil & Gamificação | Médio | 3.5d | ⬜ |
-| 12 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ⬜ |
-| 13 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ⬜ |
+| 9 | E5 · Mentorias & Atas (lado mentorado) | Médio | 4d | ✅ Concluído — backend (213/213 testes) + `revisor-seguranca` (2 achados corrigidos: injeção de CR solto no .ics, `linkOnline` sem validação de esquema) + frontend (`MentoriasPage`) + E2E (42/42, `mentorias.spec.ts`). Fecha H5.1-H5.3, deferidas desde o M06. Achado ao vivo: `LazyInitializationException` na listagem Admin, corrigido. Pendência: UI de curadoria de materiais recomendados no Admin (endpoint existe, tela não) |
+| 10 | E7 · Eventos & Inscrições | Médio | 3.5d | ⬜ |
+| 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ⬜ `revisor-seguranca` obrigatório, mesmo tratamento do Auth |
+| 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ⬜ |
+| 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ⬜ |
+| 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ⬜ |
 | — | **Fase 5 · Homologação** (smoke test via Docker, validação humana E2E, revisão final de segurança, deploy Coolify, **pass transversal de `pgcrypto` nas colunas sensíveis** — ver notas em M04 e M05) | — | 2d | ⬜ |
 
 **Total restante (peso somado): ≈ 60 dias de engenharia.** Responsividade mobile fica **fora

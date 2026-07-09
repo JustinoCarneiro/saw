@@ -1,6 +1,7 @@
 package com.sawhub.hub.mentoria;
 
 import com.sawhub.hub.common.BaseEntity;
+import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.team.Colaborador;
 import jakarta.persistence.Column;
@@ -54,6 +55,16 @@ public class Mentoria extends BaseEntity {
     @Column(nullable = false)
     private StatusMentoria status;
 
+    // H5.2 (M12) — tabela mentoria_material_recomendado já existia desde o V5__mentorias.sql (M06),
+    // nunca tinha sido mapeada em JPA nem exposta em endpoint algum (achado ao investigar o schema
+    // pro Blueprint do M12, ver ROADMAP.md). Sem cascade: apagar uma Mentoria não deve apagar o
+    // Conteudo associado, e vice-versa — só a linha de associação.
+    @ManyToMany
+    @JoinTable(name = "mentoria_material_recomendado",
+            joinColumns = @JoinColumn(name = "mentoria_id"),
+            inverseJoinColumns = @JoinColumn(name = "conteudo_id"))
+    private Set<Conteudo> materiaisRecomendados = new HashSet<>();
+
     protected Mentoria() {
     }
 
@@ -96,6 +107,13 @@ public class Mentoria extends BaseEntity {
         }
     }
 
+    /** Substitui a lista inteira (idempotente) — curadoria do Admin, ver
+     * {@code MentoriaService#atualizarMateriais}. Cópia defensiva, mesmo padrão do construtor
+     * pra {@code mentorados}. */
+    public void atualizarMateriaisRecomendados(Set<Conteudo> materiais) {
+        this.materiaisRecomendados = new HashSet<>(materiais);
+    }
+
     public TipoMentoria getTipo() {
         return tipo;
     }
@@ -126,5 +144,9 @@ public class Mentoria extends BaseEntity {
 
     public StatusMentoria getStatus() {
         return status;
+    }
+
+    public Set<Conteudo> getMateriaisRecomendados() {
+        return materiaisRecomendados;
     }
 }

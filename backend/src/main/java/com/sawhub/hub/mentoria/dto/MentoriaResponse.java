@@ -16,7 +16,8 @@ public record MentoriaResponse(
         Integer duracaoMin,
         String linkOnline,
         String local,
-        StatusMentoria status
+        StatusMentoria status,
+        List<MaterialResumoResponse> materiaisRecomendados
 ) {
     public record MentorResumo(UUID id, String nome) {
     }
@@ -29,7 +30,13 @@ public record MentoriaResponse(
                 .map(mt -> new MentoradoResumo(mt.getId(), mt.getNome()))
                 .sorted((a, b) -> a.nome().compareTo(b.nome()))
                 .toList();
+        // Sem filtro de publicado/plano aqui de propósito — visão do Admin, que já cura o
+        // conteúdo (diferente de MentoriaMentoradoResponse, mentee-facing, ver ROADMAP.md M12).
+        var materiais = m.getMateriaisRecomendados().stream()
+                .map(MaterialResumoResponse::from)
+                .sorted((a, b) -> a.titulo().compareTo(b.titulo()))
+                .toList();
         return new MentoriaResponse(m.getId(), m.getTipo(), new MentorResumo(m.getMentor().getId(), m.getMentor().getNome()),
-                mentorados, m.getDataHora(), m.getDuracaoMin(), m.getLinkOnline(), m.getLocal(), m.getStatus());
+                mentorados, m.getDataHora(), m.getDuracaoMin(), m.getLinkOnline(), m.getLocal(), m.getStatus(), materiais);
     }
 }

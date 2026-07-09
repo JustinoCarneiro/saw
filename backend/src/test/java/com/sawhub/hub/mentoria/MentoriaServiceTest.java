@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.conteudo.Conteudo;
+import com.sawhub.hub.conteudo.ConteudoRepository;
+import com.sawhub.hub.conteudo.TipoConteudo;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentorado.Plano;
@@ -16,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,9 +37,17 @@ class MentoriaServiceTest {
     private ColaboradorRepository colaboradorRepository;
     @Mock
     private MentoradoRepository mentoradoRepository;
+    @Mock
+    private ConteudoRepository conteudoRepository;
 
     private MentoriaService service() {
-        return new MentoriaService(mentoriaRepository, colaboradorRepository, mentoradoRepository);
+        return new MentoriaService(mentoriaRepository, colaboradorRepository, mentoradoRepository, conteudoRepository);
+    }
+
+    private static Conteudo conteudo(UUID id) {
+        Conteudo c = new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x", Plano.GRATUITO);
+        ReflectionTestUtils.setField(c, "id", id);
+        return c;
     }
 
     private static Colaborador mentor(UUID id) {
@@ -170,5 +182,50 @@ class MentoriaServiceTest {
         Mentoria cancelada = service().avancarStatus(id, StatusMentoria.CANCELADA);
 
         assertThat(cancelada.getStatus()).isEqualTo(StatusMentoria.CANCELADA);
+    }
+
+    @Test
+    void atualizarMateriaisSubstituiListaInteira() {
+        UUID id = UUID.randomUUID();
+        UUID conteudoId = UUID.randomUUID();
+        Mentoria mentoria = new Mentoria(TipoMentoria.INDIVIDUAL, mentor(UUID.randomUUID()),
+                java.util.Set.of(mentorado(UUID.randomUUID(), "Maria")), Instant.now(), 60, null, null);
+        when(mentoriaRepository.buscarPorIdComDetalhes(id)).thenReturn(Optional.of(mentoria));
+        when(conteudoRepository.findAllById(List.of(conteudoId))).thenReturn(List.of(conteudo(conteudoId)));
+        when(mentoriaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Mentoria atualizada = service().atualizarMateriais(id, List.of(conteudoId));
+
+        assertThat(atualizada.getMateriaisRecomendados()).hasSize(1);
+        assertThat(atualizada.getMateriaisRecomendados().iterator().next().getId()).isEqualTo(conteudoId);
+    }
+
+    @Test
+    void atualizarMateriaisComConteudoInexistenteLancaErro() {
+        UUID id = UUID.randomUUID();
+        UUID conteudoId = UUID.randomUUID();
+        Mentoria mentoria = new Mentoria(TipoMentoria.INDIVIDUAL, mentor(UUID.randomUUID()),
+                java.util.Set.of(mentorado(UUID.randomUUID(), "Maria")), Instant.now(), 60, null, null);
+        when(mentoriaRepository.buscarPorIdComDetalhes(id)).thenReturn(Optional.of(mentoria));
+        when(conteudoRepository.findAllById(List.of(conteudoId))).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service().atualizarMateriais(id, List.of(conteudoId)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("não foram encontrados");
+    }
+
+    @Test
+    void atualizarMateriaisComListaVaziaLimpaAssociacoes() {
+        UUID id = UUID.randomUUID();
+        Mentoria mentoria = new Mentoria(TipoMentoria.INDIVIDUAL, mentor(UUID.randomUUID()),
+                java.util.Set.of(mentorado(UUID.randomUUID(), "Maria")), Instant.now(), 60, null, null);
+        mentoria.atualizarMateriaisRecomendados(Set.of(conteudo(UUID.randomUUID())));
+        when(mentoriaRepository.buscarPorIdComDetalhes(id)).thenReturn(Optional.of(mentoria));
+        when(conteudoRepository.findAllById(List.of())).thenReturn(List.of());
+        when(mentoriaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Mentoria atualizada = service().atualizarMateriais(id, List.of());
+
+        assertThat(atualizada.getMateriaisRecomendados()).isEmpty();
     }
 }

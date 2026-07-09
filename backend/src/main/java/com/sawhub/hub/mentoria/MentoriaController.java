@@ -1,6 +1,7 @@
 package com.sawhub.hub.mentoria;
 
 import com.sawhub.hub.mentoria.dto.AtaResponse;
+import com.sawhub.hub.mentoria.dto.AtualizarMateriaisMentoriaRequest;
 import com.sawhub.hub.mentoria.dto.AtualizarStatusMentoriaRequest;
 import com.sawhub.hub.mentoria.dto.CriarMentoriaRequest;
 import com.sawhub.hub.mentoria.dto.MentoriaResponse;
@@ -24,8 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** H11.2 (criação/agenda) + H5.1/H5.2 (o mesmo dado alimenta a tela do mentorado quando ela
- * existir — ver nota do Blueprint M06 no ROADMAP.md). */
+/** H11.2 (criação/agenda) — o mesmo dado alimenta a tela do mentorado (H5.1/H5.2/H5.3) via
+ * {@link MentoriaMentoradoController}, read-only e tenant-scoped, ver ROADMAP.md M12. */
 @RestController
 @RequestMapping("/api/v1/admin/mentorias")
 @RequiresModulo(Modulo.MENTORADOS)
@@ -68,6 +69,13 @@ public class MentoriaController {
     @PatchMapping("/{id}/status")
     public MentoriaResponse atualizarStatus(@PathVariable UUID id, @Valid @RequestBody AtualizarStatusMentoriaRequest request) {
         return MentoriaResponse.from(mentoriaService.avancarStatus(id, request.novoStatus()));
+    }
+
+    /** M12 — pré-requisito de H5.2 (ver ROADMAP.md): sem isto o mentorado nunca teria materiais
+     * recomendados pra ver. Substitui a lista inteira (idempotente, não incremental). */
+    @PatchMapping("/{id}/materiais")
+    public MentoriaResponse atualizarMateriais(@PathVariable UUID id, @Valid @RequestBody AtualizarMateriaisMentoriaRequest request) {
+        return MentoriaResponse.from(mentoriaService.atualizarMateriais(id, request.conteudoIds()));
     }
 
     /** CLAUDE.md: "Realizada (gera ata)" — transição + criação da ata numa operação só,

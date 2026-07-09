@@ -1,0 +1,233 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: var(--text-soft);
+  margin-top: -16px;
+}
+
+.error {
+  color: var(--danger);
+  padding: 12px;
+  background: var(--danger-bg);
+  border-radius: 6px;
+}
+
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-soft);
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.agendaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.tipo {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.dataHora {
+  font-size: 16px;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.mentorLine {
+  font-size: 14px;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+
+.localLine {
+  font-size: 13px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.joinButton,
+.joinButtonDisabled {
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+.joinButton {
+  background: var(--gold);
+  color: var(--on-gold);
+}
+
+.joinButton:hover {
+  opacity: 0.9;
+}
+
+.joinButtonDisabled {
+  background: var(--line);
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.actionButton {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text-soft);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.actionButton:hover:not(:disabled) {
+  border-color: var(--text-soft);
+  color: var(--text);
+}
+
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.historicoList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.historicoHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.historicoHeader:disabled {
+  cursor: default;
+}
+
+.historicoData {
+  font-size: 13px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.historicoRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.expandIcon {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.ataBody {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.ataResumo {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.ataPublicada {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 8px;
+}
+
+.ataPendente {
+  font-size: 14px;
+  color: var(--text-soft);
+  font-style: italic;
+  margin: 0;
+}
+
+.materiais {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.materiaisLabel {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.materialChip {
+  background: var(--elevated);
+  color: var(--gold);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.materialChip:hover {
+  text-decoration: underline;
+}

@@ -112,8 +112,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         seedMentorados();
         seedFinanceiro();
         seedComercial();
-        seedMentoriasEAtas();
+        // M12: seedMentoriasEAtas associa a Ficha técnica a uma mentoria (materiaisRecomendados,
+        // H5.2) — precisa que o Conteudo já exista.
         seedConteudos();
+        seedMentoriasEAtas();
         seedEventos();
     }
 
@@ -289,6 +291,13 @@ public class DemoDataSeeder implements ApplicationRunner {
                 Instant.parse("2026-07-02T14:00:00Z"), 60, "https://meet.google.com/joao-lucas", null);
         m1.confirmar();
         m1.realizar();
+        // M12 (H5.2) — "materiais recomendados": a ficha técnica é literalmente o assunto da ata
+        // desta mentoria (ver resumo abaixo), bom fixture pra mostrar o campo populado de verdade
+        // (não só um array vazio) na tela do mentorado e no E2E.
+        Conteudo fichaTecnica = buscarConteudoPorTitulo("Ficha técnica — modelo");
+        if (fichaTecnica != null) {
+            m1.atualizarMateriaisRecomendados(Set.of(fichaTecnica));
+        }
         mentoriaRepository.save(m1);
         Ata ata1 = new Ata(m1);
         ata1.concluirProcessamento(
@@ -353,12 +362,20 @@ public class DemoDataSeeder implements ApplicationRunner {
         criarConteudo("Apresentação: Precificação estratégica", TipoConteudo.APRESENTACAO, Plano.ESSENCIAL, false);
     }
 
-    private void criarConteudo(String titulo, TipoConteudo tipo, Plano planoMinimo, boolean publicado) {
+    // Devolve o Conteudo salvo (M12: seedMentoriasEAtas usa o retorno pra associar materiaisRecomendados).
+    private Conteudo criarConteudo(String titulo, TipoConteudo tipo, Plano planoMinimo, boolean publicado) {
         Conteudo conteudo = new Conteudo(titulo, tipo, "https://cdn.sawhub.com.br/conteudos/" + tipo.name().toLowerCase(), planoMinimo);
         if (publicado) {
             conteudo.publicar();
         }
-        conteudoRepository.save(conteudo);
+        return conteudoRepository.save(conteudo);
+    }
+
+    private Conteudo buscarConteudoPorTitulo(String titulo) {
+        return conteudoRepository.findAll().stream()
+                .filter(c -> c.getTitulo().equals(titulo))
+                .findFirst()
+                .orElse(null);
     }
 
     private void seedEventos() {
