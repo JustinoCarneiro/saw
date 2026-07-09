@@ -1,0 +1,71 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 32px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandWord {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.userChip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 4px 14px 4px 4px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.userName {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.logoutBtn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.logoutBtn:hover {
+  color: var(--text);
+  border-color: var(--gold-soft);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 28px 32px;
+}

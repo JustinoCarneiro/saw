@@ -248,6 +248,32 @@ export interface Conteudo {
   criadoEm: string;
 }
 
+// M08 · E2 (Dashboard do Mentorado)
+export interface CompromissoMentorado {
+  id: string;
+  tipo: TipoMentoria;
+  dataHora: string;
+  linkOnline: string | null;
+  local: string | null;
+}
+
+export interface DicaDestaque {
+  id: string;
+  titulo: string;
+  url: string;
+}
+
+export interface DashboardMentoradoResponse {
+  nome: string;
+  evolucaoGeralPct: number;
+  tarefasAbertas: number;
+  metaSemanalPct: number | null;
+  proximaReuniao: CompromissoMentorado | null;
+  compromissos: CompromissoMentorado[];
+  dicaDestaque: DicaDestaque | null;
+  avisos: string[];
+}
+
 export type TipoEvento = 'AO_VIVO' | 'PRESENCIAL';
 export type StatusEvento = 'PROGRAMADO' | 'AO_VIVO' | 'REALIZADO' | 'CANCELADO';
 

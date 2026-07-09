@@ -35,6 +35,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M05** | **E13 · Comercial & Vendas** | **Grande** | **6d + ~1d (fast-follow H1.3)** | **H13.1–H13.3 + H1.3** |
 | **M06** | **E11 · Gestão Admin + E5 · Mentorias & Atas + diferencial de IA** | **Grande** | **6d + ~2-3d (IA)** | **H11.1–H11.4 + H5.1–H5.3** |
 | **M07** | **Google OAuth (fast-follow do E1)** | **Pequeno** | **1.5d** | **H1.2** |
+| **M08** | **E2 · Dashboard do Mentorado** | **Médio** | **3.5d** | **H2.1–H2.3** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -770,6 +771,114 @@ classe do M06**: sem app OAuth registrado no Google Cloud Console, o fluxo real 
 consentimento → callback) nunca rodou de ponta a ponta neste ambiente; validar com credenciais
 reais antes de qualquer demo que dependa do login Google funcionar de fato.
 
+### M08 — E2 · Dashboard do Mentorado
+
+**Por que Médio:** primeira tela do lado Mentorado de verdade (até aqui só existia um placeholder
+de "área em construção" pós-login, M07). Não é CRUD — é leitura agregada de dados que já existem
+(`Mentorado`, `Encaminhamento`, `Mentoria`, `Conteudo`), então não tem a complexidade de um módulo
+"Grande" como E13/E14/E11, mas cria pela primeira vez a árvore de rotas `/mentorado` no frontend
+(shell, guarda de perfil, navegação) — não é "Pequeno" como o M07 porque isso é esqueleto novo, não
+um fast-follow sobre algo que já existe.
+
+**Modelagem de banco:** nenhuma entidade nova. H2.1–H2.3 são inteiramente supridas por dado que já
+existe: `Mentorado` (nome/plano, já usado no E11), `Encaminhamento` (tarefas, já usado no E4 parcial
+e no E17), `Mentoria` (compromissos, já usado no E5/E11) e `Conteudo` (dica em destaque, já usado no
+E6 parcial/E11). Só entram métodos novos de leitura nos repositórios existentes — nenhuma tabela,
+nenhuma migração Flyway.
+
+**H2.1 (visão geral) — decisões de escopo:**
+- **Tarefas abertas** e **evolução geral (%)**: dado real, sem suposição. Evolução geral reusa a
+  *mesma* fórmula de peso-concluído/peso-total já usada em `MentoradoConsolidadoResponse.from()`
+  (E17) — extraída pra um helper compartilhado (`PesoProgressoCalculator` ou equivalente em
+  `com.sawhub.hub.mentorado`) especificamente pra impedir que o Dashboard do mentorado e o Painel
+  Consolidado do Admin um dia mostrem números diferentes pro mesmo mentorado por causa de duas
+  implementações da mesma conta divergindo ao longo do tempo — não é abstração prematura, é a mesma
+  conta usada em dois lugares.
+- **Meta semanal (%)**: **suposição, não coberta pelo `spec.md`** — E3 · Metas Estratégicas não
+  existe ainda (nenhuma entidade `Meta`), então este campo volta `null`/omitido nesta leva, com o
+  frontend mostrando um estado "Metas ainda não disponíveis" em vez de inventar um número. Mesmo
+  padrão "buraco esperado, não falha desta leva" já usado no M06 (H5.1/H5.3) e M07 (mentee sem área
+  própria). Volta a ser um número real quando o M09/E3 (próximo da fila) entrar.
+
+**H2.2 (compromissos) — decisão de escopo:** "mentorias/visitas/eventos futuros" do `spec.md` vira,
+nesta leva, **só Mentorias** onde o mentorado logado é membro (`MEMBER OF`, já que `Mentoria` é M:N
+com `Mentorado` mesmo pra tipo INDIVIDUAL — ver nota do M06), status `AGENDADA`/`CONFIRMADA`, data
+futura. "Visitas" não tem modelagem em lugar nenhum do sistema (não é um gap desta leva, é uma
+suposição do próprio `spec.md`, fora de escopo até virar história própria). Eventos ficam de fora
+porque E7 · Eventos & Inscrições ainda não construiu o vínculo mentorado↔evento (M06 só entregou o
+CRUD administrativo do Evento, sem inscrição) — mostrar "todo evento futuro" pra todo mentorado
+seria inventar uma inscrição implícita que não existe. Filtro de data feito em Java (mesmo padrão
+já usado em `MentoriaService`/`LancamentoService` — dataset pequeno por mentorado, não JPQL, pelo
+mesmo problema de inferência de tipo do Postgres com `Instant` achado no M06).
+
+**H2.3 (avisos + dica do Brayan) — decisões de escopo:**
+- **Avisos**: E16 · Avisos & Notificações (transversal) não existe — nenhuma entidade `Aviso`.
+  Lista sempre vazia nesta leva, com estado "Nenhum aviso no momento" no frontend. Não é um buraco
+  desta leva: E16 é um épico transversal próprio, sem prioridade definida ainda no pipeline.
+- **Dica do Brayan em destaque**: **suposição, não coberta pelo `spec.md`** — E6 · Materiais &
+  Dicas do Brayan não existe como épico próprio ainda; o `spec.md` não diz como um conteúdo vira "a
+  dica em destaque" (não existe um campo "destaque"). Proxy adotado: o `Conteudo` (já existe desde
+  o M06) mais recente com `tipo=VIDEO`, `publicado=true` e `planoMinimo` dentro do plano do
+  mentorado (`Plano` é um enum ordenado — `planoMinimo.ordinal() <= mentorado.plano.ordinal()`).
+  Se não houver nenhum, estado vazio. Revisitar quando E6 definir curadoria própria (campo
+  `destaque` explícito seria o caminho natural, mas isso é decisão do Blueprint do E6, não deste).
+
+**Frontend — primeira rota `/mentorado`:** `MentoradoShell` novo, mesmo padrão do `AdminShell`
+(guarda de `perfil`, mas checando `MENTORADO` em vez de `ADMIN` — perfil Mentorado não tem conceito
+de RBAC por área, então não reusa `Sidebar`/`Modulo`, que são exclusivos do Admin/E15). Sem
+navegação multi-item ainda — só existe a página de Dashboard nesta leva; a navegação cresce quando
+E3/E4 entrarem (mesma ordem já definida em `CLAUDE.md` § MVP: Dashboard → Metas/Tarefas → Mentorias
+→ resto). `LoginPage.tsx` troca a mensagem placeholder "área em construção" (M06/M07) por navegação
+real pra `/mentorado` — fecha essa pendência que vinha sendo documentada desde o M06.
+
+## Contratos de API (M08)
+
+```jsonc
+GET /api/v1/mentorado/dashboard        // hasRole("MENTORADO"), já coberto pelo SecurityConfig
+{
+  "nome": "Maria Silva",
+  "evolucaoGeralPct": 62,
+  "tarefasAbertas": 3,
+  "metaSemanalPct": null,              // E3 não construído nesta leva — sempre null por ora
+  "proximaReuniao": {                  // null se não houver nenhuma futura
+    "id": "uuid",
+    "tipo": "INDIVIDUAL",
+    "dataHora": "2026-07-15T14:00:00Z",
+    "linkOnline": "https://meet.google.com/...",
+    "local": null
+  },
+  "compromissos": [                    // mesmo formato do item acima, ordenado por dataHora ASC
+    { "id": "uuid", "tipo": "INDIVIDUAL", "dataHora": "2026-07-15T14:00:00Z", "linkOnline": "...", "local": null }
+  ],
+  "dicaDestaque": {                    // null se não houver Conteudo elegível
+    "id": "uuid",
+    "titulo": "Como montar sua ficha técnica",
+    "url": "https://..."
+  },
+  "avisos": []                         // E16 não construído nesta leva — sempre vazio por ora
+}
+```
+
+## Rastreabilidade história ↔ módulo (M08)
+
+| História | Cobertura |
+|---|---|
+| H2.1 — visão geral (reunião, meta, tarefas, evolução) | `GET /mentorado/dashboard` (`evolucaoGeralPct`, `tarefasAbertas`, `metaSemanalPct`, `proximaReuniao`) |
+| H2.2 — próximos compromissos | `GET /mentorado/dashboard` (`compromissos`, só Mentorias nesta leva — ver Suposição acima) |
+| H2.3 — avisos + dica do Brayan | `GET /mentorado/dashboard` (`avisos` sempre vazio nesta leva; `dicaDestaque` via proxy em `Conteudo`) |
+
+**Status: ✅ M08 concluído** (2026-07-09) — backend (152/152 testes, incluindo `ProgressoCalculatorTest`
+e `MentoradoDashboardServiceTest` novos), `revisor-seguranca` sem achado bloqueante (isolamento por
+tenant confirmado por análise de código: o id do mentorado usado em toda a agregação vem só de
+`principal.getUsuarioId()`, nunca de request; RBAC `/api/v1/mentorado/**` intacto; sem risco de
+injeção JPQL na query `MEMBER OF` nova — só 2 notas de robustez sem exploração possível, endereçadas
+com comentário no código), frontend (`MentoradoShell` + `DashboardMentoradoPage`, primeira rota
+`/mentorado` de verdade — fecha o placeholder "área em construção" documentado desde o M06),
+verificação ao vivo via curl com 3 contas reais (Rafael/João/Admin: dado correto por mentorado,
+403 pro Admin) e E2E (`dashboard-mentorado.spec.ts`, 5 testes) — 29/29 verde na suíte completa, sem
+regressão. Sem pendência de credencial externa nesta leva (diferente de M06/M07) — módulo
+inteiramente verificável neste ambiente.
+
 ## Fórmula de prazo
 
 ```
@@ -799,7 +908,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 2 | E13 · Comercial & Vendas | Grande | 6d + ~1d (H1.3) | ✅ Concluído — backend (90/90 testes) + `revisor-seguranca` (M1/M2/L2/L3 corrigidos) + frontend (dashboard/funil/ranking) + E2E (17/17, `comercial.spec.ts`) |
 | 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo |
 | 4 | Google OAuth (fast-follow do E1) | Pequeno | 1.5d | ✅ Concluído — backend (141/141 testes) + `revisor-seguranca` (2 achados corrigidos: oráculo de enumeração de contas + nota pendurada) + frontend (botão condicional + tradução de erro) + E2E (24/24, `google-oauth.spec.ts`). Fluxo real (redirect→consentimento→callback) verificado só até a borda — sem app Google Cloud Console configurado neste ambiente |
-| 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ⬜ |
+| 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ✅ Concluído — backend (152/152 testes) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado) + frontend (primeira rota `/mentorado` de verdade) + E2E (29/29, `dashboard-mentorado.spec.ts`) |
 | 6 | E3 · Metas Estratégicas | Médio | 3.5d | ⬜ |
 | 7 | E4 · Tarefas & Agenda | Médio | 3.5d | ⬜ Backend parcial já existe (`Encaminhamento`, peso 1/2, usado pelo E17) |
 | 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ⬜ |

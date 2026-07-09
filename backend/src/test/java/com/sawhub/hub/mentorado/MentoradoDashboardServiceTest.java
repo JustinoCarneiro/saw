@@ -1,0 +1,196 @@
+package com.sawhub.hub.mentorado;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
+
+import com.sawhub.hub.conteudo.Conteudo;
+import com.sawhub.hub.conteudo.ConteudoRepository;
+import com.sawhub.hub.conteudo.TipoConteudo;
+import com.sawhub.hub.mentoria.Mentoria;
+import com.sawhub.hub.mentoria.MentoriaRepository;
+import com.sawhub.hub.mentoria.TipoMentoria;
+import com.sawhub.hub.team.Area;
+import com.sawhub.hub.team.Colaborador;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+/** H2.1–H2.3 — RED primeiro: MentoradoDashboardService ainda não existe neste ponto do ciclo. */
+@ExtendWith(MockitoExtension.class)
+class MentoradoDashboardServiceTest {
+
+    @Mock
+    private MentoradoRepository mentoradoRepository;
+    @Mock
+    private EncaminhamentoRepository encaminhamentoRepository;
+    @Mock
+    private MentoriaRepository mentoriaRepository;
+    @Mock
+    private ConteudoRepository conteudoRepository;
+
+    private MentoradoDashboardService service() {
+        return new MentoradoDashboardService(mentoradoRepository, encaminhamentoRepository, mentoriaRepository, conteudoRepository);
+    }
+
+    private static Mentorado mentorado(UUID id, Plano plano) {
+        Mentorado m = new Mentorado(null, "Maria", "Restaurante da Maria", plano, BigDecimal.ZERO, 0, 0);
+        ReflectionTestUtils.setField(m, "id", id);
+        return m;
+    }
+
+    private static Colaborador mentor() {
+        Colaborador c = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE, 10, BigDecimal.TEN);
+        ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
+        return c;
+    }
+
+    private void semCompromissosNemDica(Mentorado mentorado) {
+        when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of());
+    }
+
+    @Test
+    void usuarioSemMentoradoVinculadoLancaErroClaro() {
+        UUID usuarioId = UUID.randomUUID();
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().dashboard(usuarioId))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void tarefasAbertasEEvolucaoGeralVemDoPesoDosEncaminhamentos() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+
+        Encaminhamento concluido = new Encaminhamento(mentorado, "Ficha técnica", 2, true);
+        Encaminhamento aberto1 = new Encaminhamento(mentorado, "DRE", 1, false);
+        Encaminhamento aberto2 = new Encaminhamento(mentorado, "Manual da cultura", 1, false);
+        when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId()))
+                .thenReturn(List.of(concluido, aberto1, aberto2));
+        semCompromissosNemDica(mentorado);
+
+        var dashboard = service().dashboard(usuarioId);
+
+        assertThat(dashboard.tarefasAbertas()).isEqualTo(2);
+        // peso concluído 2 / peso total 4 = 50% — mesma fórmula do E17 (ProgressoCalculator).
+        assertThat(dashboard.evolucaoGeralPct()).isEqualTo(50);
+    }
+
+    @Test
+    void metaSemanalPctSempreNullPorqueE3NaoExisteAinda() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
+        semCompromissosNemDica(mentorado);
+
+        assertThat(service().dashboard(usuarioId).metaSemanalPct()).isNull();
+    }
+
+    @Test
+    void avisosSempreVazioPorqueE16NaoExisteAinda() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
+        semCompromissosNemDica(mentorado);
+
+        assertThat(service().dashboard(usuarioId).avisos()).isEmpty();
+    }
+
+    @Test
+    void compromissosSaoSoMentoriasFuturasAgendadasOuConfirmadasOrdenadasPorData() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of());
+
+        Colaborador mentor = mentor();
+        Instant agora = Instant.now();
+
+        Mentoria passada = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(mentorado), agora.minusSeconds(3600), 60, null, null);
+        ReflectionTestUtils.setField(passada, "id", UUID.randomUUID());
+
+        Mentoria futuraAgendadaMaisLonge = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(mentorado), agora.plusSeconds(7200), 60, "link2", null);
+        ReflectionTestUtils.setField(futuraAgendadaMaisLonge, "id", UUID.randomUUID());
+
+        Mentoria futuraConfirmadaMaisProxima = new Mentoria(TipoMentoria.GRUPO, mentor, Set.of(mentorado), agora.plusSeconds(3600), 60, "link1", null);
+        futuraConfirmadaMaisProxima.confirmar();
+        ReflectionTestUtils.setField(futuraConfirmadaMaisProxima, "id", UUID.randomUUID());
+
+        Mentoria futuraCancelada = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(mentorado), agora.plusSeconds(1800), 60, null, null);
+        futuraCancelada.cancelar();
+        ReflectionTestUtils.setField(futuraCancelada, "id", UUID.randomUUID());
+
+        when(mentoriaRepository.buscarPorMentorado(mentorado))
+                .thenReturn(List.of(passada, futuraAgendadaMaisLonge, futuraConfirmadaMaisProxima, futuraCancelada));
+
+        var dashboard = service().dashboard(usuarioId);
+
+        assertThat(dashboard.compromissos()).hasSize(2);
+        assertThat(dashboard.compromissos().get(0).id()).isEqualTo(futuraConfirmadaMaisProxima.getId());
+        assertThat(dashboard.compromissos().get(1).id()).isEqualTo(futuraAgendadaMaisLonge.getId());
+        assertThat(dashboard.proximaReuniao().id()).isEqualTo(futuraConfirmadaMaisProxima.getId());
+    }
+
+    @Test
+    void semCompromissoFuturoProximaReuniaoENull() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
+        semCompromissosNemDica(mentorado);
+
+        var dashboard = service().dashboard(usuarioId);
+
+        assertThat(dashboard.proximaReuniao()).isNull();
+        assertThat(dashboard.compromissos()).isEmpty();
+    }
+
+    @Test
+    void dicaDestaqueEOVideoPublicadoMaisRecenteDentroDoPlanoDoMentorado() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
+        when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
+
+        // Repositório já devolve ordenado DESC por criadoEm (buscarComFiltro real) — o mais
+        // recente vem primeiro na lista simulada aqui.
+        Conteudo profissionalForaDoAlcance = new Conteudo("Vídeo avançado", TipoConteudo.VIDEO, "url1", Plano.PROFISSIONAL);
+        Conteudo essencialElegivelMaisRecente = new Conteudo("Vídeo essencial", TipoConteudo.VIDEO, "url2", Plano.ESSENCIAL);
+        Conteudo gratuitoElegivelMaisAntigo = new Conteudo("Vídeo básico", TipoConteudo.VIDEO, "url3", Plano.GRATUITO);
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true))
+                .thenReturn(List.of(profissionalForaDoAlcance, essencialElegivelMaisRecente, gratuitoElegivelMaisAntigo));
+
+        var dashboard = service().dashboard(usuarioId);
+
+        assertThat(dashboard.dicaDestaque().titulo()).isEqualTo("Vídeo essencial");
+    }
+
+    @Test
+    void semVideoElegivelDicaDestaqueENull() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
+        when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
+
+        Conteudo profissionalForaDoAlcance = new Conteudo("Vídeo avançado", TipoConteudo.VIDEO, "url1", Plano.PROFISSIONAL);
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of(profissionalForaDoAlcance));
+
+        assertThat(service().dashboard(usuarioId).dicaDestaque()).isNull();
+    }
+}

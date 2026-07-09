@@ -1,5 +1,6 @@
 package com.sawhub.hub.mentoria;
 
+import com.sawhub.hub.mentorado.Mentorado;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,4 +27,13 @@ public interface MentoriaRepository extends JpaRepository<Mentoria, UUID> {
 
     @Query("SELECT DISTINCT m FROM Mentoria m LEFT JOIN FETCH m.mentor LEFT JOIN FETCH m.mentorados WHERE m.id = :id")
     Optional<Mentoria> buscarPorIdComDetalhes(@Param("id") UUID id);
+
+    // M08 — Dashboard do Mentorado (H2.2). MEMBER OF exige o tipo do elemento da coleção
+    // (Mentorado), não um UUID cru — o service já tem a entidade carregada, então passa ela.
+    // Status/data futura são filtrados em MentoradoDashboardService, mesmo padrão do resto do
+    // pacote (dataset pequeno por mentorado, sem o problema de inferência de tipo do Postgres).
+    @Query("SELECT DISTINCT m FROM Mentoria m LEFT JOIN FETCH m.mentor LEFT JOIN FETCH m.mentorados "
+            + "WHERE :mentorado MEMBER OF m.mentorados "
+            + "ORDER BY m.dataHora ASC")
+    List<Mentoria> buscarPorMentorado(@Param("mentorado") Mentorado mentorado);
 }

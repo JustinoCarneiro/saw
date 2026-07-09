@@ -11,6 +11,10 @@ import org.springframework.data.repository.query.Param;
 public interface MentoradoRepository extends JpaRepository<Mentorado, UUID> {
     Optional<Mentorado> findByUsuario(Usuario usuario);
 
+    // M08 — resolve o Mentorado logado a partir do id do Usuario no AppUserPrincipal, sem precisar
+    // de um passo intermediário pelo UsuarioRepository.
+    Optional<Mentorado> findByUsuarioId(UUID usuarioId);
+
     // Bug achado ao vivo (boot do M06): com :busca=null, o Postgres não conseguia inferir o tipo
     // do parâmetro dentro de CONCAT('%', :busca, '%') e escolhia `bytea` em vez de `text`
     // ("function lower(bytea) does not exist"). CAST(:busca AS string) força o tipo certo mesmo

@@ -42,17 +42,10 @@ export function LoginPage() {
     return <Navigate to={firstPermittedRoute(user.modulosPermitidos)} replace />;
   }
 
-  // MENTORADO autentica com sucesso (e-mail/senha ou Google), mas ainda não tem área própria —
-  // E2+ não construído (ver ROADMAP.md M07). Mensagem clara em vez de deixar a tela travada
-  // sem explicação nenhuma.
+  // M08 — /mentorado existe de verdade agora (Dashboard, H2.1–H2.3). Antes disso (M06/M07) só
+  // havia um placeholder de "área em construção" aqui.
   if (!loading && user?.perfil === 'MENTORADO') {
-    return (
-      <div className={styles.page}>
-        <div className={styles.card} style={{ padding: 48, textAlign: 'center' }}>
-          <p>Você entrou, {user.nome}. A área do mentorado ainda está em construção.</p>
-        </div>
-      </div>
-    );
+    return <Navigate to="/mentorado" replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -61,7 +54,9 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const loggedInUser = await login(email, senha);
-      navigate(firstPermittedRoute(loggedInUser.modulosPermitidos));
+      // firstPermittedRoute só faz sentido pra ADMIN (modulosPermitidos é RBAC por área, E15) —
+      // MENTORADO não tem módulos, teria caído de volta em /login (modulosPermitidos vazio).
+      navigate(loggedInUser.perfil === 'MENTORADO' ? '/mentorado' : firstPermittedRoute(loggedInUser.modulosPermitidos));
     } catch (err) {
       // 401 é o único caso de "credenciais erradas" de verdade — qualquer outro status
       // (403 de CORS/CSRF, 5xx, falha de rede) é um problema de infra, não do usuário,

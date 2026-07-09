@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminShell } from './app/AdminShell';
 import { AdminIndexRedirect } from './app/AdminIndexRedirect';
+import { MentoradoShell } from './app/MentoradoShell';
 import { PlaceholderScreen, RequireModulo } from './app/RequireModulo';
 import { LoginPage } from './features/auth/LoginPage';
 import { SolicitarAcessoPage } from './features/auth/SolicitarAcessoPage';
@@ -22,6 +23,7 @@ import { AtaDetalhePage } from './features/mentorados/AtaDetalhePage';
 import { ConteudosShell } from './features/conteudos/ConteudosShell';
 import { ConteudosPage } from './features/conteudos/ConteudosPage';
 import { EventosPage } from './features/conteudos/EventosPage';
+import { DashboardMentoradoPage } from './features/mentorado/DashboardMentoradoPage';
 
 export default function App() {
   return (
@@ -107,6 +109,10 @@ export default function App() {
           <Route path="lista" element={<ConteudosPage />} />
           <Route path="eventos" element={<EventosPage />} />
         </Route>
+      </Route>
+
+      <Route path="/mentorado" element={<MentoradoShell />}>
+        <Route index element={<DashboardMentoradoPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/login" replace />} />
