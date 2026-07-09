@@ -41,6 +41,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M11** | **E6 · Materiais & Dicas do Brayan** | **Médio** | **3.5d** | **H6.1–H6.3** |
 | **M12** | **E5 · Mentorias & Atas (lado mentorado)** | **Médio** | **4d** | **H5.1–H5.3** |
 | **M13** | **E7 · Eventos & Inscrições (lado mentorado)** | **Médio** | **4.5d** | **H7.1–H7.3** |
+| **M14** | **E8 · Loja SAW (catálogo, carrinho, checkout, gateway)** | **Grande · risco alto** | **6d** | **H8.1–H8.4** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -1503,6 +1504,244 @@ ligou um formulário de edição a ele) — achado ao ler `EventosPage.tsx` (Adm
 não é escopo deste módulo mentee-facing, só registrado pra não se perder. Sem pendência de
 credencial externa.
 
+### M14 — E8 · Loja SAW (catálogo, carrinho, checkout, gateway)
+
+**Por que Grande · risco alto:** diferente de E5/E7, não há NENHUM precedente admin (M06 nunca
+tocou Loja) — `Produto`, `Pedido`, `ItemPedido` são inteiramente novos, junto com a primeira
+integração de gateway de pagamento externo do projeto. Risco alto por decisão explícita do
+CLAUDE.md ("Auth e Pagamento são os módulos de maior risco... passam por revisor-seguranca
+obrigatório") — mesmo tratamento do E1.
+
+**Decisão de gateway (pergunta feita a Marcos, resolvida antes deste Blueprint):
+Mercado Pago**, via Checkout Pro (Preferences API) — o mentorado é redirecionado pro checkout
+hospedado pelo Mercado Pago, o SAW HUB nunca processa dado de cartão diretamente (reduz escopo de
+PCI a zero). Confirma o que já era esperado pela CLAUDE.md (público 100% Brasil, PIX/boleto/cartão).
+
+**Decisões de escopo & Suposições assumidas:**
+- **Chamada HTTP direta via `RestClient`, não o SDK oficial do Mercado Pago.** A superfície
+  necessária é pequena (criar Preference, consultar um Payment por id) — usar o mesmo padrão já
+  estabelecido em `com.sawhub.hub.mentoria.ia` (`WhisperTranscricaoService`/
+  `ClaudeAtaRascunhoService`: `RestClient.Builder` autoconfigurado, timeout explícito, exceção
+  sentinela própria, falha limpa sem credencial) evita uma dependência nova só pra duas chamadas,
+  e mantém controle total pra testar sem credencial real.
+- **Sem credencial neste ambiente — mesmo tratamento do pipeline de IA do M06.**
+  `MERCADOPAGO_ACCESS_TOKEN`/`MERCADOPAGO_WEBHOOK_SECRET` vazios por padrão
+  (`application.yml`, mesmo bloco `sawhub.pagamento`, mesmo raciocínio do bloco `ia`) — checkout
+  falha com `PagamentoIndisponivelException` clara em vez de tentar uma chamada fadada a 401.
+  Verificado só até a borda; validar com credenciais reais (sandbox do Mercado Pago) antes de
+  qualquer demo que dependa do checkout funcionar de fato.
+- **Webhook com verificação de assinatura obrigatória desde o início**, não um "achado pra
+  corrigir depois": Mercado Pago assina notificações (`x-signature`/`x-request-id`, HMAC-SHA256
+  com o webhook secret) — `POST /api/v1/webhooks/mercadopago` rejeita qualquer notificação sem
+  assinatura válida antes de processar. Além disso, o valor/status do pagamento NUNCA é confiado a
+  partir do corpo da notificação — o webhook só usa o `payment id` recebido pra re-consultar o
+  Payment de verdade na API do Mercado Pago (padrão documentado pelo próprio gateway contra
+  notificações forjadas).
+- **`PAGO` e `LIBERADO` transitam juntos, automaticamente, no mesmo webhook** — CLAUDE.md lista os
+  dois como estados formalmente distintos da máquina, e o schema os mantém distintos (2 colunas de
+  histórico reais), mas H8.3 descreve aprovação → "vira Pago" e "o item digital é liberado" na
+  mesma frase, sem gate manual do Admin no meio. Catálogo é 100% digital nesta leva (ver abaixo) —
+  se a SAW um dia vender algo que exija atendimento manual (produto físico, geração de licença),
+  `LIBERADO` vira uma transição manual separada; até lá, automática.
+- **Catálogo 100% digital — sem "produtos físicos" nesta leva.** O protótipo congelado
+  (`design/prototipo/index.html`) mostra uma categoria "Produtos físicos" nos filtros, mas H8.3 só
+  descreve entrega via "item digital é liberado" (sem fluxo de frete/rastreio/endereço). Categorias
+  usadas são as de `spec.md` H8.1 (`CURSO, PLANILHA, TEMPLATE, EBOOK, FERRAMENTA, KIT,
+  CONSULTORIA`), não as do protótipo — o protótipo é só referência visual de card, não a fonte de
+  verdade de categorização (mesma hierarquia spec.md > protótipo já usada desde o M09).
+- **"Avaliação" (H8.1) é um campo estático curado pelo Admin, não um sistema de reviews.** Nem o
+  protótipo congelado nem nenhum módulo existente têm conceito de review/nota de mentorado — H8.1
+  só pede "vejo... com preço e avaliação", não pede a jornada de AVALIAR. `avaliacaoMedia`
+  (`BigDecimal`, opcional) é preenchido pelo Admin ao cadastrar o produto, igual "destaque"/"tag".
+  Se a SAW quiser reviews de verdade (quem pode avaliar, quando, baseado em quê) isso é um H8.5
+  não escrito ainda — não inventar aqui.
+- **Um carrinho ativo por mentorado, do lado do servidor** (não localStorage): bate com a máquina
+  de estado do `CLAUDE.md` (`Pedido: Carrinho → Aguardando pagamento → ...`) tratando "Carrinho"
+  como um estado real e persistido do `Pedido`, não uma abstração cliente-only. Adicionar/remover
+  item muta o MESMO `Pedido` em `CARRINHO`; finalizar compra transiciona esse pedido pra frente
+  (nunca cria um novo). Sobrevive a troca de dispositivo/refresh — mais robusto que localStorage
+  pra 10-15 usuários que podem comprar do celular e continuar no desktop.
+- **Preço do item é travado no momento em que entra no carrinho** (`ItemPedido.precoUnitario`
+  como snapshot), não recalculado no checkout — evita que uma mudança de preço pelo Admin durante
+  o processo de compra altere o valor que o mentorado já viu no carrinho. Reação a um "produto já
+  no carrinho" é incrementar quantidade, não re-snapshotar o preço.
+- **Fecha o contrato já documentado desde o E13/E14**: `ROADMAP.md`'s Blueprint do E13 já avisa
+  que `vendasLoja` fica em R$ 0 "até o E8 existir" e lê de `OrigemReceita.LOJA` — este módulo
+  ESCREVE em `LancamentoFinanceiro` (categoria pré-semeada "Loja SAW", `TipoLancamento.RECEITA`,
+  `StatusLancamento.REALIZADO`) no momento em que o pedido vira `PAGO`, seguindo o padrão já
+  estabelecido (`ContaPagarReceberService.liquidar()`: sem service intermediário, o service do
+  domínio salva o `LancamentoFinanceiro` direto). Não duplica contagem própria de receita — o
+  Financeiro continua sendo o dono único do número, mesmo princípio já citado no Blueprint do E13.
+- **RBAC do Admin: `Modulo.COMERCIAL`** (curadoria de `Produto` + reembolso/cancelamento manual de
+  `Pedido`) — suposição explícita, `CLAUDE.md` não define qual área da SAW cuida da Loja; Comercial
+  (vendas, funil, ranking) é o encaixe mais próximo do que existe hoje. Ajustar se o cliente
+  confirmar outra área.
+- **Reembolso é ação manual do Admin, não self-service do mentorado.** H8.3 descreve pagamento
+  RECUSADO (falha no primeiro attempt, carrinho preservado) — isso é tratado automaticamente pelo
+  checkout. Estornar um pedido JÁ PAGO é uma operação distinta (dinheiro de volta), que a SAW faz
+  direto no painel do Mercado Pago hoje — o Admin só reflete isso no SAW HUB via
+  `PATCH /admin/pedidos/{id}/reembolsar`, sem iniciar o estorno de verdade por aqui. Mesma
+  categoria de pendência do M12/M13 (dado/endpoint existe, curadoria fina fica pra depois).
+- **Sem nota fiscal.** `spec.md` já lista "emissão fiscal" como pendência aberta separada da
+  escolha de gateway — não é parte de H8.1-H8.4, não entra nesta leva.
+- **Correção de uma inconsistência encontrada no ROADMAP.md**: a nota de ordenação do E13
+  ("Loja depende de Assinatura/Perfil (E9) existirem antes de fazer sentido") contradizia a
+  própria tabela de pipeline (que já colocava E8 antes de E9). Não há dependência técnica real —
+  H8.1-H8.4 não usam nada de H9.1-H9.3 (perfil/XP/assinatura são conceitos separados de "comprar um
+  produto avulso"). Nota removida da tabela de pipeline; E8 segue na ordem em que já estava.
+
+## Modelagem de banco (M14)
+
+```sql
+-- V11__loja.sql
+CREATE TABLE produto (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    titulo            VARCHAR(255) NOT NULL,
+    descricao         TEXT NOT NULL,
+    categoria         VARCHAR(20) NOT NULL,
+    preco             NUMERIC(10,2) NOT NULL,
+    preco_original    NUMERIC(10,2),
+    avaliacao_media   NUMERIC(2,1),
+    destaque          BOOLEAN NOT NULL DEFAULT false,
+    vendas            INT NOT NULL DEFAULT 0,
+    arquivo_url       VARCHAR(500) NOT NULL,
+    imagem_url        VARCHAR(500),
+    publicado         BOOLEAN NOT NULL DEFAULT false,
+    criado_em         TIMESTAMP NOT NULL DEFAULT now(),
+    versao            BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_produto_categoria CHECK (categoria IN
+        ('CURSO','PLANILHA','TEMPLATE','EBOOK','FERRAMENTA','KIT','CONSULTORIA')),
+    CONSTRAINT chk_produto_preco CHECK (preco > 0)
+);
+CREATE INDEX idx_produto_categoria ON produto(categoria);
+CREATE INDEX idx_produto_publicado ON produto(publicado);
+
+CREATE TABLE pedido (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mentorado_id          UUID NOT NULL REFERENCES mentorado(id),
+    status                VARCHAR(25) NOT NULL DEFAULT 'CARRINHO',
+    valor_total           NUMERIC(10,2) NOT NULL DEFAULT 0,
+    referencia_gateway    VARCHAR(255),
+    criado_em             TIMESTAMP NOT NULL DEFAULT now(),
+    atualizado_em         TIMESTAMP NOT NULL DEFAULT now(),
+    versao                BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_pedido_status CHECK (status IN
+        ('CARRINHO','AGUARDANDO_PAGAMENTO','PAGO','LIBERADO','CANCELADO','REEMBOLSADO'))
+);
+-- Só 1 carrinho ATIVO por mentorado — índice parcial, não constraint de tabela inteira (o
+-- mentorado pode ter vários pedidos PAGO/LIBERADO no histórico, só não 2 CARRINHO ao mesmo tempo).
+CREATE UNIQUE INDEX idx_pedido_carrinho_unico ON pedido(mentorado_id) WHERE status = 'CARRINHO';
+CREATE INDEX idx_pedido_mentorado ON pedido(mentorado_id);
+
+CREATE TABLE item_pedido (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pedido_id         UUID NOT NULL REFERENCES pedido(id) ON DELETE CASCADE,
+    produto_id        UUID NOT NULL REFERENCES produto(id),
+    quantidade        INT NOT NULL,
+    preco_unitario    NUMERIC(10,2) NOT NULL,
+    criado_em         TIMESTAMP NOT NULL DEFAULT now(),
+    versao            BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_item_pedido_quantidade CHECK (quantidade > 0)
+);
+CREATE UNIQUE INDEX idx_item_pedido_unico ON item_pedido(pedido_id, produto_id);
+```
+
+## Contratos de API (M14)
+
+```jsonc
+// --- Admin (Modulo.COMERCIAL) ---
+POST/GET/PUT /api/v1/admin/produtos               // CRUD, mesmo padrão de Conteudo (M06/M11)
+PATCH /api/v1/admin/produtos/{id}/publicar
+PATCH /api/v1/admin/produtos/{id}/despublicar
+PATCH /api/v1/admin/pedidos/{id}/reembolsar        // manual, ver Suposições acima
+PATCH /api/v1/admin/pedidos/{id}/cancelar
+
+// --- Mentorado (hasRole MENTORADO) ---
+GET /api/v1/mentorado/loja/produtos?categoria=&busca=&destaque=
+[{ "id":"uuid","titulo":"Pacote de Planilhas Gerenciais","categoria":"PLANILHA",
+   "preco":97.00,"precoOriginal":197.00,"avaliacaoMedia":4.8,"destaque":true,
+   "vendas":42,"imagemUrl":"https://...", "publicado":true }]
+// só publicado=true, nunca arquivoUrl (só liberado após pagamento, ver ItemPedidoResponse abaixo)
+
+GET /api/v1/mentorado/loja/carrinho
+// Devolve o Pedido em CARRINHO do mentorado autenticado, ou um carrinho vazio (sem criar linha
+// no banco até o 1º item ser adicionado — carrinho vazio não é um Pedido real).
+{ "id":"uuid","status":"CARRINHO","valorTotal":97.00,
+  "itens":[{ "id":"uuid","produtoId":"uuid","titulo":"...","quantidade":1,"precoUnitario":97.00 }] }
+
+POST /api/v1/mentorado/loja/carrinho/itens
+{ "produtoId":"uuid","quantidade":1 }
+// Cria o carrinho se não existir. Item já no carrinho: soma quantidade, NÃO re-snapshota preço.
+
+PATCH /api/v1/mentorado/loja/carrinho/itens/{itemId}
+{ "quantidade":2 }
+
+DELETE /api/v1/mentorado/loja/carrinho/itens/{itemId}
+
+POST /api/v1/mentorado/loja/checkout
+// 409 se o carrinho estiver vazio ou algum produto tiver sido despublicado desde que entrou no
+// carrinho. 503 (PagamentoIndisponivelException) se MERCADOPAGO_ACCESS_TOKEN não configurado.
+{ "checkoutUrl": "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=..." }
+// Pedido: CARRINHO -> AGUARDANDO_PAGAMENTO nesta chamada.
+
+GET /api/v1/mentorado/loja/pedidos
+// Histórico — todo Pedido do mentorado que NÃO está em CARRINHO, mais recente primeiro.
+[{ "id":"uuid","status":"LIBERADO","valorTotal":97.00,"criadoEm":"...",
+   "itens":[{ "titulo":"...","quantidade":1,"arquivoUrl":"https://..." }] }]
+// arquivoUrl só aparece quando status=LIBERADO — mesmo raciocínio do "ata RASCUNHO nunca aparece"
+// do M12: dado sensível ao estado, não uma checagem de front-end.
+
+// --- Webhook público, sem sessão (verificado por assinatura, não por hasRole) ---
+POST /api/v1/webhooks/mercadopago
+// 401 se a assinatura x-signature não bater. 200 sempre que processado (mesmo se o pedido já
+// estava PAGO — idempotente, notificação duplicada não reprocessa).
+```
+
+## Rastreabilidade história ↔ módulo (M14)
+
+| História | Cobertura |
+|---|---|
+| H8.1 — navegar catálogo por categoria, destaques/mais vendidos | `GET /mentorado/loja/produtos?categoria=&destaque=` (`vendas` cobre "mais vendidos", `avaliacaoMedia` estática — ver Suposições) |
+| H8.2 — adicionar ao carrinho, subtotal atualiza | `POST/PATCH/DELETE /mentorado/loja/carrinho/itens`, `valorTotal` no `GET /carrinho` |
+| H8.3 — checkout seguro, aprovado libera item, recusado preserva carrinho | `POST /checkout` + webhook assinado; recusa não transiciona o Pedido, carrinho intacto por construção |
+| H8.4 — pedido com trilha de estado | Schema com status formal + `PATCH` admin pra Cancelado/Reembolsado |
+
+**Status: ✅ M14 concluído** (2026-07-09) — backend (270/270 testes, incluindo `PedidoTest` (máquina
+de estado + matemática do carrinho, sem mocks), `LojaMentoradoServiceTest`, `PedidoPagamentoServiceTest`
+(idempotência do webhook, integração com Financeiro), `MercadoPagoGatewayServiceTest` (verificação
+de assinatura HMAC recomputada de forma independente), `PedidoAdminServiceTest`) + frontend
+(`LojaPage` — catálogo/carrinho/meus pedidos — e `ProdutosPage`/`PedidosPage` no Admin) + E2E
+(`loja.spec.ts`, 6 testes) — **52/52 verde na suíte completa**.
+
+**Achado ao vivo, antes do `revisor-seguranca`:** checkout sem `MERCADOPAGO_ACCESS_TOKEN`
+configurado (esperado neste ambiente) estourava 500 genérico em vez de erro claro —
+`PagamentoIndisponivelException` nunca tinha um handler em `GlobalExceptionHandler` (mesma classe
+de achado do H14/M06: erro de negócio/dependência externa fora do ar vs. erro interno). Corrigido
+com handler novo → 503, mensagem clara ("MERCADOPAGO_ACCESS_TOKEN não configurado — checkout
+indisponível.").
+
+**`revisor-seguranca` (mandatório, mesmo tratamento do Auth): Seguro** — nenhuma falha
+crítica/alta explorável nos caminhos de dinheiro, webhook ou isolamento de tenant. Toda a cadeia
+preço→carrinho→checkout→webhook→Financeiro foi rastreada: nenhum número vindo do corpo da
+requisição do cliente (só `produtoId`/`quantidade`) alimenta o valor cobrado ou lançado — o preço
+sempre vem de `Produto.preco` travado no servidor no momento do add-to-cart. Webhook nunca confia
+no corpo da notificação, sempre re-consulta o Payment real na API do Mercado Pago a partir só do
+id. Dois achados de hardening aplicados (não bloqueantes, mas corrigidos por ser módulo de
+pagamento): (1) `quantidade` sem teto superior — adicionado `@Max(20)`; (2) assinatura do webhook
+sem checagem de frescor do timestamp (janela de replay) — adicionado limite de 5 minutos. Dois
+achados registrados como pendência, ver abaixo.
+
+**Pendências reais, documentadas, não escondidas:** (1) **validar contra o sandbox real do
+Mercado Pago antes de qualquer demo/produção** — a verificação de assinatura HMAC foi implementada
+de boa-fé a partir da documentação pública (mesmo "verificado só até a borda" do pipeline de IA do
+M06), nunca testada contra um webhook de verdade; (2) sem rate limiting em `POST
+.../loja/checkout` — cada chamada gera uma Preference real na API do Mercado Pago, um mentorado
+autenticado pode chamar repetidamente (custo/abuso de API, não vazamento de dado — baixo risco
+dado que exige sessão); (3) `PedidoAdminService.reembolsar()`/`cancelar()` só refletem o estado no
+SAW HUB, nunca chamam a API de estorno de verdade do Mercado Pago — decisão documentada desde o
+Blueprint, não uma lacuna; (4) sem nota fiscal (fora de escopo desde o Blueprint, `spec.md` já
+lista como pendência separada da escolha de gateway).
+
 ## Fórmula de prazo
 
 ```
@@ -1538,7 +1777,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ✅ Concluído — backend (183/183 testes) + `revisor-seguranca` (4 achados corrigidos: reverse tabnabbing, `Plano.ordinal()` duplicado, corrida de criação concorrente, `url` sem validação de esquema) + frontend (`MateriaisPage`) + E2E (38/38, `materiais.spec.ts`). Indicadores agregados de consumo (H6.3) não implementados — pendência real |
 | 9 | E5 · Mentorias & Atas (lado mentorado) | Médio | 4d | ✅ Concluído — backend (213/213 testes) + `revisor-seguranca` (2 achados corrigidos: injeção de CR solto no .ics, `linkOnline` sem validação de esquema) + frontend (`MentoriasPage`) + E2E (42/42, `mentorias.spec.ts`). Fecha H5.1-H5.3, deferidas desde o M06. Achado ao vivo: `LazyInitializationException` na listagem Admin, corrigido. Pendência: UI de curadoria de materiais recomendados no Admin (endpoint existe, tela não) |
 | 10 | E7 · Eventos & Inscrições (lado mentorado) | Médio | 4.5d | ✅ Concluído — backend (226/226 testes) + `revisor-seguranca` (sem achado bloqueante — primeira revisão limpa desde M08-M10) + frontend (`EventosMentoradoPage`, calendário próprio) + E2E (46/46, `eventos.spec.ts`). Fecha H7.1-H7.3, deferidas desde o M06. Nova entidade `InscricaoEvento` com corrida de última vaga protegida por `@Version`. Pendência: janela de corrida rara em `marcarParticipacoes` (baixo impacto) |
-| 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ⬜ `revisor-seguranca` obrigatório, mesmo tratamento do Auth |
+| 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ✅ Concluído — backend (270/270 testes) + `revisor-seguranca` obrigatório (Seguro — 2 achados de hardening corrigidos: teto de quantidade, janela de frescor da assinatura do webhook) + frontend (`LojaPage`, `ProdutosPage`/`PedidosPage` Admin) + E2E (52/52, `loja.spec.ts`). Gateway Mercado Pago (Checkout Pro), sem credencial neste ambiente — verificado só até a borda, validar contra sandbox real antes de produção |
 | 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ⬜ |
 | 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ⬜ |
 | 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ⬜ |
@@ -1555,5 +1794,7 @@ módulo de maior risco entra primeiro (mesma lógica que já puxou E15 e agora p
 E13). E11+E5+IA vem logo em seguida por ser o diferencial que o cliente pediu explicitamente
 pra fechar negócio — não fica esperando todos os módulos do mentorado. Loja (E8) é o único
 módulo de mentorado tratado como alto risco (gateway de pagamento), mas mantém sua posição
-natural na sequência do núcleo do mentorado em vez de ser antecipado, já que depende de
-Assinatura/Perfil (E9) existirem antes de fazer sentido ter carrinho/checkout.
+natural na sequência do núcleo do mentorado (correção: uma versão anterior desta nota dizia que
+Loja "dependia de Assinatura/Perfil (E9) existirem antes" — checado no Blueprint do M14 e não é
+verdade, H8.1-H8.4 não usam nada de E9; assinatura/XP/conquistas são conceitos separados de
+comprar um produto avulso).

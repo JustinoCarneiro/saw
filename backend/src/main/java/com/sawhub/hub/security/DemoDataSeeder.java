@@ -13,6 +13,11 @@ import com.sawhub.hub.evento.EventoRepository;
 import com.sawhub.hub.evento.InscricaoEvento;
 import com.sawhub.hub.evento.InscricaoEventoRepository;
 import com.sawhub.hub.evento.TipoEvento;
+import com.sawhub.hub.loja.CategoriaProduto;
+import com.sawhub.hub.loja.Pedido;
+import com.sawhub.hub.loja.PedidoRepository;
+import com.sawhub.hub.loja.Produto;
+import com.sawhub.hub.loja.ProdutoRepository;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
 import com.sawhub.hub.financeiro.ContaPagarReceber;
@@ -76,6 +81,8 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final ConteudoRepository conteudoRepository;
     private final EventoRepository eventoRepository;
     private final InscricaoEventoRepository inscricaoEventoRepository;
+    private final ProdutoRepository produtoRepository;
+    private final PedidoRepository pedidoRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(UsuarioRepository usuarioRepository, ColaboradorRepository colaboradorRepository,
@@ -91,6 +98,8 @@ public class DemoDataSeeder implements ApplicationRunner {
                            ConteudoRepository conteudoRepository,
                            EventoRepository eventoRepository,
                            InscricaoEventoRepository inscricaoEventoRepository,
+                           ProdutoRepository produtoRepository,
+                           PedidoRepository pedidoRepository,
                            PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.colaboradorRepository = colaboradorRepository;
@@ -107,6 +116,8 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.conteudoRepository = conteudoRepository;
         this.eventoRepository = eventoRepository;
         this.inscricaoEventoRepository = inscricaoEventoRepository;
+        this.produtoRepository = produtoRepository;
+        this.pedidoRepository = pedidoRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -124,6 +135,8 @@ public class DemoDataSeeder implements ApplicationRunner {
         seedEventos();
         // M13: precisa que eventos e mentorados já existam.
         seedInscricoesEventos();
+        // M14: precisa que mentorados e a CategoriaFinanceira "Loja SAW" (seedFinanceiro) já existam.
+        seedLoja();
     }
 
     private void seedColaboradores() {
@@ -434,5 +447,63 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .filter(e -> e.getTitulo().equals(titulo))
                 .findFirst()
                 .orElse(null);
+    }
+
+    // M14 (E8 Loja) — catálogo variado (categorias/destaque/desconto do spec.md H8.1) + 1 pedido
+    // já LIBERADO (Ana Costa) pra "Meus Pedidos" ter dado real, não só o catálogo vazio de
+    // inscrições. O lançamento financeiro e o incremento de vendas espelham manualmente o que
+    // PedidoPagamentoService faria de verdade num webhook — o seeder não passa pelo gateway.
+    private void seedLoja() {
+        if (produtoRepository.count() > 0) {
+            return;
+        }
+        criarProduto("Pacote de Planilhas Gerenciais",
+                "12 planilhas prontas para gestão completa do seu restaurante.", CategoriaProduto.PLANILHA,
+                "97.00", "197.00", "4.8", true, true);
+        criarProduto("Curso de Precificação Estratégica",
+                "Aprenda a precificar seu cardápio sem perder margem.", CategoriaProduto.CURSO,
+                "297.00", null, "4.6", false, true);
+        Produto template = criarProduto("Template de Cardápio Digital",
+                "Template editável pronto pra QR code, sem depender de designer.", CategoriaProduto.TEMPLATE,
+                "47.00", null, "4.5", false, true);
+        criarProduto("E-book: Gestão de Custos", "Guia prático de CMV e ponto de equilíbrio.",
+                CategoriaProduto.EBOOK, "27.00", null, "4.3", false, true);
+        criarProduto("Kit Abertura de Restaurante", "Tudo que você precisa pra abrir com o pé direito.",
+                CategoriaProduto.KIT, "397.00", "497.00", "4.9", true, true);
+        // Ainda não publicado de propósito — fixture pra confirmar que rascunho nunca aparece no
+        // catálogo do mentorado nem pode ser adicionado ao carrinho (achado do M11/M12 reaplicado
+        // aqui: mesmo invariante isPublicado()).
+        criarProduto("Consultoria Express (1h)", "Sessão individual com o time SAW.",
+                CategoriaProduto.CONSULTORIA, "250.00", null, null, false, false);
+
+        Mentorado ana = buscarMentoradoPorNome("Ana Costa");
+        if (ana == null) {
+            return;
+        }
+        Pedido pedido = new Pedido(ana);
+        pedido.adicionarItem(template, 1);
+        pedido.iniciarCheckout("seed-preference-id");
+        pedido.confirmarPagamento();
+        pedido.liberar();
+        pedidoRepository.save(pedido);
+
+        template.incrementarVendas(1);
+        produtoRepository.save(template);
+
+        categoriaFinanceiraRepository.findByOrigemReceita(OrigemReceita.LOJA).ifPresent(categoriaLoja ->
+                lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, categoriaLoja,
+                        "Pedido " + pedido.getId(), pedido.getValorTotal(), LocalDate.now(), StatusLancamento.REALIZADO, null)));
+    }
+
+    private Produto criarProduto(String titulo, String descricao, CategoriaProduto categoria, String preco,
+                                  String precoOriginal, String avaliacaoMedia, boolean destaque, boolean publicado) {
+        Produto produto = new Produto(titulo, descricao, categoria, new BigDecimal(preco),
+                precoOriginal == null ? null : new BigDecimal(precoOriginal),
+                avaliacaoMedia == null ? null : new BigDecimal(avaliacaoMedia),
+                destaque, "https://cdn.sawhub.com.br/produtos/" + categoria.name().toLowerCase() + ".zip", null);
+        if (publicado) {
+            produto.publicar();
+        }
+        return produtoRepository.save(produto);
     }
 }

@@ -8,6 +8,8 @@ const TABS = [
   { to: '/admin/comercial/dashboard', label: 'Dashboard' },
   { to: '/admin/comercial/leads', label: 'Funil de vendas' },
   { to: '/admin/comercial/ranking', label: 'Metas e ranking' },
+  { to: '/admin/comercial/produtos', label: 'Loja — Produtos' },
+  { to: '/admin/comercial/pedidos', label: 'Loja — Pedidos' },
 ];
 
 export function ComercialShell() {

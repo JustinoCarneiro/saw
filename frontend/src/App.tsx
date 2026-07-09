@@ -16,6 +16,8 @@ import { ComercialShell } from './features/comercial/ComercialShell';
 import { DashboardComercialPage } from './features/comercial/DashboardComercialPage';
 import { LeadsComercialPage } from './features/comercial/LeadsComercialPage';
 import { RankingComercialPage } from './features/comercial/RankingComercialPage';
+import { ProdutosPage } from './features/comercial/ProdutosPage';
+import { PedidosPage } from './features/comercial/PedidosPage';
 import { MentoradosShell } from './features/mentorados/MentoradosShell';
 import { MentoradosListaPage } from './features/mentorados/MentoradosListaPage';
 import { MentoriasAgendaPage } from './features/mentorados/MentoriasAgendaPage';
@@ -29,6 +31,7 @@ import { TarefasPage } from './features/mentorado/TarefasPage';
 import { MateriaisPage } from './features/mentorado/MateriaisPage';
 import { MentoriasPage } from './features/mentorado/MentoriasPage';
 import { EventosMentoradoPage } from './features/mentorado/EventosMentoradoPage';
+import { LojaPage } from './features/mentorado/LojaPage';
 
 export default function App() {
   return (
@@ -58,6 +61,8 @@ export default function App() {
           <Route path="dashboard" element={<DashboardComercialPage />} />
           <Route path="leads" element={<LeadsComercialPage />} />
           <Route path="ranking" element={<RankingComercialPage />} />
+          <Route path="produtos" element={<ProdutosPage />} />
+          <Route path="pedidos" element={<PedidosPage />} />
         </Route>
         <Route
           path="financeiro"
@@ -123,6 +128,7 @@ export default function App() {
         <Route path="materiais" element={<MateriaisPage />} />
         <Route path="mentorias" element={<MentoriasPage />} />
         <Route path="eventos" element={<EventosMentoradoPage />} />
+        <Route path="loja" element={<LojaPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/login" replace />} />

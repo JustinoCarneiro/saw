@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/mentorado/mentorias', label: 'Mentorias & Atas', end: false },
   { to: '/mentorado/materiais', label: 'Materiais & Dicas', end: false },
   { to: '/mentorado/eventos', label: 'Eventos', end: false },
+  { to: '/mentorado/loja', label: 'Loja SAW', end: false },
 ];
 
 // M08 — primeira rota de verdade do perfil MENTORADO (antes disso só existia um placeholder

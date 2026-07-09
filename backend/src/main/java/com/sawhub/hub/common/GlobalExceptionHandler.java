@@ -1,5 +1,6 @@
 package com.sawhub.hub.common;
 
+import com.sawhub.hub.loja.pagamento.PagamentoIndisponivelException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.DateTimeException;
@@ -90,5 +91,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(ApiError.of(413, "Payload Too Large", "Arquivo excede o tamanho máximo permitido.", request.getRequestURI()));
+    }
+
+    // Checkout da Loja (M14) sem MERCADOPAGO_ACCESS_TOKEN configurado, ou falha real na API do
+    // Mercado Pago — achado ao vivo: sem isto virava 500 genérico em vez de dizer claramente que o
+    // pagamento está indisponível (mesma classe do achado H14 sobre erro de negócio vs. interno).
+    // 503, não 500/409: o problema é uma dependência externa fora do ar, não o pedido do mentorado.
+    @ExceptionHandler(PagamentoIndisponivelException.class)
+    public ResponseEntity<ApiError> handlePagamentoIndisponivel(PagamentoIndisponivelException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiError.of(503, "Service Unavailable", ex.getMessage(), request.getRequestURI()));
     }
 }

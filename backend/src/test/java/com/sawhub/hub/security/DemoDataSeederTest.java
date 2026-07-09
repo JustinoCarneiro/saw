@@ -88,6 +88,10 @@ class DemoDataSeederTest {
     @Mock
     private InscricaoEventoRepository inscricaoEventoRepository;
     @Mock
+    private com.sawhub.hub.loja.ProdutoRepository produtoRepository;
+    @Mock
+    private com.sawhub.hub.loja.PedidoRepository pedidoRepository;
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private DemoDataSeeder seeder() {
@@ -95,7 +99,7 @@ class DemoDataSeederTest {
                 encaminhamentoRepository, categoriaFinanceiraRepository, lancamentoFinanceiroRepository,
                 contaPagarReceberRepository, leadRepository, metaComercialRepository, mentoriaRepository,
                 ataRepository, ataEncaminhamentoSugeridoRepository, conteudoRepository, eventoRepository,
-                inscricaoEventoRepository, passwordEncoder);
+                inscricaoEventoRepository, produtoRepository, pedidoRepository, passwordEncoder);
     }
 
     @BeforeEach
@@ -274,6 +278,10 @@ class DemoDataSeederTest {
         when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(ataEncaminhamentoSugeridoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(encaminhamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        // M14: esta lista de mentorados inclui Ana Costa, então seedLoja() (que roda no mesmo
+        // run()) encontra ela e tenta materializar o pedido de exemplo — precisa que
+        // produtoRepository.save() devolva o argumento, senão o Produto fica null.
+        when(produtoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         Colaborador lucas = colaborador("Lucas Alves", Area.GESTAO_PERFORMANCE);
         Colaborador ricardo = colaborador("Ricardo Costa", Area.GESTAO_PERFORMANCE);
@@ -348,5 +356,32 @@ class DemoDataSeederTest {
         verify(eventoRepository, times(4)).save(captor.capture());
         assertThat(captor.getAllValues()).extracting(e -> e.getStatus().name())
                 .containsExactlyInAnyOrder("PROGRAMADO", "PROGRAMADO", "REALIZADO", "CANCELADO");
+    }
+
+    @Test
+    void naoRecriaProdutosSeJaExistirAlgum() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(produtoRepository.count()).thenReturn(1L);
+
+        seeder().run(null);
+
+        verify(produtoRepository, never()).save(any());
+    }
+
+    @Test
+    void seedaSeisProdutosComUmDespublicado() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(produtoRepository.count()).thenReturn(0L);
+        when(produtoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        seeder().run(null);
+
+        ArgumentCaptor<com.sawhub.hub.loja.Produto> captor = ArgumentCaptor.forClass(com.sawhub.hub.loja.Produto.class);
+        // 6 produtos seedados — Ana Costa não é encontrada nesse teste (mentoradoRepository
+        // mockado sem seed de verdade), então o pedido de exemplo não roda e não gera um save extra.
+        verify(produtoRepository, times(6)).save(captor.capture());
+        assertThat(captor.getAllValues()).filteredOn(p -> !p.isPublicado()).hasSize(1);
     }
 }

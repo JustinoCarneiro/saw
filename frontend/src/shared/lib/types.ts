@@ -388,3 +388,92 @@ export interface EventoMentorado {
   status: StatusEvento;
   inscrito: boolean;
 }
+
+// M14 · E8 (Loja SAW)
+export type CategoriaProduto = 'CURSO' | 'PLANILHA' | 'TEMPLATE' | 'EBOOK' | 'FERRAMENTA' | 'KIT' | 'CONSULTORIA';
+export type StatusPedido = 'CARRINHO' | 'AGUARDANDO_PAGAMENTO' | 'PAGO' | 'LIBERADO' | 'CANCELADO' | 'REEMBOLSADO';
+
+// Admin — inclui arquivoUrl/publicado, que a visão do mentorado (ProdutoCatalogo) nunca expõe.
+export interface Produto {
+  id: string;
+  titulo: string;
+  descricao: string;
+  categoria: CategoriaProduto;
+  preco: number;
+  precoOriginal: number | null;
+  avaliacaoMedia: number | null;
+  destaque: boolean;
+  vendas: number;
+  arquivoUrl: string;
+  imagemUrl: string | null;
+  publicado: boolean;
+  criadoEm: string;
+}
+
+// Mentee-facing — sem arquivoUrl (só liberado após pagamento, ver PedidoMentorado).
+export interface ProdutoCatalogo {
+  id: string;
+  titulo: string;
+  descricao: string;
+  categoria: CategoriaProduto;
+  preco: number;
+  precoOriginal: number | null;
+  avaliacaoMedia: number | null;
+  destaque: boolean;
+  vendas: number;
+  imagemUrl: string | null;
+}
+
+export interface ItemCarrinho {
+  id: string;
+  produtoId: string;
+  titulo: string;
+  imagemUrl: string | null;
+  quantidade: number;
+  precoUnitario: number;
+  subtotal: number;
+}
+
+export interface Carrinho {
+  id: string | null;
+  status: StatusPedido;
+  valorTotal: number;
+  itens: ItemCarrinho[];
+}
+
+export interface ItemPedidoMentorado {
+  titulo: string;
+  quantidade: number;
+  precoUnitario: number;
+  arquivoUrl: string | null;
+}
+
+export interface PedidoMentorado {
+  id: string;
+  status: StatusPedido;
+  valorTotal: number;
+  criadoEm: string;
+  itens: ItemPedidoMentorado[];
+}
+
+export interface CheckoutResponse {
+  checkoutUrl: string;
+}
+
+// Admin — visão de todos os pedidos, com nome do mentorado.
+export interface ItemPedidoAdmin {
+  titulo: string;
+  quantidade: number;
+  precoUnitario: number;
+}
+
+export interface PedidoAdmin {
+  id: string;
+  mentoradoId: string;
+  mentoradoNome: string;
+  status: StatusPedido;
+  valorTotal: number;
+  referenciaGateway: string | null;
+  criadoEm: string;
+  itens: ItemPedidoAdmin[];
+}

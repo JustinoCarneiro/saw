@@ -115,13 +115,16 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)
                         .csrfTokenRequestHandler(csrfHandler)
-                        // /leads (H1.3, "Solicitar acesso") é o único endpoint público além do login —
-                        // visitante anônimo não tem sessão prévia pra ter recebido o cookie XSRF-TOKEN.
-                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/leads"))
+                        // /leads (H1.3, "Solicitar acesso") e o webhook do Mercado Pago (M14) são os únicos
+                        // endpoints públicos além do login — quem chama nunca tem sessão prévia pra ter
+                        // recebido o cookie XSRF-TOKEN. O webhook é protegido por verificação de
+                        // assinatura HMAC própria (MercadoPagoGatewayService.verificarAssinatura), não CSRF.
+                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/leads", "/api/v1/webhooks/**"))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/oauth2-config").permitAll()
                         .requestMatchers("/api/v1/leads").permitAll()
+                        .requestMatchers("/api/v1/webhooks/**").permitAll()
                         // /oauth2/** e /login/oauth2/** só existem de fato quando
                         // googleOAuthProperties.isEnabled() adiciona .oauth2Login() abaixo —
                         // permitAll aqui não abre nada sozinho.

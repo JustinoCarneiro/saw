@@ -77,6 +77,16 @@ sawhub:
     # Volume Docker em produção (ver ROADMAP.md M06) — precisa entrar no backup, não é só um
     # diretório solto. Default relativo pra dev local funcionar sem configurar nada.
     storage-dir: ${AUDIO_STORAGE_DIR:./data/audios}
+  # E8 — checkout Loja SAW (Mercado Pago, M14). Default vazio de propósito, mesmo raciocínio do
+  # bloco `ia` acima: sem a credencial, o checkout falha com PagamentoIndisponivelException clara
+  # em vez de tentar uma chamada fadada a 401. frontend-base-url/backend-base-url alimentam os
+  # back_urls/notification_url da preferência do Mercado Pago — em dev local o webhook nunca é
+  # alcançável de fora (localhost), verificado só até a borda (mesmo padrão do pipeline de IA).
+  pagamento:
+    mercadopago-access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
+    mercadopago-webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
+    frontend-base-url: ${LOJA_FRONTEND_BASE_URL:http://localhost:5173}
+    backend-base-url: ${LOJA_BACKEND_BASE_URL:http://localhost:8080}
 
 logging:
   level:

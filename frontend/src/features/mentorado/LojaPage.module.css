@@ -1,0 +1,293 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: var(--text-soft);
+  margin-top: -16px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  color: var(--text-soft);
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab:hover {
+  background: var(--elevated);
+  color: var(--text);
+}
+
+.tabActive {
+  background: var(--elevated);
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.badge {
+  background: var(--gold);
+  color: var(--on-gold);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.error {
+  color: var(--danger);
+  padding: 12px;
+  background: var(--danger-bg);
+  border-radius: 6px;
+}
+
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-soft);
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+}
+
+.select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.destaqueTag {
+  display: inline-block;
+  background: var(--gold);
+  color: var(--on-gold);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.categoriaLabel {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.produtoTitulo {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+  margin-top: 4px;
+}
+
+.produtoDesc {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+
+.avaliacao {
+  font-size: 13px;
+  color: var(--gold);
+  margin-top: 8px;
+}
+
+.precoLine {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.precoOriginal {
+  font-size: 13px;
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.preco {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.buyButton {
+  width: 100%;
+  margin-top: 16px;
+  background: var(--gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.buyButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cartList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cartRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.cartInfo {
+  flex: 1;
+}
+
+.cartActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.quantidadeControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quantidadeControl button {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.subtotal {
+  font-weight: 600;
+  color: var(--text);
+  min-width: 90px;
+  text-align: right;
+}
+
+.removeButton {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cartTotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.totalValor {
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.checkoutButton {
+  width: 100%;
+  background: var(--gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checkoutButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pedidoHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pedidoData {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.pedidoItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-soft);
+  padding: 4px 0;
+}
+
+.downloadLink {
+  color: var(--gold);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.downloadLink:hover {
+  text-decoration: underline;
+}
+
+.pedidoTotal {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
