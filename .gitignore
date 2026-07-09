@@ -16,3 +16,6 @@ build/
 
 # Scripts de dev (logs/PIDs do dev-up.sh / dev-down.sh)
 .dev/
+
+# Áudio de ata (M06) salvo em disco local no dev — AUDIO_STORAGE_DIR aponta pra cá por padrão
+backend/data/

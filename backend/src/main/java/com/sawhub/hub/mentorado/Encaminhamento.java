@@ -1,6 +1,7 @@
 package com.sawhub.hub.mentorado;
 
 import com.sawhub.hub.common.BaseEntity;
+import com.sawhub.hub.mentoria.Mentoria;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -32,18 +33,33 @@ public class Encaminhamento extends BaseEntity {
     @Column(nullable = false)
     private boolean concluido = false;
 
+    // Nullable de propósito (M06): encaminhamentos manuais (E4) não nascem de uma mentoria.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mentoria_id")
+    private Mentoria mentoria;
+
     protected Encaminhamento() {
     }
 
     public Encaminhamento(Mentorado mentorado, String titulo, Integer peso, boolean concluido) {
+        this(mentorado, titulo, peso, concluido, null);
+    }
+
+    /** M06 — encaminhamento materializado a partir de uma sugestão de IA aceita na publicação da ata. */
+    public Encaminhamento(Mentorado mentorado, String titulo, Integer peso, boolean concluido, Mentoria mentoria) {
         this.mentorado = mentorado;
         this.titulo = titulo;
         this.peso = peso;
         this.concluido = concluido;
+        this.mentoria = mentoria;
     }
 
     public Mentorado getMentorado() {
         return mentorado;
+    }
+
+    public Mentoria getMentoria() {
+        return mentoria;
     }
 
     public String getTitulo() {

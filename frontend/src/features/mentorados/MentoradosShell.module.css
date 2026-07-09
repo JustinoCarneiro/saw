@@ -1,0 +1,33 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.tabs {
+  display: flex;
+  gap: 22px;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 20px 32px 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.tab {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+  white-space: nowrap;
+  padding-bottom: 11px;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+}
+
+.tabActive {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+.content {
+  padding: 22px 32px 40px;
+}

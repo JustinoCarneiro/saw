@@ -37,6 +37,10 @@ public class Mentorado extends BaseEntity {
     @Column(name = "ferramentas_total", nullable = false)
     private Integer ferramentasTotal = 0;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StatusMentorado status = StatusMentorado.ATIVO;
+
     protected Mentorado() {
     }
 
@@ -49,6 +53,26 @@ public class Mentorado extends BaseEntity {
         this.crescimentoFaturamentoPct = crescimentoFaturamentoPct;
         this.ferramentasConcluidas = ferramentasConcluidas;
         this.ferramentasTotal = ferramentasTotal;
+        this.status = StatusMentorado.ATIVO;
+    }
+
+    /** H11.1 — edição administrativa (nome, negócio, plano); status muda por {@link #ativar()}/{@link #desativar()}. */
+    public void atualizar(String nome, String negocio, Plano plano) {
+        this.nome = nome;
+        this.negocio = negocio;
+        this.plano = plano;
+    }
+
+    public void ativar() {
+        this.status = StatusMentorado.ATIVO;
+    }
+
+    public void desativar() {
+        this.status = StatusMentorado.INATIVO;
+    }
+
+    public StatusMentorado getStatus() {
+        return status;
     }
 
     public Usuario getUsuario() {

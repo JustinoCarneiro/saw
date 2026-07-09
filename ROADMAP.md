@@ -33,6 +33,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | M03 | E17 · Painel Consolidado & Ranking | Grande · risco médio | — (já implementado, sem Blueprint formal) | H17.1–H17.4 |
 | **M04** | **E14 · Financeiro & DRE** | **Grande · risco alto** | **6d** | **H14.1–H14.4** |
 | **M05** | **E13 · Comercial & Vendas** | **Grande** | **6d + ~1d (fast-follow H1.3)** | **H13.1–H13.3 + H1.3** |
+| **M06** | **E11 · Gestão Admin + E5 · Mentorias & Atas + diferencial de IA** | **Grande** | **6d + ~2-3d (IA)** | **H11.1–H11.4 + H5.1–H5.3** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -387,6 +388,301 @@ uma área Comercial não-Fundador não conseguiria montar esse dropdown por ali.
 | H13.2 — funil de vendas | `GET /comercial/leads`, `PATCH /comercial/leads/{id}/avancar` |
 | H13.3 — metas e ranking do time | `GET /comercial/ranking` (+ seed de `meta_comercial`, sem CRUD dedicado nesta leva) |
 
+### M06 — E11 · Gestão Admin + E5 · Mentorias & Atas + diferencial de IA
+
+**Por que Grande:**
+- **Complexidade:** três recursos administrativos novos numa leva só (Mentoria com máquina de
+  estado própria e suporte a grupo via M:N, Conteúdo com controle de acesso por plano, Evento com
+  sua própria máquina de estado), **mais** uma classe de funcionalidade que não existe em nenhum
+  outro módulo do sistema até aqui: um pipeline assíncrono de IA (upload de áudio → transcrição →
+  resumo estruturado → revisão humana → publicação).
+- **Risco não listado no `CLAUDE.md` mas real** (mesmo raciocínio do M05 para `/leads`): este é o
+  primeiro fluxo do sistema que envia dado do negócio do cliente (áudio de mentoria, potencialmente
+  com informação sensível do restaurante do mentorado) pra **duas APIs de terceiros** (Whisper,
+  Claude). Não está marcado "risco alto" no `CLAUDE.md`, mas o vetor de dado saindo da VPS pra
+  fora merece `revisor-seguranca` antes de fechar — validação de tipo/tamanho de upload, timeout e
+  tratamento de falha do provedor externo, e confirmação de que a transcrição/áudio ficam sob o
+  mesmo guarda-chuva de backup do Postgres (não um volume solto sem cobertura).
+
+**Suposições assumidas pra este Blueprint seguir adiante** (`docs/spec.md` § Suposições já lista
+duas relacionadas, ainda não confirmadas pela SAW; a terceira é nova, não coberta no spec.md):
+- **#3 do spec.md (mentoria em grupo):** sem confirmação de cliente, assumido **sem limite superior**
+  de participantes por grupo, e **uma única ata por mentoria**, visível a todos os mentorados do
+  grupo (não há ata por pessoa). Ajustar se a SAW definir uma regra diferente.
+- **#5 do spec.md (integração de agenda):** campo genérico (`linkOnline` + `local` opcional), não
+  travado só em Google Meet — o `CLAUDE.md` cita Meet como a integração do MVP, mas o formulário de
+  criação de mentoria (H11.2) já pede "plataforma" como campo livre, então o modelo não trava nisso.
+- **Nova suposição — dono de área de Eventos no RBAC (E15):** `CLAUDE.md` define Comercial,
+  Marketing (conteúdos/marketing) e Gestão de Performance (Mentorados/Mentorias/Conteúdos/Painel
+  Consolidado), mas não diz quem administra Eventos. Default assumido: **`Modulo.CONTEUDOS`**, o
+  mesmo módulo de Marketing (eventos como atividade de marketing/growth), em vez de criar um
+  `Modulo.EVENTOS` novo sem necessidade comprovada — mais fácil remover um agrupamento depois do que
+  destrinchar RBAC espalhado por várias telas. Ajustar `AreaModuloMatrix` se a SAW quiser separar.
+
+**Fechamento de pendência do M05:** `Lead.status=FECHADO` registra a venda pra métrica, mas
+propositalmente **não cria a conta de login do mentorado** (nota do M05). H11.1 ("gerenciar
+mentorados por plano e status") é onde isso se fecha: `POST /admin/mentorados/a-partir-do-lead/{leadId}`
+cria o `Mentorado` (+ `Usuario` com `Perfil.MENTORADO`) a partir de um lead fechado, e seta
+`Lead.mentoradoId` (nova coluna) pra rastrear a origem — sem isso, não haveria como saber quais
+mentorados vieram de qual lead depois que o funil já rodou. `Mentorado` também ganha uma coluna
+`status` (`ATIVO`/`INATIVO`) que hoje não existe — H11.1 pede filtro por status e a entidade atual
+não tem esse campo.
+
+**IA — decisões desta leva (conversa com Marcos, 2026-07-08):**
+- **Transcrição:** Whisper API (já cotado no `CLAUDE.md` § Diferenciais do MVP).
+- **Geração do rascunho** (resumo + encaminhamentos sugeridos): **Claude Sonnet 5**
+  (`claude-sonnet-5`), com saída estruturada (tool use/JSON) — escolhido por custo/latência/qualidade
+  em extração estruturada sobre um transcript; a tarefa (resumir + listar encaminhamentos) não tem
+  complexidade de raciocínio que justifique Opus.
+- **Processamento assíncrono via `@Async` + `Executor` dedicado**, não fila pesada — mesmo
+  raciocínio da decisão de stack do `CLAUDE.md` (`@Scheduled`/jobs em vez de fila de alto volume):
+  aqui o gatilho é por upload (evento), não periódico, mas a razão de não introduzir
+  RabbitMQ/SQS pra um volume baixo (uma mentoria de cada vez, não é caso de uso de alto throughput)
+  é a mesma. Frontend faz **polling** do `statusProcessamento` — não há WebSocket no stack.
+- **Revisão humana é obrigatória antes de qualquer efeito em métrica:** a IA nunca escreve direto
+  em `Encaminhamento` — ela gera `AtaEncaminhamentoSugerido` (rascunho), e só na publicação da ata
+  (`POST .../publicar`) as sugestões aceitas viram `Encaminhamento` de verdade, com `mentoriaId`
+  setado. É só nesse momento que passam a contar pro ranking do E17 — evita a IA escrever direto
+  numa métrica que já vira ranking/desempenho do time (mesmo cuidado do M05 em não deixar `Lead`
+  registrar venda sem `planoFechado`/L2).
+- **Custo por uso:** a considerar no orçamento de infra (`CLAUDE.md` já sinaliza isso) — cada
+  mentoria com áudio gera custo variável (Whisper por minuto de áudio + Claude por tokens do
+  resumo); não precificado aqui, só a arquitetura que gera esse custo.
+- **Armazenamento do áudio:** disco da própria VPS (volume Docker, ex. `/data/audios`) pro MVP —
+  escala de 10-15 usuários não justifica object storage dedicado agora (mesmo raciocínio do
+  `CLAUDE.md` § Hospedagem de não pagar por infra que a escala atual não pede). Entra no mesmo pass
+  de revisão de backup da Fase 5: é dado do negócio do cliente, precisa estar coberto pelo mesmo
+  backup do Postgres, não um volume solto sem retenção. **Ainda não está no `docker-compose.full.yml`**
+  (volume dedicado) — follow-up de infra antes do deploy real, não bloqueia o MVP local.
+
+**Achados da revisão de segurança (`revisor-seguranca`), todos corrigidos:**
+- **Alto:** chamadas à Whisper API e à Claude API sem timeout — uma API lenta/instável travava a
+  thread do `ataProcessamentoExecutor` (pool de só 2-4 threads) indefinidamente, deixando a ata
+  presa em `PROCESSANDO` pra sempre (`iniciarProcessamento()`/`publicar()` bloqueiam nesse estado).
+  Corrigido com `SimpleClientHttpRequestFactory` (connect timeout 10s, read timeout 3min na Whisper
+  — áudio+transcrição podem levar minutos — e 90s na Claude).
+- **Médio:** `POST .../ata/audio` sem rate limit — diferente de `/leads` (M05), cada chamada dispara
+  uma requisição paga em duas APIs de terceiros, e o próprio design permite reenvio (retry após
+  FALHA, regravar após CONCLUIDO) sem limite. Corrigido com `AtaAudioRateLimitFilter` (mesmo padrão
+  Redis do `LeadRateLimitFilter`, mas por usuário autenticado, não por IP — este endpoint já exige
+  login): 10 uploads/hora.
+- **Médio:** upload de áudio sem allow-list de extensão/content-type nem `max-file-size`
+  configurado — o nome do arquivo do cliente virava extensão do arquivo em disco sem checagem
+  (podia ser `.php`/`.html`), e o binário era reencaminhado pra Whisper API sem validar
+  content-type. Corrigido com allow-list de extensões (`.mp3/.wav/.m4a/.ogg/.webm/.aac/.flac`) +
+  checagem de `content-type` (`audio/*`) em `AudioStorageService`, e
+  `spring.servlet.multipart.max-file-size=150MB` em `application.yml`.
+- **Baixo:** `PATCH .../ata/sugestoes/{id}` continuava aceitando edição depois da ata `PUBLICADA`,
+  divergindo do que já foi materializado em `Encaminhamento` — inconsistência de trilha de auditoria
+  num documento que deveria ser imutável após publicado. Corrigido reusando `Ata.exigirRascunho()`
+  (mesma checagem que já protegia `editarResumo()`/`publicar()`).
+
+**Bugs reais achados na verificação ao vivo (curl + navegador), todos corrigidos com teste de
+regressão:**
+- Filtro opcional de texto nulo em JPQL (`MentoradoRepository.buscarComFiltro`, busca por nome) —
+  com `busca=null`, o Postgres não conseguia inferir o tipo do parâmetro dentro de
+  `CONCAT('%', :busca, '%')` e escolhia `bytea` em vez de `text` ("function lower(bytea) does not
+  exist"), derrubando o boot inteiro da aplicação (o `DemoDataSeeder` chama esse método). Corrigido
+  com `CAST(:busca AS string)`.
+- Mesma classe de bug em `MentoriaRepository.buscarComFiltro` (filtro opcional de `Instant`
+  nulo, `de`/`ate`) — dessa vez o `CAST` não bastou (`cannot cast type bytea to timestamp without
+  time zone`, um comportamento diferente do Hibernate 6 pra parâmetros temporais dentro de função
+  JPQL). Resolvido filtrando `de`/`ate` em memória no `MentoriaService` (mesmo padrão já usado em
+  `LancamentoService`/financeiro — dataset pequeno, endpoint admin autenticado).
+- `@Lob` em `String` (`Ata.resumo`/`transcricao`) mapeia pra `oid` (large object) no Postgres, não
+  `text` — a migration criava as colunas como `TEXT`, e a validação do schema do Hibernate falhava
+  no boot. Corrigido trocando `@Lob` por `@Column(columnDefinition = "text")`.
+- Coluna `criado_em` faltando na migration de `ata_encaminhamento_sugerido` (a entidade herda de
+  `BaseEntity`, que exige `criado_em`+`versao`) — mesma falha de boot por schema-validation.
+- Overflow de e-mail na tela de Mentorados (mesmo bug já corrigido no M05/Comercial): e-mail longo
+  sem espaços estourava a largura da coluna do grid e sobrepunha a coluna de Plano. Corrigido com
+  `overflow-wrap: anywhere` no CSS module da coluna.
+
+## Modelagem de banco (M06)
+
+```sql
+-- Máquina de estado (CLAUDE.md): Agendada -> Confirmada -> Realizada (gera ata) | desvio -> Cancelada
+CREATE TABLE mentoria (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tipo            VARCHAR(20) NOT NULL,                      -- INDIVIDUAL | GRUPO
+    mentor_id       UUID NOT NULL REFERENCES colaborador(id),
+    data_hora       TIMESTAMP NOT NULL,
+    duracao_min     INT NOT NULL,
+    link_online     VARCHAR(500),
+    local           VARCHAR(255),
+    status          VARCHAR(20) NOT NULL DEFAULT 'AGENDADA',
+    criado_em       TIMESTAMP NOT NULL DEFAULT now(),
+    versao          BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_mentoria_status CHECK (status IN ('AGENDADA','CONFIRMADA','REALIZADA','CANCELADA')),
+    CONSTRAINT chk_mentoria_tipo CHECK (tipo IN ('INDIVIDUAL','GRUPO'))
+);
+
+-- M:N de propósito mesmo pra INDIVIDUAL (1 linha só) — evita duas modelagens paralelas p/ solo x grupo.
+CREATE TABLE mentoria_mentorado (
+    mentoria_id     UUID NOT NULL REFERENCES mentoria(id) ON DELETE CASCADE,
+    mentorado_id    UUID NOT NULL REFERENCES mentorado(id),
+    PRIMARY KEY (mentoria_id, mentorado_id)
+);
+
+-- 1:1 com mentoria — nasce (vazia) quando mentoria muda pra REALIZADA.
+CREATE TABLE ata (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mentoria_id           UUID NOT NULL UNIQUE REFERENCES mentoria(id),
+    audio_url             VARCHAR(500),
+    transcricao           TEXT,
+    resumo                TEXT,
+    status_processamento  VARCHAR(20) NOT NULL DEFAULT 'SEM_AUDIO',  -- SEM_AUDIO|PROCESSANDO|CONCLUIDO|FALHA
+    status                VARCHAR(20) NOT NULL DEFAULT 'RASCUNHO',    -- RASCUNHO|PUBLICADA
+    publicada_em          TIMESTAMP,
+    criado_em             TIMESTAMP NOT NULL DEFAULT now(),
+    versao                BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_ata_status_proc CHECK (status_processamento IN ('SEM_AUDIO','PROCESSANDO','CONCLUIDO','FALHA')),
+    CONSTRAINT chk_ata_status CHECK (status IN ('RASCUNHO','PUBLICADA'))
+);
+
+-- Rascunho gerado pela IA — só materializa em `encaminhamento` de verdade na publicação (ver nota de IA acima).
+CREATE TABLE ata_encaminhamento_sugerido (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ata_id          UUID NOT NULL REFERENCES ata(id) ON DELETE CASCADE,
+    titulo          VARCHAR(255) NOT NULL,
+    peso_sugerido   SMALLINT NOT NULL DEFAULT 1,
+    aceito          BOOLEAN NOT NULL DEFAULT true,
+    CONSTRAINT chk_peso_sugerido CHECK (peso_sugerido IN (1,2))
+);
+
+-- Nullable de propósito: encaminhamentos já existentes (seed/E4 manual) não têm mentoria de origem.
+ALTER TABLE encaminhamento ADD COLUMN mentoria_id UUID REFERENCES mentoria(id);
+
+CREATE TABLE conteudo (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    titulo          VARCHAR(255) NOT NULL,
+    tipo            VARCHAR(20) NOT NULL,               -- DOCUMENTO|VIDEO|PLANILHA|APRESENTACAO|OUTRO
+    url             VARCHAR(500) NOT NULL,
+    plano_minimo    VARCHAR(20) NOT NULL DEFAULT 'GRATUITO',
+    publicado       BOOLEAN NOT NULL DEFAULT false,
+    criado_em       TIMESTAMP NOT NULL DEFAULT now(),
+    versao          BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_conteudo_plano CHECK (plano_minimo IN ('GRATUITO','BASICO','ESSENCIAL','PROFISSIONAL'))
+);
+
+CREATE TABLE mentoria_material_recomendado (
+    mentoria_id     UUID NOT NULL REFERENCES mentoria(id) ON DELETE CASCADE,
+    conteudo_id     UUID NOT NULL REFERENCES conteudo(id),
+    PRIMARY KEY (mentoria_id, conteudo_id)
+);
+
+-- Máquina de estado própria (H11.4), independente da de mentoria.
+CREATE TABLE evento (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    titulo          VARCHAR(255) NOT NULL,
+    tipo            VARCHAR(20) NOT NULL,               -- AO_VIVO|PRESENCIAL
+    tema            VARCHAR(255),
+    data_hora       TIMESTAMP NOT NULL,
+    local           VARCHAR(255),
+    link_online     VARCHAR(500),
+    vagas           INT,                                 -- null = ilimitado
+    status          VARCHAR(20) NOT NULL DEFAULT 'PROGRAMADO',
+    criado_em       TIMESTAMP NOT NULL DEFAULT now(),
+    versao          BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_evento_status CHECK (status IN ('PROGRAMADO','AO_VIVO','REALIZADO','CANCELADO')),
+    CONSTRAINT chk_evento_tipo CHECK (tipo IN ('AO_VIVO','PRESENCIAL'))
+);
+
+ALTER TABLE mentorado ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ATIVO';
+ALTER TABLE mentorado ADD CONSTRAINT chk_mentorado_status CHECK (status IN ('ATIVO','INATIVO'));
+ALTER TABLE lead ADD COLUMN mentorado_id UUID REFERENCES mentorado(id);
+```
+
+## Contratos de API (M06)
+
+### Mentorados (`@RequiresModulo(Modulo.MENTORADOS)`) — fecha H11.1
+```jsonc
+GET /api/v1/admin/mentorados?plano=&status=&busca=      // MentoradoResponse[]
+PATCH /api/v1/admin/mentorados/{id}                       // editar plano/status
+POST /api/v1/admin/mentorados/a-partir-do-lead/{leadId}    // cria Mentorado+Usuario a partir de Lead FECHADO
+// Response 201
+{ "id": "uuid", "nome": "Maria Souza", "plano": "ESSENCIAL", "status": "ATIVO" }
+```
+
+### Mentorias (`@RequiresModulo(Modulo.MENTORADOS)`) — fecha H11.2
+```jsonc
+POST /api/v1/admin/mentorias
+{ "tipo": "INDIVIDUAL", "mentoradoIds": ["uuid"], "mentorId": "uuid",
+  "dataHora": "2026-07-15T14:00:00Z", "duracaoMin": 60,
+  "linkOnline": "https://meet.google.com/abc-defg-hij", "local": null }
+// Response 201: MentoriaResponse
+
+GET /api/v1/admin/mentorias?status=&de=&ate=     // agenda/histórico (fecha H5.1/H5.2 no back)
+// de/ate filtram em memória, não em SQL — achado ao vivo, ver nota de bugs corrigidos acima.
+GET /api/v1/admin/mentorias/mentores             // colaboradores de GESTAO_PERFORMANCE (seletor do form)
+
+PATCH /api/v1/admin/mentorias/{id}/status         // CONFIRMADA ou CANCELADA
+{ "novoStatus": "CONFIRMADA" }
+
+POST /api/v1/admin/mentorias/{id}/realizar
+// REALIZADA não passa por /status — cria a Ata (vazia) atomicamente com a transição, por isso
+// tem endpoint próprio (ver AtaService.realizarMentoria). Response: AtaResponse.
+```
+
+### Ata (mesmo `RequiresModulo`) — fecha H5.2 + diferencial de IA
+```jsonc
+GET /api/v1/admin/mentorias/{id}/ata
+
+POST /api/v1/admin/mentorias/{id}/ata/audio     // multipart/form-data (campo "arquivo"), dispara o pipeline assíncrono
+// Response 202: AtaResponse com statusProcessamento=PROCESSANDO
+// Validado: allow-list de extensão (.mp3/.wav/.m4a/.ogg/.webm/.aac/.flac) + content-type audio/*,
+// rate limit de 10 uploads/hora por usuário (achados M/M da revisão de segurança, ver acima).
+
+PATCH /api/v1/admin/mentorias/{id}/ata            // editar resumo manualmente (revisão humana)
+{ "resumo": "..." }
+
+PATCH /api/v1/admin/mentorias/{id}/ata/sugestoes/{sugestaoId}
+{ "titulo": "Atualizar ficha técnica", "pesoSugerido": 2, "aceito": true }
+
+POST /api/v1/admin/mentorias/{id}/ata/publicar
+// RASCUNHO -> PUBLICADA; materializa sugestões aceitas em Encaminhamento reais.
+// 409 se statusProcessamento=PROCESSANDO (não publica no meio do processamento).
+```
+
+### Conteúdos (`@RequiresModulo(Modulo.CONTEUDOS)`) — fecha H11.3
+```jsonc
+POST/GET/PATCH /api/v1/admin/conteudos     // CRUD + publicar/despublicar (plano_minimo controla acesso)
+```
+
+### Eventos (`@RequiresModulo(Modulo.CONTEUDOS)` — default assumido, ver Suposição acima) — fecha H11.4
+```jsonc
+POST/GET/PATCH /api/v1/admin/eventos       // CRUD + transição PROGRAMADO→AO_VIVO→REALIZADO (ou CANCELADO)
+```
+
+## Rastreabilidade história ↔ módulo (M06)
+
+| História | Cobertura |
+|---|---|
+| H11.1 — gerenciar mentorados por plano/status | `GET/PATCH /admin/mentorados`, `POST .../a-partir-do-lead/{leadId}` (fecha a pendência do M05) |
+| H11.2 — criar mentoria individual/grupo | `POST /admin/mentorias` |
+| H11.3 — gerir biblioteca de conteúdos | `POST/GET/PATCH /admin/conteudos` |
+| H11.4 — gerir eventos | `POST/GET/PATCH /admin/eventos` |
+| H5.2 — histórico e ata da mentoria | `GET /admin/mentorias/{id}/ata` |
+| Diferencial de IA (`CLAUDE.md` § Diferenciais do MVP — não numerado como história em `spec.md`, extensão de H5.2) | `POST .../ata/audio`, `PATCH .../ata/sugestoes/{id}`, `POST .../ata/publicar` |
+
+**H5.1 (entrar na reunião) e H5.3 (.ics) são histórias do mentorado, não do Admin** — o dado
+(`linkOnline`, `dataHora`) já nasce pronto nesta leva, mas a **tela** do mentorado só existe quando
+os módulos do mentorado entrarem no pipeline (item 5+ abaixo). Mesmo padrão já usado pelo E17
+rodando sobre dado seed antes do E4 estar completo: não é um buraco desta leva, é ordem de
+construção — back-office e dado antes, tela do mentorado depois, por decisão do cliente
+(`CLAUDE.md` § MVP · Prioridade de construção).
+
+**Status: ✅ M06 concluído** (2026-07-09) — backend (137/137 testes: entidades/serviços/controllers
++ `LeadRepositoryTest`-style `@DataJpaTest` pra `LeadRepository`/`AudioStorageService`), 4 achados
+do `revisor-seguranca` corrigidos, 5 bugs reais achados na verificação ao vivo corrigidos com teste
+de regressão, frontend completo (`MentoradosShell`, `ConteudosShell` + 5 páginas novas) e E2E
+(`mentorados.spec.ts`, 4 testes cobrindo o fluxo ponta a ponta lead→mentorado→mentoria→ata
+publicada, mais Conteúdos/Eventos/RBAC) — 21/21 verde na suíte completa. **Pendência explícita**:
+o pipeline de IA foi verificado só até a borda (falha limpa e clara sem `OPENAI_API_KEY`/
+`ANTHROPIC_API_KEY` configuradas) — a chamada real a Whisper/Claude nunca rodou de ponta a ponta
+por falta de credenciais neste ambiente; validar com chaves reais antes de qualquer demo que
+dependa da transcrição funcionar de fato.
+
 ## Fórmula de prazo
 
 ```
@@ -394,9 +690,11 @@ Prazo = Fase 2 (2d ou 4d se sem identidade) + Σ(dias dos módulos) + 2d (Fase 5
 ```
 
 Fase 2 já entregue (protótipo aprovado e congelado). M04 (E14, concluído) somou **6 dias** de
-engenharia; M05 (E13) soma mais **6d + ~1d** (o dia extra cobre o fast-follow de H1.3, achado
-faltando durante este Blueprint) — os módulos seguintes (E11+IA, mentorado) somam seus próprios
-dias quando ganharem Blueprint, na ordem em que entrarem.
+engenharia; M05 (E13, concluído) somou mais **6d + ~1d** (o dia extra cobriu o fast-follow de H1.3,
+achado faltando durante o Blueprint do M05); M06 (E11+E5+IA, concluído) somou mais **6d + ~2-3d**
+(a variação cobriu o pipeline de IA — transcrição + LLM + revisão humana — que não tinha precedente
+nos módulos anteriores pra calibrar a estimativa com mais precisão) — os módulos seguintes
+(mentorado) somam seus próprios dias quando ganharem Blueprint, na ordem em que entrarem.
 
 ## Pipeline geral até a conclusão do MVP
 
@@ -412,7 +710,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | — | E17 · Painel Consolidado & Ranking | Grande · risco médio | — | ✅ Concluído |
 | 1 | **E14 · Financeiro & DRE** | Grande · risco alto | 6d | ✅ Concluído |
 | 2 | E13 · Comercial & Vendas | Grande | 6d + ~1d (H1.3) | ✅ Concluído — backend (90/90 testes) + `revisor-seguranca` (M1/M2/L2/L3 corrigidos) + frontend (dashboard/funil/ranking) + E2E (17/17, `comercial.spec.ts`) |
-| 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ⬜ Blueprint pendente — decidir provedor (Whisper API) e custo por uso antes |
+| 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo |
 | 4 | Google OAuth (fast-follow do E1) | Pequeno | 1.5d | ⬜ Cai na mesma máquina de sessão/RBAC já pronta |
 | 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ⬜ |
 | 6 | E3 · Metas Estratégicas | Médio | 3.5d | ⬜ |

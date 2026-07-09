@@ -13,6 +13,10 @@ import com.sawhub.hub.comercial.Lead;
 import com.sawhub.hub.comercial.LeadRepository;
 import com.sawhub.hub.comercial.MetaComercial;
 import com.sawhub.hub.comercial.MetaComercialRepository;
+import com.sawhub.hub.conteudo.Conteudo;
+import com.sawhub.hub.conteudo.ConteudoRepository;
+import com.sawhub.hub.evento.Evento;
+import com.sawhub.hub.evento.EventoRepository;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
 import com.sawhub.hub.financeiro.ContaPagarReceber;
@@ -23,6 +27,12 @@ import com.sawhub.hub.mentorado.Encaminhamento;
 import com.sawhub.hub.mentorado.EncaminhamentoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
+import com.sawhub.hub.mentorado.Plano;
+import com.sawhub.hub.mentoria.Ata;
+import com.sawhub.hub.mentoria.AtaEncaminhamentoSugeridoRepository;
+import com.sawhub.hub.mentoria.AtaRepository;
+import com.sawhub.hub.mentoria.Mentoria;
+import com.sawhub.hub.mentoria.MentoriaRepository;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
@@ -35,6 +45,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * Dado de demo, não produção — mas achado H1 da revisão de segurança é justamente que
@@ -64,12 +75,24 @@ class DemoDataSeederTest {
     @Mock
     private MetaComercialRepository metaComercialRepository;
     @Mock
+    private MentoriaRepository mentoriaRepository;
+    @Mock
+    private AtaRepository ataRepository;
+    @Mock
+    private AtaEncaminhamentoSugeridoRepository ataEncaminhamentoSugeridoRepository;
+    @Mock
+    private ConteudoRepository conteudoRepository;
+    @Mock
+    private EventoRepository eventoRepository;
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private DemoDataSeeder seeder() {
         return new DemoDataSeeder(usuarioRepository, colaboradorRepository, mentoradoRepository,
                 encaminhamentoRepository, categoriaFinanceiraRepository, lancamentoFinanceiroRepository,
-                contaPagarReceberRepository, leadRepository, metaComercialRepository, passwordEncoder);
+                contaPagarReceberRepository, leadRepository, metaComercialRepository, mentoriaRepository,
+                ataRepository, ataEncaminhamentoSugeridoRepository, conteudoRepository, eventoRepository,
+                passwordEncoder);
     }
 
     @BeforeEach
@@ -83,6 +106,24 @@ class DemoDataSeederTest {
     @BeforeEach
     void skipSeedComercialPorPadrao() {
         lenient().when(leadRepository.count()).thenReturn(1L);
+    }
+
+    @BeforeEach
+    void skipSeedMentoriasConteudosEventosPorPadrao() {
+        lenient().when(mentoriaRepository.count()).thenReturn(1L);
+        lenient().when(conteudoRepository.count()).thenReturn(1L);
+        lenient().when(eventoRepository.count()).thenReturn(1L);
+    }
+
+    private static Colaborador colaborador(String nome, Area area) {
+        Colaborador c = new Colaborador(null, nome, area, null, null);
+        return c;
+    }
+
+    private static Mentorado mentorado(String nome) {
+        Mentorado m = new Mentorado(null, nome, null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        ReflectionTestUtils.setField(m, "id", java.util.UUID.randomUUID());
+        return m;
     }
 
     private void stubSaves() {
@@ -207,5 +248,102 @@ class DemoDataSeederTest {
         ArgumentCaptor<MetaComercial> metaCaptor = ArgumentCaptor.forClass(MetaComercial.class);
         verify(metaComercialRepository, times(1)).save(metaCaptor.capture());
         assertThat(metaCaptor.getValue().getVendedor()).isSameAs(paula);
+    }
+
+    @Test
+    void naoRecriaMentoriasSeJaExistirAlguma() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(mentoriaRepository.count()).thenReturn(1L);
+
+        seeder().run(null);
+
+        verify(mentoriaRepository, never()).save(any());
+        verify(ataRepository, never()).save(any());
+    }
+
+    @Test
+    void seedaQuatroMentoriasDuasAtasEUmEncaminhamentoMaterializado() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(mentoriaRepository.count()).thenReturn(0L);
+        when(mentoriaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(ataEncaminhamentoSugeridoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(encaminhamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Colaborador lucas = colaborador("Lucas Alves", Area.GESTAO_PERFORMANCE);
+        Colaborador ricardo = colaborador("Ricardo Costa", Area.GESTAO_PERFORMANCE);
+        when(colaboradorRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(lucas, ricardo));
+
+        List<Mentorado> mentorados = List.of(mentorado("João Silva"), mentorado("Ana Costa"), mentorado("Carlos Menezes"),
+                mentorado("Rafael Gomes"), mentorado("Fernanda Lima"), mentorado("Marina Souza"));
+        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(mentorados);
+
+        seeder().run(null);
+
+        verify(mentoriaRepository, times(4)).save(any(Mentoria.class));
+
+        ArgumentCaptor<Ata> ataCaptor = ArgumentCaptor.forClass(Ata.class);
+        verify(ataRepository, times(2)).save(ataCaptor.capture());
+        assertThat(ataCaptor.getAllValues()).extracting(a -> a.getStatus().name())
+                .containsExactlyInAnyOrder("PUBLICADA", "RASCUNHO");
+
+        // A ata em RASCUNHO carrega as 2 sugestões da IA aguardando revisão humana.
+        verify(ataEncaminhamentoSugeridoRepository, times(2)).save(any());
+        // A ata PUBLICADA já materializou 1 encaminhamento de verdade (mesmo efeito de
+        // AtaService.publicar(), replicado manualmente aqui porque o seeder não passa pelo service).
+        verify(encaminhamentoRepository, times(1)).save(any(Encaminhamento.class));
+    }
+
+    @Test
+    void naoRecriaConteudosSeJaExistirAlgum() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(conteudoRepository.count()).thenReturn(1L);
+
+        seeder().run(null);
+
+        verify(conteudoRepository, never()).save(any());
+    }
+
+    @Test
+    void seedaQuatroConteudosComUmNaoPublicado() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(conteudoRepository.count()).thenReturn(0L);
+        when(conteudoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        seeder().run(null);
+
+        ArgumentCaptor<Conteudo> captor = ArgumentCaptor.forClass(Conteudo.class);
+        verify(conteudoRepository, times(4)).save(captor.capture());
+        assertThat(captor.getAllValues()).filteredOn(c -> !c.isPublicado()).hasSize(1);
+    }
+
+    @Test
+    void naoRecriaEventosSeJaExistirAlgum() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(eventoRepository.count()).thenReturn(1L);
+
+        seeder().run(null);
+
+        verify(eventoRepository, never()).save(any());
+    }
+
+    @Test
+    void seedaQuatroEventosComStatusVariados() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(eventoRepository.count()).thenReturn(0L);
+        when(eventoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        seeder().run(null);
+
+        ArgumentCaptor<Evento> captor = ArgumentCaptor.forClass(Evento.class);
+        verify(eventoRepository, times(4)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(e -> e.getStatus().name())
+                .containsExactlyInAnyOrder("PROGRAMADO", "PROGRAMADO", "REALIZADO", "CANCELADO");
     }
 }

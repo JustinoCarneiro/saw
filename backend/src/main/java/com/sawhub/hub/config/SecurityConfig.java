@@ -2,6 +2,7 @@ package com.sawhub.hub.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sawhub.hub.comercial.LeadRateLimitFilter;
+import com.sawhub.hub.mentoria.AtaAudioRateLimitFilter;
 import com.sawhub.hub.security.AuthFailureHandler;
 import com.sawhub.hub.security.AuthSuccessHandler;
 import com.sawhub.hub.security.JsonAuthEntryPoint;
@@ -39,6 +40,7 @@ public class SecurityConfig {
     private final JsonAuthEntryPoint jsonAuthEntryPoint;
     private final CsrfCookieFilter csrfCookieFilter;
     private final LeadRateLimitFilter leadRateLimitFilter;
+    private final AtaAudioRateLimitFilter ataAudioRateLimitFilter;
     private final ObjectMapper objectMapper;
 
     @org.springframework.beans.factory.annotation.Value("${sawhub.cors.allowed-origins}")
@@ -46,12 +48,14 @@ public class SecurityConfig {
 
     public SecurityConfig(AuthSuccessHandler authSuccessHandler, AuthFailureHandler authFailureHandler,
                            JsonAuthEntryPoint jsonAuthEntryPoint, CsrfCookieFilter csrfCookieFilter,
-                           LeadRateLimitFilter leadRateLimitFilter, ObjectMapper objectMapper) {
+                           LeadRateLimitFilter leadRateLimitFilter, AtaAudioRateLimitFilter ataAudioRateLimitFilter,
+                           ObjectMapper objectMapper) {
         this.authSuccessHandler = authSuccessHandler;
         this.authFailureHandler = authFailureHandler;
         this.jsonAuthEntryPoint = jsonAuthEntryPoint;
         this.csrfCookieFilter = csrfCookieFilter;
         this.leadRateLimitFilter = leadRateLimitFilter;
+        this.ataAudioRateLimitFilter = ataAudioRateLimitFilter;
         this.objectMapper = objectMapper;
     }
 
@@ -126,7 +130,11 @@ public class SecurityConfig {
                 .addFilterAfter(csrfCookieFilter, org.springframework.security.web.csrf.CsrfFilter.class)
                 // Achado M1 da revisão de segurança do E13 — roda antes de qualquer filtro de
                 // autenticação, já que /leads nunca autentica (rejeita cedo, sem custo extra).
-                .addFilterBefore(leadRateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(leadRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                // Achado (médio) da revisão de segurança do M06 — roda depois (não antes) do filtro
+                // de login: precisa do SecurityContextHolder já populado (via sessão, carregado bem
+                // mais cedo no chain) pra identificar o usuário autenticado, diferente do leadRateLimitFilter.
+                .addFilterAfter(ataAudioRateLimitFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

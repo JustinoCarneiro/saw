@@ -168,3 +168,92 @@ export interface RankingComercialItem {
   realizado: number;
   pctAtingido: number;
 }
+
+// M06 · E11 (Gestão Admin) + E5 (Mentorias & Atas) + diferencial de IA
+export type StatusMentorado = 'ATIVO' | 'INATIVO';
+
+export interface MentoradoAdmin {
+  id: string;
+  nome: string;
+  email: string;
+  negocio: string | null;
+  plano: Plano;
+  status: StatusMentorado;
+  criadoEm: string;
+}
+
+export interface MentoradoCriado {
+  id: string;
+  nome: string;
+  email: string;
+  senhaTemporaria: string;
+}
+
+export type TipoMentoria = 'INDIVIDUAL' | 'GRUPO';
+export type StatusMentoria = 'AGENDADA' | 'CONFIRMADA' | 'REALIZADA' | 'CANCELADA';
+
+export interface MentorResumo {
+  id: string;
+  nome: string;
+}
+
+export interface Mentoria {
+  id: string;
+  tipo: TipoMentoria;
+  mentor: MentorResumo;
+  mentorados: { id: string; nome: string }[];
+  dataHora: string;
+  duracaoMin: number;
+  linkOnline: string | null;
+  local: string | null;
+  status: StatusMentoria;
+}
+
+export type StatusAta = 'RASCUNHO' | 'PUBLICADA';
+export type StatusProcessamentoAta = 'SEM_AUDIO' | 'PROCESSANDO' | 'CONCLUIDO' | 'FALHA';
+
+export interface SugestaoEncaminhamento {
+  id: string;
+  titulo: string;
+  pesoSugerido: number;
+  aceito: boolean;
+}
+
+export interface Ata {
+  id: string;
+  mentoriaId: string;
+  transcricao: string | null;
+  resumo: string | null;
+  statusProcessamento: StatusProcessamentoAta;
+  status: StatusAta;
+  erroProcessamento: string | null;
+  publicadaEm: string | null;
+  sugestoes: SugestaoEncaminhamento[];
+}
+
+export type TipoConteudo = 'DOCUMENTO' | 'VIDEO' | 'PLANILHA' | 'APRESENTACAO' | 'OUTRO';
+
+export interface Conteudo {
+  id: string;
+  titulo: string;
+  tipo: TipoConteudo;
+  url: string;
+  planoMinimo: Plano;
+  publicado: boolean;
+  criadoEm: string;
+}
+
+export type TipoEvento = 'AO_VIVO' | 'PRESENCIAL';
+export type StatusEvento = 'PROGRAMADO' | 'AO_VIVO' | 'REALIZADO' | 'CANCELADO';
+
+export interface Evento {
+  id: string;
+  titulo: string;
+  tipo: TipoEvento;
+  tema: string | null;
+  dataHora: string;
+  local: string | null;
+  linkOnline: string | null;
+  vagas: number | null;
+  status: StatusEvento;
+}

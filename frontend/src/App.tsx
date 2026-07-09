@@ -15,6 +15,13 @@ import { ComercialShell } from './features/comercial/ComercialShell';
 import { DashboardComercialPage } from './features/comercial/DashboardComercialPage';
 import { LeadsComercialPage } from './features/comercial/LeadsComercialPage';
 import { RankingComercialPage } from './features/comercial/RankingComercialPage';
+import { MentoradosShell } from './features/mentorados/MentoradosShell';
+import { MentoradosListaPage } from './features/mentorados/MentoradosListaPage';
+import { MentoriasAgendaPage } from './features/mentorados/MentoriasAgendaPage';
+import { AtaDetalhePage } from './features/mentorados/AtaDetalhePage';
+import { ConteudosShell } from './features/conteudos/ConteudosShell';
+import { ConteudosPage } from './features/conteudos/ConteudosPage';
+import { EventosPage } from './features/conteudos/EventosPage';
 
 export default function App() {
   return (
@@ -63,10 +70,15 @@ export default function App() {
           path="mentorados"
           element={
             <RequireModulo modulo="MENTORADOS">
-              <PlaceholderScreen title="Mentorados" />
+              <MentoradosShell />
             </RequireModulo>
           }
-        />
+        >
+          <Route index element={<Navigate to="lista" replace />} />
+          <Route path="lista" element={<MentoradosListaPage />} />
+          <Route path="mentorias" element={<MentoriasAgendaPage />} />
+          <Route path="mentorias/:mentoriaId/ata" element={<AtaDetalhePage />} />
+        </Route>
         <Route
           path="consolidado"
           element={
@@ -87,10 +99,14 @@ export default function App() {
           path="conteudos"
           element={
             <RequireModulo modulo="CONTEUDOS">
-              <PlaceholderScreen title="Conteúdos" />
+              <ConteudosShell />
             </RequireModulo>
           }
-        />
+        >
+          <Route index element={<Navigate to="lista" replace />} />
+          <Route path="lista" element={<ConteudosPage />} />
+          <Route path="eventos" element={<EventosPage />} />
+        </Route>
       </Route>
 
       <Route path="/" element={<Navigate to="/login" replace />} />

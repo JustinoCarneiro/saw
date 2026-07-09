@@ -10,6 +10,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -65,5 +66,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiError.of(400, "Bad Request", "Parâmetro inválido.", request.getRequestURI()));
+    }
+
+    // Upload de áudio da ata (M06) acima de spring.servlet.multipart.max-file-size — sem isto
+    // virava 500 genérico (achado da revisão de segurança do M06, mesma classe do achado H14
+    // sobre erro de negócio vs. erro interno).
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiError.of(413, "Payload Too Large", "Arquivo excede o tamanho máximo permitido.", request.getRequestURI()));
     }
 }

@@ -28,8 +28,11 @@ test.describe('RBAC por área', () => {
     await loginAs(page, 'lucas@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
+    // getByRole('navigation') de propósito no link "Mentorados": a MentoradosShell (M06) tem
+    // sua própria aba "Mentorados", texto igual ao link da sidebar — sem escopo, os dois batem.
+    const sidebar = page.getByRole('navigation');
     await expect(page.getByRole('link', { name: 'Painel Consolidado' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Mentorados' })).toBeVisible();
+    await expect(sidebar.getByRole('link', { name: 'Mentorados' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Time' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Financeiro' })).toHaveCount(0);
 

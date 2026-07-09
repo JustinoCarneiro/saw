@@ -5,6 +5,12 @@ import com.sawhub.hub.comercial.LeadRepository;
 import com.sawhub.hub.comercial.MetaComercial;
 import com.sawhub.hub.comercial.MetaComercialRepository;
 import com.sawhub.hub.comercial.StatusLead;
+import com.sawhub.hub.conteudo.Conteudo;
+import com.sawhub.hub.conteudo.ConteudoRepository;
+import com.sawhub.hub.conteudo.TipoConteudo;
+import com.sawhub.hub.evento.Evento;
+import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.TipoEvento;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
 import com.sawhub.hub.financeiro.ContaPagarReceber;
@@ -21,11 +27,20 @@ import com.sawhub.hub.mentorado.EncaminhamentoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentorado.Plano;
+import com.sawhub.hub.mentoria.Ata;
+import com.sawhub.hub.mentoria.AtaEncaminhamentoSugerido;
+import com.sawhub.hub.mentoria.AtaEncaminhamentoSugeridoRepository;
+import com.sawhub.hub.mentoria.AtaRepository;
+import com.sawhub.hub.mentoria.Mentoria;
+import com.sawhub.hub.mentoria.MentoriaRepository;
+import com.sawhub.hub.mentoria.TipoMentoria;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Set;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -53,6 +68,11 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final ContaPagarReceberRepository contaPagarReceberRepository;
     private final LeadRepository leadRepository;
     private final MetaComercialRepository metaComercialRepository;
+    private final MentoriaRepository mentoriaRepository;
+    private final AtaRepository ataRepository;
+    private final AtaEncaminhamentoSugeridoRepository ataEncaminhamentoSugeridoRepository;
+    private final ConteudoRepository conteudoRepository;
+    private final EventoRepository eventoRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(UsuarioRepository usuarioRepository, ColaboradorRepository colaboradorRepository,
@@ -62,6 +82,11 @@ public class DemoDataSeeder implements ApplicationRunner {
                            ContaPagarReceberRepository contaPagarReceberRepository,
                            LeadRepository leadRepository,
                            MetaComercialRepository metaComercialRepository,
+                           MentoriaRepository mentoriaRepository,
+                           AtaRepository ataRepository,
+                           AtaEncaminhamentoSugeridoRepository ataEncaminhamentoSugeridoRepository,
+                           ConteudoRepository conteudoRepository,
+                           EventoRepository eventoRepository,
                            PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.colaboradorRepository = colaboradorRepository;
@@ -72,6 +97,11 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.contaPagarReceberRepository = contaPagarReceberRepository;
         this.leadRepository = leadRepository;
         this.metaComercialRepository = metaComercialRepository;
+        this.mentoriaRepository = mentoriaRepository;
+        this.ataRepository = ataRepository;
+        this.ataEncaminhamentoSugeridoRepository = ataEncaminhamentoSugeridoRepository;
+        this.conteudoRepository = conteudoRepository;
+        this.eventoRepository = eventoRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -82,6 +112,9 @@ public class DemoDataSeeder implements ApplicationRunner {
         seedMentorados();
         seedFinanceiro();
         seedComercial();
+        seedMentoriasEAtas();
+        seedConteudos();
+        seedEventos();
     }
 
     private void seedColaboradores() {
@@ -232,5 +265,120 @@ public class DemoDataSeeder implements ApplicationRunner {
             }
         }
         leadRepository.save(lead);
+    }
+
+    private void seedMentoriasEAtas() {
+        if (mentoriaRepository.count() > 0) {
+            return;
+        }
+        Colaborador lucas = buscarColaboradorPorNome("Lucas Alves");
+        Colaborador ricardo = buscarColaboradorPorNome("Ricardo Costa");
+        Mentorado joao = buscarMentoradoPorNome("João Silva");
+        Mentorado ana = buscarMentoradoPorNome("Ana Costa");
+        Mentorado carlos = buscarMentoradoPorNome("Carlos Menezes");
+        Mentorado rafael = buscarMentoradoPorNome("Rafael Gomes");
+        Mentorado fernanda = buscarMentoradoPorNome("Fernanda Lima");
+        Mentorado marina = buscarMentoradoPorNome("Marina Souza");
+        if (lucas == null || ricardo == null || joao == null) {
+            return; // seedColaboradores/seedMentorados não rodaram (ex.: banco já tinha dado de outra fonte)
+        }
+
+        // 1) Mentoria individual já REALIZADA, com ata PUBLICADA (IA "rodou" — dado simulado,
+        // não chamou a API de verdade) — demonstra o fluxo completo pronto pra apresentação.
+        Mentoria m1 = new Mentoria(TipoMentoria.INDIVIDUAL, lucas, Set.of(joao),
+                Instant.parse("2026-07-02T14:00:00Z"), 60, "https://meet.google.com/joao-lucas", null);
+        m1.confirmar();
+        m1.realizar();
+        mentoriaRepository.save(m1);
+        Ata ata1 = new Ata(m1);
+        ata1.concluirProcessamento(
+                "Transcrição simulada: conversamos sobre a atualização da ficha técnica dos pratos principais "
+                        + "e a necessidade de revisar o cardápio pra refletir os novos preços de insumos.",
+                "João revisou os resultados do último mês (crescimento de 18%) e alinhou com o mentor os "
+                        + "próximos passos: atualizar a ficha técnica dos pratos principais e revisar o cardápio "
+                        + "com os novos preços de insumos.");
+        ata1.publicar();
+        ataRepository.save(ata1);
+        encaminhamentoRepository.save(new Encaminhamento(joao, "Atualizar ficha técnica dos pratos principais", 2, false, m1));
+
+        // 2) Mentoria em grupo REALIZADA, ata com IA CONCLUÍDA mas ainda em RASCUNHO — demonstra
+        // a tela de revisão humana (sugestões aguardando aceite antes de publicar).
+        Mentoria m2 = new Mentoria(TipoMentoria.GRUPO, ricardo, Set.of(ana, carlos),
+                Instant.parse("2026-07-05T16:00:00Z"), 90, "https://meet.google.com/grupo-ricardo", null);
+        m2.confirmar();
+        m2.realizar();
+        mentoriaRepository.save(m2);
+        Ata ata2 = new Ata(m2);
+        ata2.concluirProcessamento(
+                "Transcrição simulada: discussão em grupo sobre precificação do buffet e digitalização do cardápio.",
+                "Encontro em grupo sobre precificação e digitalização de cardápio. Ana e Carlos trouxeram "
+                        + "dúvidas semelhantes sobre como repassar o aumento de custo sem perder cliente.");
+        ataRepository.save(ata2);
+        ataEncaminhamentoSugeridoRepository.save(new AtaEncaminhamentoSugerido(ata2, "Revisar precificação do buffet", 2, true));
+        ataEncaminhamentoSugeridoRepository.save(new AtaEncaminhamentoSugerido(ata2, "Digitalizar cardápio (QR code)", 1, true));
+
+        // 3) Próxima mentoria confirmada (futura) — aparece na agenda, sem ata ainda.
+        Mentoria m3 = new Mentoria(TipoMentoria.INDIVIDUAL, lucas, Set.of(rafael),
+                Instant.parse("2026-07-15T15:00:00Z"), 60, "https://meet.google.com/rafael-lucas", null);
+        m3.confirmar();
+        mentoriaRepository.save(m3);
+
+        // 4) Mentoria agendada (ainda não confirmada), em grupo.
+        Mentoria m4 = new Mentoria(TipoMentoria.GRUPO, ricardo, Set.of(fernanda, marina),
+                Instant.parse("2026-07-20T10:00:00Z"), 90, null, "SAW HUB — Sala de reuniões");
+        mentoriaRepository.save(m4);
+    }
+
+    private Colaborador buscarColaboradorPorNome(String nome) {
+        return colaboradorRepository.findAllByOrderByNomeAsc().stream()
+                .filter(c -> c.getNome().equals(nome))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Mentorado buscarMentoradoPorNome(String nome) {
+        return mentoradoRepository.buscarComFiltro(null, null, null).stream()
+                .filter(m -> m.getNome().equals(nome))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void seedConteudos() {
+        if (conteudoRepository.count() > 0) {
+            return;
+        }
+        criarConteudo("Ficha técnica — modelo", TipoConteudo.PLANILHA, Plano.GRATUITO, true);
+        criarConteudo("Manual da Cultura SAW", TipoConteudo.DOCUMENTO, Plano.GRATUITO, true);
+        criarConteudo("Como calcular seu DRE", TipoConteudo.VIDEO, Plano.BASICO, true);
+        criarConteudo("Apresentação: Precificação estratégica", TipoConteudo.APRESENTACAO, Plano.ESSENCIAL, false);
+    }
+
+    private void criarConteudo(String titulo, TipoConteudo tipo, Plano planoMinimo, boolean publicado) {
+        Conteudo conteudo = new Conteudo(titulo, tipo, "https://cdn.sawhub.com.br/conteudos/" + tipo.name().toLowerCase(), planoMinimo);
+        if (publicado) {
+            conteudo.publicar();
+        }
+        conteudoRepository.save(conteudo);
+    }
+
+    private void seedEventos() {
+        if (eventoRepository.count() > 0) {
+            return;
+        }
+        eventoRepository.save(new Evento("Encontro Nacional SAW 2026", TipoEvento.AO_VIVO, "Gestão de restaurantes",
+                Instant.parse("2026-09-10T19:00:00Z"), null, "https://meet.google.com/encontro-saw", 200));
+        eventoRepository.save(new Evento("Workshop de Gestão Financeira", TipoEvento.PRESENCIAL, "Financeiro",
+                Instant.parse("2026-08-05T18:00:00Z"), "Av. Paulista, 1000 — São Paulo/SP", null, 40));
+
+        Evento realizado = new Evento("Live: Tendências do setor", TipoEvento.AO_VIVO, "Mercado",
+                Instant.parse("2026-06-15T19:00:00Z"), null, "https://meet.google.com/live-tendencias", null);
+        realizado.iniciar();
+        realizado.finalizar();
+        eventoRepository.save(realizado);
+
+        Evento cancelado = new Evento("Feirão de fornecedores", TipoEvento.PRESENCIAL, "Compras",
+                Instant.parse("2026-06-20T14:00:00Z"), "Expo Center Norte", null, 150);
+        cancelado.cancelar();
+        eventoRepository.save(cancelado);
     }
 }

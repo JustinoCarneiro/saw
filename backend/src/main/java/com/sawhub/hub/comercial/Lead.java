@@ -1,6 +1,7 @@
 package com.sawhub.hub.comercial;
 
 import com.sawhub.hub.common.BaseEntity;
+import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.team.Colaborador;
 import jakarta.persistence.Column;
@@ -54,6 +55,10 @@ public class Lead extends BaseEntity {
     @Column(name = "data_fechamento")
     private Instant dataFechamento;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mentorado_id")
+    private Mentorado mentorado;
+
     protected Lead() {
     }
 
@@ -97,6 +102,21 @@ public class Lead extends BaseEntity {
         this.status = StatusLead.PERDIDO;
         this.motivoPerdido = motivo;
         this.dataFechamento = Instant.now();
+    }
+
+    /** H11.1 (M06) — fecha a pendência deixada pelo M05: liga o lead à conta de mentorado
+     * criada a partir dele, sem o qual não haveria como rastrear a origem depois que o funil
+     * já rodou. Só faz sentido em FECHADO e só uma vez (não pode religar). */
+    public void vincularMentorado(Mentorado mentorado) {
+        exigirStatus(StatusLead.FECHADO);
+        if (this.mentorado != null) {
+            throw new IllegalStateException("Lead já está vinculado a um mentorado.");
+        }
+        this.mentorado = mentorado;
+    }
+
+    public Mentorado getMentorado() {
+        return mentorado;
     }
 
     private void exigirStatus(StatusLead esperado) {

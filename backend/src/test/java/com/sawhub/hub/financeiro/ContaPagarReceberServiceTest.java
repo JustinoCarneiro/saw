@@ -18,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 /** H14.4 — RED primeiro: ContaPagarReceberService ainda não existe neste ponto do ciclo. */
 @ExtendWith(MockitoExtension.class)
