@@ -75,12 +75,12 @@ public class MentoradoDashboardService {
 
     private DicaDestaque dicaDestaque(Mentorado mentorado) {
         // buscarComFiltro já devolve ordenado DESC por criadoEm — primeiro elegível é o mais
-        // recente dentro do plano do mentorado.
-        // Nota do revisor-seguranca: único ponto do backend que compara Plano por ordinal() —
-        // correto hoje (ordem declarada do enum já é a hierarquia de negócio), mas reordenar
-        // Plano.java silenciosamente muda quem vê o quê. Manter GRATUITO→PROFISSIONAL nessa ordem.
+        // recente dentro do plano do mentorado. Comparação de plano centralizada em
+        // Plano.atendePlanoMinimo() (achado do revisor-seguranca no M11: esta lógica tinha sido
+        // duplicada independentemente em ConteudoMentoradoService, invalidando a nota antiga de
+        // "único ponto do backend").
         return conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true).stream()
-                .filter(c -> c.getPlanoMinimo().ordinal() <= mentorado.getPlano().ordinal())
+                .filter(c -> mentorado.getPlano().atendePlanoMinimo(c.getPlanoMinimo()))
                 .findFirst()
                 .map(DicaDestaque::from)
                 .orElse(null);

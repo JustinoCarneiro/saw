@@ -38,6 +38,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M08** | **E2 · Dashboard do Mentorado** | **Médio** | **3.5d** | **H2.1–H2.3** |
 | **M09** | **E3 · Metas Estratégicas** | **Médio** | **3.5d** | **H3.1–H3.3** |
 | **M10** | **E4 · Tarefas & Agenda** | **Médio** | **3.5d** | **H4.1–H4.5** |
+| **M11** | **E6 · Materiais & Dicas do Brayan** | **Médio** | **3.5d** | **H6.1–H6.3** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -1119,17 +1120,17 @@ a correção acima. Sem pendência de credencial externa.
 **Por que Médio:** Módulo do lado do mentorado, focado em leitura, curadoria (favoritos) e consumo (assistido) de entidades `Conteudo` já criadas e gerenciadas pelo Admin desde o M06. A complexidade fica na junção de dados globais (o catálogo) com estado local por tenant (o que o mentorado atual favoritou/consumiu).
 
 **Decisões de escopo & Suposições assumidas:**
-- **Categorias (H6.1):** O `spec.md` cita filtro por "categoria e formato", mas `Conteudo` tem apenas `tipo` (formato: VIDEO, DOCUMENTO, etc.). Por ora, o filtro será por `tipo`. Se a SAW solicitar categorização temática no futuro (ex: Vendas, Gestão), será adicionada uma nova coluna.
-- **Indicadores de consumo (H6.3):** "dias assistidos, minutos, favoritas" - Sem metadado de 'duração' no `Conteudo` atual, assumimos a contagem simples de conteúdos assistidos para os indicadores nesta fase.
-- **Isolamento de estado:** A tabela `conteudo_mentorado` guardará o estado de 'favorito' e 'assistido' isolado por `mentorado_id`.
+- **Categorias (H6.1):** O `spec.md` cita filtro por "categoria e formato", mas `Conteudo` tem apenas `tipo` (formato: VIDEO, DOCUMENTO, etc.), sem coluna de categoria temática (Vendas, Gestão etc.) — filtro implementado só por `tipo`. Se a SAW pedir categorização temática, entra como coluna nova depois.
+- **Controle de acesso por plano reaproveita o padrão do M08:** `planosPermitidos()` compara `Plano.ordinal()` (mesma técnica, e o mesmo aviso, do `dicaDestaque` do M08 — funciona porque a ordem declarada do enum já é a hierarquia de negócio, mas é frágil a reordenar `Plano.java`).
+- **Indicadores de consumo (H6.3) — pendência real, não só suposição:** a história pede "o consumo conta nos meus indicadores (dias assistidos, minutos, favoritas)". O que existe hoje é só o toggle `assistido`/`favorito` por item (`ConteudoMentorado.dataConsumo` grava a data na 1ª vez que é marcado assistido) — **não existe nenhum endpoint ou tela agregando esses dados num "indicador"** (nem contagem de dias assistidos, nem minutos, nem um resumo de favoritas). Diferente das Suposições acima (decisões conscientes), isto é um pedaço da história não implementado — ver Status abaixo.
 
 ## Modelagem de banco (M11)
 
 ```sql
 -- V8__conteudo_mentorado.sql
 CREATE TABLE conteudo_mentorado (
-    mentorado_id    UUID NOT NULL REFERENCES mentorado(id),
-    conteudo_id     UUID NOT NULL REFERENCES conteudo(id),
+    mentorado_id    UUID NOT NULL REFERENCES mentorado(id) ON DELETE CASCADE,
+    conteudo_id     UUID NOT NULL REFERENCES conteudo(id) ON DELETE CASCADE,
     favorito        BOOLEAN NOT NULL DEFAULT false,
     assistido       BOOLEAN NOT NULL DEFAULT false,
     data_consumo    TIMESTAMP,
@@ -1137,42 +1138,90 @@ CREATE TABLE conteudo_mentorado (
 );
 
 CREATE INDEX idx_conteudo_mentorado_favorito ON conteudo_mentorado(mentorado_id, favorito);
+CREATE INDEX idx_conteudo_mentorado_assistido ON conteudo_mentorado(mentorado_id, assistido);
+
+-- V9__conteudo_mentorado_versao.sql — achado nesta verificação: a entidade nasceu sem @Version
+-- (não estende BaseEntity porque usa @EmbeddedId composta, incompatível com o @Id de coluna
+-- única de BaseEntity). Toda entidade do projeto tem lock otimista desde o achado da revisão de
+-- segurança do E14 — replicado aqui manualmente numa migração separada, já que V8 já tinha sido
+-- aplicada neste ambiente antes desta verificação (editar V8 direto quebraria o checksum do Flyway).
+ALTER TABLE conteudo_mentorado ADD COLUMN versao BIGINT NOT NULL DEFAULT 0;
 ```
 
 ## Contratos de API (M11)
 
 ```jsonc
-// hasRole("MENTORADO") - Traz catálogo filtrado pelo planoMinimo <= planoAtual
+// hasRole("MENTORADO") — traz catálogo filtrado por planoMinimo <= plano do mentorado
 GET /api/v1/mentorado/conteudos?tipo=&favorito=
 [{
-  "id": "uuid",
-  "titulo": "Ficha Técnica Completa",
-  "tipo": "PLANILHA",
-  "url": "https://...",
-  "favorito": true,
-  "assistido": false
+  "id": "uuid", "titulo": "Ficha Técnica Completa", "tipo": "PLANILHA", "url": "https://...",
+  "planoMinimo": "BASICO", "publicado": true, "criadoEm": "2026-06-01T12:00:00Z",
+  "favorito": true, "assistido": false
 }]
 
-// Retorna apenas tipo=VIDEO, ordenado pelos mais recentes (Proxy para Dicas do Brayan)
+// Mesmo formato acima, só tipo=VIDEO, ordenado pelos mais recentes (proxy pra "Dicas do Brayan")
 GET /api/v1/mentorado/conteudos/dicas
-[{
-  "id": "uuid", "titulo": "...", "tipo": "VIDEO", "url": "...", "favorito": false, "assistido": true
-}]
 
 PATCH /api/v1/mentorado/conteudos/{id}/favorito
 { "favorito": true }
 
-PATCH /api/v1/mentorado/conteudos/{id}/assistido
+PATCH /api/v1/mentorado/conteudos/{id}/assistido   // 1ª vez marcando true grava data_consumo
 { "assistido": true }
+// 404 se o conteúdo não existe; 403 se o plano do mentorado não permite (AccessDeniedException,
+// não IllegalStateException — achado nesta verificação, corrigido pra bater com o padrão já
+// usado em GlobalExceptionHandler pro resto do projeto)
 ```
 
 ## Rastreabilidade história ↔ módulo (M11)
 
 | História | Cobertura |
 |---|---|
-| H6.1 — navegar biblioteca por categoria e formato | `GET /mentorado/conteudos` |
+| H6.1 — navegar biblioteca por categoria e formato | `GET /mentorado/conteudos` (só `tipo`, sem categoria temática — ver Suposição acima) |
 | H6.2 — favoritar materiais e dicas | `PATCH /mentorado/conteudos/{id}/favorito` |
-| H6.3 — assistir dicas e contar nos indicadores | `GET /mentorado/conteudos/dicas`, `PATCH /mentorado/conteudos/{id}/assistido` |
+| H6.3 — assistir dicas | `GET /mentorado/conteudos/dicas`, `PATCH /mentorado/conteudos/{id}/assistido` — cobre "assistir", **não cobre** "contar nos meus indicadores" (nenhum endpoint agrega dias/minutos/favoritas ainda, ver Pendência acima) |
+
+**Status: ✅ M11 concluído** (2026-07-09) — módulo começou como código escrito em paralelo por
+outra sessão (não seguiu o pipeline Blueprint→TDD→revisor-seguranca→E2E desta esteira), adotado e
+completado por esta sessão antes de fechar. Backend (183/183 testes) + frontend (`MateriaisPage`,
+rota `/mentorado/materiais` + nav no `MentoradoShell`) + E2E (`materiais.spec.ts`, 3 testes) —
+**38/38 verde na suíte completa**.
+
+**Achados corrigidos na verificação desta sessão, antes do `revisor-seguranca`:**
+CSS com variáveis inexistentes no design system (`--text-base`/`--bg-hover`/`--primary`/
+`--bg-base` em vez de `--text`/`--elevated`/`--gold`/`--surface` — a tela renderizaria com texto
+provavelmente invisível no tema dark) + baixo contraste (texto branco sobre fundo dourado no botão
+de acessar material, corrigido pra `--on-gold`); rota `/mentorado/materiais` nunca tinha sido
+adicionada em `App.tsx` (nav linkava pra uma página inacessível); `ConteudoMentoradoService`
+lançava `IllegalStateException` (409) tanto pra "não encontrado" quanto "plano insuficiente" —
+trocado pra `NoSuchElementException` (404) e `AccessDeniedException` (403), consistente com o
+padrão do resto do projeto; **achado de isolamento real**: `atualizarStatus` não checava
+`conteudo.isPublicado()` — um mentorado que soubesse/adivinhasse o UUID de um conteúdo ainda em
+rascunho conseguia favoritar/marcar assistido nele, vazando título/url de volta na resposta;
+corrigido tratando como 404; `ConteudoMentorado` não estendia `BaseEntity` (não tinha `@Version`,
+diferente de toda outra entidade do projeto desde o achado do E14) — corrigido com `@Version`
+manual + migração `V9__conteudo_mentorado_versao.sql` nova, já que `V8` já tinha sido aplicada
+neste ambiente antes desta verificação (editá-la quebraria o checksum do Flyway — acabou
+acontecendo mesmo assim uma vez, revertido); parâmetro `mentoradoId` renomeado pra `usuarioId`
+(era na verdade um id de Usuario resolvido internamente, nome antigo convidava um call site futuro
+a pular a resolução a partir do usuário autenticado).
+
+**Achados do `revisor-seguranca` (4, todos corrigidos):** (1) `window.open(dica.url, '_blank')`
+sem `noopener,noreferrer` — reverse tabnabbing, inconsistente com os `<a rel="noreferrer">` já
+usados na mesma página; (2) `ConteudoMentoradoService.planosPermitidos()` duplicava a comparação
+por `Plano.ordinal()` já usada em `MentoradoDashboardService` (M08), invalidando o comentário que
+dizia "único ponto do backend" — centralizado em `Plano.atendePlanoMinimo()`, comentário do M08
+corrigido; (3) lock otimista (`@Version`) só protege UPDATE-vs-UPDATE — duas requisições
+concorrentes do *primeiro* favoritar/assistir (mesmo mentorado, ex. duplo clique) podiam colidir
+na PK composta e estourar 500 em vez de 409; adicionado `GlobalExceptionHandler.
+handleDataIntegrityViolation`; (4) `Conteudo.url` (CRUD Admin, M06) sem validação de esquema —
+M11 é a primeira vez que esse campo vira link clicável/`window.open` direto pro mentorado, então
+um Admin comprometido podia gravar `javascript:...`; adicionado `@Pattern(regexp = "^https?://.+")`
+em `CriarConteudoRequest`/`AtualizarConteudoRequest`.
+
+**Pendência real (não suposição):** H6.3 pede "o consumo conta nos meus indicadores (dias
+assistidos, minutos, favoritas)" — não implementado, só o toggle por item existe. Fica pra uma
+leva futura quando/se a SAW confirmar que precisa desse indicador agregado (ver Suposições do
+Blueprint acima). Sem pendência de credencial externa.
 
 ## Fórmula de prazo
 
@@ -1206,7 +1255,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ✅ Concluído — backend (152/152 testes) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado) + frontend (primeira rota `/mentorado` de verdade) + E2E (29/29, `dashboard-mentorado.spec.ts`) |
 | 6 | E3 · Metas Estratégicas | Médio | 3.5d | ✅ Concluído — backend (165/165 testes, 1ª entidade nova desde o M06) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado nos caminhos de escrita) + frontend (`MetasPage` self-service) + E2E (32/32, `metas.spec.ts`) |
 | 7 | E4 · Tarefas & Agenda | Médio | 3.5d | ✅ Concluído — backend (178/178 testes) + `revisor-seguranca` (sem achado bloqueante: peso do ranking protegido, isolamento Tarefa→Meta confirmado, migração idempotente, máquina de estado com guardas, JPQL seguro) + frontend (`TarefasPage` self-service) + E2E (35/35, `tarefas.spec.ts`) |
-| 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ⬜ |
+| 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ✅ Concluído — backend (183/183 testes) + `revisor-seguranca` (4 achados corrigidos: reverse tabnabbing, `Plano.ordinal()` duplicado, corrida de criação concorrente, `url` sem validação de esquema) + frontend (`MateriaisPage`) + E2E (38/38, `materiais.spec.ts`). Indicadores agregados de consumo (H6.3) não implementados — pendência real |
 | 9 | E7 · Eventos & Inscrições | Médio | 3.5d | ⬜ |
 | 10 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ⬜ `revisor-seguranca` obrigatório, mesmo tratamento do Auth |
 | 11 | E9 · Perfil & Gamificação | Médio | 3.5d | ⬜ |

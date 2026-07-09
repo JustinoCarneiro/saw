@@ -246,6 +246,8 @@ export interface Conteudo {
   planoMinimo: Plano;
   publicado: boolean;
   criadoEm: string;
+  favorito?: boolean;
+  assistido?: boolean;
 }
 
 // M08 · E2 (Dashboard do Mentorado)

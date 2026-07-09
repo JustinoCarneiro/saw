@@ -5,11 +5,12 @@ interface CardProps {
   children: ReactNode;
   style?: CSSProperties;
   className?: string;
+  testId?: string;
 }
 
-export function Card({ children, style, className }: CardProps) {
+export function Card({ children, style, className, testId }: CardProps) {
   return (
-    <div className={[styles.card, className].filter(Boolean).join(' ')} style={style}>
+    <div className={[styles.card, className].filter(Boolean).join(' ')} style={style} data-testid={testId}>
       {children}
     </div>
   );

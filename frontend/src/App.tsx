@@ -26,6 +26,7 @@ import { EventosPage } from './features/conteudos/EventosPage';
 import { DashboardMentoradoPage } from './features/mentorado/DashboardMentoradoPage';
 import { MetasPage } from './features/mentorado/MetasPage';
 import { TarefasPage } from './features/mentorado/TarefasPage';
+import { MateriaisPage } from './features/mentorado/MateriaisPage';
 
 export default function App() {
   return (
@@ -117,6 +118,7 @@ export default function App() {
         <Route index element={<DashboardMentoradoPage />} />
         <Route path="metas" element={<MetasPage />} />
         <Route path="tarefas" element={<TarefasPage />} />
+        <Route path="materiais" element={<MateriaisPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/login" replace />} />

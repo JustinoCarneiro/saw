@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.DateTimeException;
 import java.util.NoSuchElementException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -47,6 +48,20 @@ public class GlobalExceptionHandler {
     // perde a corrida e recebe 409 em vez de silenciosamente corromper o dado.
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiError> handleOptimisticLock(ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiError.of(409, "Conflict",
+                        "Este registro foi alterado por outra operação simultânea. Recarregue e tente novamente.",
+                        request.getRequestURI()));
+    }
+
+    // Corrida de criação concorrente sobre uma chave única/composta (achado do revisor-seguranca
+    // no M11): @Version só protege UPDATE-vs-UPDATE numa linha já existente — duas requisições
+    // simultâneas do PRIMEIRO favoritar/assistir do mesmo mentorado+conteúdo (ex.: duplo clique)
+    // podem ambas ler "não existe" e tentar inserir a mesma PK composta
+    // (ConteudoMentoradoService.atualizarStatus). Sem isto virava 500 genérico em vez do mesmo
+    // 409 limpo que o lock otimista já dá pro caso de UPDATE.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiError.of(409, "Conflict",
                         "Este registro foi alterado por outra operação simultânea. Recarregue e tente novamente.",
