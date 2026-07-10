@@ -6,7 +6,6 @@ import com.sawhub.hub.conteudo.TipoConteudo;
 import com.sawhub.hub.mentorado.dto.DashboardMentoradoResponse;
 import com.sawhub.hub.mentorado.dto.DashboardMentoradoResponse.Compromisso;
 import com.sawhub.hub.mentorado.dto.DashboardMentoradoResponse.DicaDestaque;
-import com.sawhub.hub.mentoria.Mentoria;
 import com.sawhub.hub.mentoria.MentoriaRepository;
 import com.sawhub.hub.mentoria.StatusMentoria;
 import java.time.Instant;
