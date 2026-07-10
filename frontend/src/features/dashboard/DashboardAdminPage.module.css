@@ -1,0 +1,210 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error {
+  color: var(--danger);
+  padding: 12px;
+  background: var(--danger-bg);
+  border-radius: 6px;
+}
+
+.loading {
+  padding: 20px 22px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.kpiValue {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 8px 0 2px;
+}
+
+.kpiHint {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.emptyState {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+/* Crescimento de mentorados — bar chart simples (sem lib de gráfico) */
+.barChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 160px;
+}
+
+.barColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.barTrack {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.barFill {
+  width: 100%;
+  min-height: 2px;
+  background: var(--gold);
+  border-radius: 4px 4px 0 0;
+}
+
+.barValue {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 6px;
+}
+
+.barLabel {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* Distribuição por plano — mesma linguagem visual do funil comercial (E13) */
+.funilList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.funilHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+
+.funilLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.funilValue {
+  font-weight: 700;
+}
+
+.track {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+}
+
+.listaAtividades {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.atividadeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.atividadeRow:last-child {
+  border-bottom: none;
+}
+
+.atividadeIcone {
+  flex: none;
+}
+
+.atividadeDescricao {
+  flex: 1;
+  color: var(--text);
+}
+
+.atividadeQuando {
+  color: var(--text-faint);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.mentoriaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mentoriaRow:last-child {
+  border-bottom: none;
+}
+
+.mentoriaTitulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mentoriaSub {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--success);
+  background: var(--success-bg);
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}

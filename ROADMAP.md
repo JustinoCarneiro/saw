@@ -43,6 +43,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M13** | **E7 · Eventos & Inscrições (lado mentorado)** | **Médio** | **4.5d** | **H7.1–H7.3** |
 | **M14** | **E8 · Loja SAW (catálogo, carrinho, checkout, gateway)** | **Grande · risco alto** | **6d** | **H8.1–H8.4** |
 | **M15** | **E9 · Perfil & Gamificação** | **Médio** | **3.5d** | **H9.1–H9.3** |
+| **M16** | **E10 · Painel Administrativo & Métricas** | **Médio** | **3.5d** | **H10.1–H10.3** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -1909,6 +1910,108 @@ mostrar "conquistado em DD/MM" como o mockup sugere, e o XP não é ajustável m
 cliente quiser XP com histórico real de eventos, é trabalho adicional (event sourcing), não uma
 extensão trivial deste módulo. Sem pendência de credencial externa.
 
+## Blueprint (M16 · E10 · Painel Administrativo & Métricas)
+
+**Por que Médio, sem `revisor-seguranca` obrigatório por CLAUDE.md (revisado do mesmo jeito, por
+convenção desta esteira):** agregação pura de leitura sobre dados que já existem (Mentorado,
+Mentoria, Evento, Conteudo, Financeiro/E14) — mesma classe de módulo que E17 Painel Consolidado e
+o Dashboard Comercial (E13), sem entidade nova, sem escrita nova, sem dado sensível novo. É o
+"KPI geral" do Admin — `spec.md` já deixa explícito que isso é diferente do E17 (consolidado por
+mentorado) e do E13/E14 (dashboards por área), não uma sobreposição.
+
+**Estado de partida, diferente de todo módulo anterior:** `/admin/dashboard` e `Modulo.DASHBOARD`
+**já existem como scaffolding** desde antes desta leva — a rota está protegida por
+`RequireModulo modulo="DASHBOARD"` e é a PRIMEIRA da ordem de redirecionamento pós-login
+(`MODULO_ROUTE_ORDER` em `moduloRoutes.ts`), só que hoje renderiza `<PlaceholderScreen
+title="Dashboard" />`. Este módulo substitui o placeholder pelo conteúdo real — sem RBAC novo,
+sem rota nova.
+
+**Leitura do mockup congelado** (`design/prototipo/uploads/06-admin.png`, "Tela 11 — Dashboard
+Administrativo"): 4 cartões de KPI com variação % (mentorados ativos, mentorias realizadas,
+eventos realizados, receita do mês), gráfico de linha "Crescimento de mentorados" (últimos 6
+meses), donut "Distribuição por plano", lista "Atividades recentes", lista "Mentorias agendadas
+para hoje".
+
+**Suposições (decisões conscientes, documentadas, não escondidas):**
+1. **"Atividades recentes" deriva de timestamps de CRIAÇÃO já existentes** (`Mentorado.criadoEm`,
+   `Evento.criadoEm`, `Conteudo.criadoEm` quando publicado) — o sistema não tem tabela de
+   auditoria/log de eventos. Não cobre transições de status (ex.: "mentoria concluída" do mockup)
+   porque nenhuma entidade rastreia a DATA da transição, só o status atual — mesma limitação já
+   aceita no E14 (DRE não tem histórico de mudança de status de conta). Mesma classe de decisão do
+   XP derivado do M15: dado computado por leitura, não persistido, sem inventar uma tabela de
+   evento só pra esta tela.
+2. **"Crescimento de mentorados" (6 meses) e a variação % de "mentorados ativos" usam
+   `Mentorado.criadoEm` como proxy de crescimento de base**, contando cadastros acumulados até o
+   fim de cada mês — não há histórico de ativar/desativar, então "ativos naquele mês passado" é
+   aproximado pelo total cadastrado até lá (se alguém foi desativado depois, o gráfico de meses
+   anteriores não reflete retroativamente). Documentado, não escondido.
+3. **"Mentorias realizadas"/"Eventos realizados" no mês usam a data do evento (`dataHora`) como
+   mês de referência**, não uma data de transição de status separada (que não existe).
+4. **Centralização de dívida técnica encontrada, não introduzida por este módulo:**
+   `variacaoPct(BigDecimal anterior, BigDecimal atual)` já está duplicado de forma idêntica em
+   `RelatorioFinanceiroService` (E14) e `ComercialDashboardService` (E13) — este módulo seria o
+   TERCEIRO a reimplementar a mesma fórmula. Extraído pra `common/VariacaoCalculator` (com um
+   overload `long`/`long` novo, usado pelos KPIs de contagem deste módulo) e os dois call sites
+   existentes apontados pra lá — mesma disciplina do `ProgressoCalculator`/`Plano.atendePlanoMinimo`
+   (lições do M08/M11): centralizar no momento em que a duplicata é encontrada, não adiar.
+
+**Contratos de API:**
+
+```
+GET /api/v1/admin/dashboard?ano=&mes=   // default: mês corrente
+// Response 200
+{
+  "mentoradosAtivos": 6, "variacaoMentoradosAtivosPct": 20.0,
+  "mentoriasRealizadas": 2, "variacaoMentoriasRealizadasPct": 0.0,
+  "eventosRealizados": 1, "variacaoEventosRealizadosPct": 0.0,
+  "receitaMes": 1770.00, "variacaoReceitaMesPct": 12.5,
+  "crescimentoMentorados": [ { "mes": "2026-02", "total": 4 }, ... 6 itens ],
+  "distribuicaoPlano": [ { "plano": "ESSENCIAL", "quantidade": 3, "pct": 50.0 }, ... ],
+  "atividadesRecentes": [
+    { "tipo": "MENTORADO_CADASTRADO", "descricao": "Novo mentorado: Ana Costa", "quando": "2026-07-09T00:37:06Z" }
+  ],
+  "mentoriasHoje": [
+    { "tipo": "INDIVIDUAL", "mentorNome": "Brayan", "mentoradoNomes": "João Silva", "hora": "10:00", "status": "CONFIRMADA" }
+  ]
+}
+```
+
+**Rastreabilidade:**
+
+| História | Cobertura |
+|---|---|
+| H10.1 — visão geral (mentorados ativos, mentorias/eventos realizados, receita do mês, variação) | 4 KPIs do `GET /admin/dashboard` |
+| H10.2 — crescimento e distribuição por plano | `crescimentoMentorados` + `distribuicaoPlano` |
+| H10.3 — atividades recentes e mentorias do dia | `atividadesRecentes` + `mentoriasHoje` |
+
+**Status: ✅ M16 concluído** (2026-07-10) — backend (290/290 testes, incluindo
+`DashboardAdminServiceTest` (contagem de ativos, distribuição por plano, crescimento de 6 meses,
+mentorias/eventos realizados por mês, mentorias de hoje, atividades recentes ordenadas/limitadas)
+e `VariacaoCalculatorTest`) + frontend (`DashboardAdminPage` substitui o `PlaceholderScreen` que
+ocupava `/admin/dashboard` desde antes desta leva) + E2E (`dashboard-admin.spec.ts`, 2 testes) —
+**59/59 verde na suíte completa**.
+
+**Refatoração feita antes do código novo (não depois):** `variacaoPct` já estava duplicado de
+forma idêntica em `RelatorioFinanceiroService` (E14) e `ComercialDashboardService` (E13) — this
+módulo seria o terceiro ponto a reimplementar a mesma fórmula. Extraído pra
+`common/VariacaoCalculator` (com overload `long`/`long` novo pros KPIs de contagem) antes de
+escrever `DashboardAdminService`, não como um achado de `revisor-seguranca` corrigido depois —
+mesma disciplina do `ProgressoCalculator`/`Plano.atendePlanoMinimo` (M08/M11).
+
+**`revisor-seguranca` (mesmo tratamento de todo módulo desta esteira): Seguro** — confirmado que
+`Modulo.DASHBOARD` só está em `AreaModuloMatrix.FUNDADOR` (nenhuma outra área vê o módulo, testado
+ao vivo com um usuário Comercial retornando 403), agregação admin-wide correta pra este caso (não
+é vazamento cross-tenant, é o propósito do módulo), "atividades recentes" só expõe nome/título
+(nunca email/telefone), `ano`/`mes` validados sem caminho de exceção não tratada, refatoração do
+`VariacaoCalculator` confirmada comportamentalmente idêntica ao código antigo. Nenhum achado —
+quinta revisão limpa desde M08-M10/M13/M15.
+
+**Pendência real, documentada, não escondida:** "atividades recentes" não cobre transições de
+status (ex.: "mentoria concluída", que o mockup mostra) porque nenhuma entidade rastreia a DATA da
+transição, só o status atual — só cobre eventos de criação (mentorado cadastrado, evento criado,
+conteúdo publicado). "Crescimento de mentorados" e a variação de "mentorados ativos" usam
+`criadoEm` como proxy (sem histórico de ativar/desativar). Sem pendência de credencial externa.
+
 ## Fórmula de prazo
 
 ```
@@ -1946,7 +2049,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 10 | E7 · Eventos & Inscrições (lado mentorado) | Médio | 4.5d | ✅ Concluído — backend (226/226 testes) + `revisor-seguranca` (sem achado bloqueante — primeira revisão limpa desde M08-M10) + frontend (`EventosMentoradoPage`, calendário próprio) + E2E (46/46, `eventos.spec.ts`). Fecha H7.1-H7.3, deferidas desde o M06. Nova entidade `InscricaoEvento` com corrida de última vaga protegida por `@Version`. Pendência: janela de corrida rara em `marcarParticipacoes` (baixo impacto) |
 | 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ✅ Concluído — backend (270/270 testes) + `revisor-seguranca` obrigatório (Seguro — 2 achados de hardening corrigidos: teto de quantidade, janela de frescor da assinatura do webhook) + frontend (`LojaPage`, `ProdutosPage`/`PedidosPage` Admin) + E2E (52/52, `loja.spec.ts`). Gateway Mercado Pago (Checkout Pro), sem credencial neste ambiente — verificado só até a borda, validar contra sandbox real antes de produção |
 | 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ✅ Concluído — backend (280/280 testes) + `revisor-seguranca` (sem achado bloqueante — quarta revisão limpa da esteira) + frontend (`PerfilPage`) + E2E (57/57, `perfil.spec.ts`). XP/nível/conquistas calculados por leitura, sem persistência (ver Blueprint) — pendência real: sem data de desbloqueio de conquista, sem histórico de XP. Achado e corrigido: gap entre o Blueprint (vencimentoPlano via admin) e a implementação inicial (nunca fazia isso) |
-| 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ⬜ |
+| 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ✅ Concluído — backend (290/290 testes) + `revisor-seguranca` (sem achado bloqueante — quinta revisão limpa da esteira) + frontend (`DashboardAdminPage`, substitui o placeholder que ocupava `/admin/dashboard`) + E2E (59/59, `dashboard-admin.spec.ts`). Refatoração proativa: `variacaoPct` (duplicado em E13/E14) centralizado em `VariacaoCalculator` antes do código novo. Pendência: "atividades recentes" só cobre eventos de criação, sem histórico de transição de status |
 | 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ⬜ |
 | — | **Fase 5 · Homologação** (smoke test via Docker, validação humana E2E, revisão final de segurança, deploy Coolify, **pass transversal de `pgcrypto` nas colunas sensíveis** — ver notas em M04 e M05) | — | 2d | ⬜ |
 

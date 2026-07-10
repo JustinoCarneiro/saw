@@ -528,3 +528,44 @@ export interface Assinatura {
   vencimentoPlano: string | null;
   planosDisponiveis: PlanoDisponivel[];
 }
+
+// M16 — E10 Painel Administrativo & Métricas.
+export interface CrescimentoMesItem {
+  mes: string;
+  total: number;
+}
+
+export interface DistribuicaoPlanoItem {
+  plano: Plano;
+  quantidade: number;
+  pct: number;
+}
+
+export interface AtividadeRecente {
+  tipo: string;
+  descricao: string;
+  quando: string;
+}
+
+export interface MentoriaHojeItem {
+  tipo: TipoMentoria;
+  mentorNome: string | null;
+  mentoradoNomes: string;
+  hora: string;
+  status: StatusMentoria;
+}
+
+export interface DashboardAdminResponse {
+  mentoradosAtivos: number;
+  variacaoMentoradosAtivosPct: number;
+  mentoriasRealizadas: number;
+  variacaoMentoriasRealizadasPct: number;
+  eventosRealizados: number;
+  variacaoEventosRealizadosPct: number;
+  receitaMes: number;
+  variacaoReceitaMesPct: number;
+  crescimentoMentorados: CrescimentoMesItem[];
+  distribuicaoPlano: DistribuicaoPlanoItem[];
+  atividadesRecentes: AtividadeRecente[];
+  mentoriasHoje: MentoriaHojeItem[];
+}

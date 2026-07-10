@@ -2,11 +2,12 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminShell } from './app/AdminShell';
 import { AdminIndexRedirect } from './app/AdminIndexRedirect';
 import { MentoradoShell } from './app/MentoradoShell';
-import { PlaceholderScreen, RequireModulo } from './app/RequireModulo';
+import { RequireModulo } from './app/RequireModulo';
 import { LoginPage } from './features/auth/LoginPage';
 import { SolicitarAcessoPage } from './features/auth/SolicitarAcessoPage';
 import { TeamPage } from './features/team/TeamPage';
 import { ConsolidatedPage } from './features/consolidated/ConsolidatedPage';
+import { DashboardAdminPage } from './features/dashboard/DashboardAdminPage';
 import { FinanceiroShell } from './features/financeiro/FinanceiroShell';
 import { DashboardFaturamentoPage } from './features/financeiro/DashboardFaturamentoPage';
 import { DrePage } from './features/financeiro/DrePage';
@@ -46,7 +47,7 @@ export default function App() {
           path="dashboard"
           element={
             <RequireModulo modulo="DASHBOARD">
-              <PlaceholderScreen title="Dashboard" />
+              <DashboardAdminPage />
             </RequireModulo>
           }
         />

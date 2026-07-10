@@ -2,6 +2,7 @@ package com.sawhub.hub.comercial;
 
 import com.sawhub.hub.comercial.dto.DashboardComercialResponse;
 import com.sawhub.hub.comercial.dto.FunilItem;
+import com.sawhub.hub.common.VariacaoCalculator;
 import com.sawhub.hub.financeiro.OrigemReceita;
 import com.sawhub.hub.financeiro.RelatorioFinanceiroService;
 import com.sawhub.hub.financeiro.dto.DashboardFaturamentoResponse;
@@ -51,7 +52,7 @@ public class ComercialDashboardService {
                 anterior.getYear(), anterior.getMonthValue());
 
         BigDecimal vendasLoja = vendasPorOrigem(atual, OrigemReceita.LOJA);
-        double variacaoMrrPct = variacaoPct(doMesAnterior.mrr(), atual.mrr());
+        double variacaoMrrPct = VariacaoCalculator.pct(doMesAnterior.mrr(), atual.mrr());
 
         return new DashboardComercialResponse(fechados, taxaConversaoPct, atual.mrr(), vendasLoja, variacaoMrrPct, funil);
     }
@@ -64,13 +65,4 @@ public class ComercialDashboardService {
                 .orElse(BigDecimal.ZERO);
     }
 
-    private static double variacaoPct(BigDecimal anterior, BigDecimal atual) {
-        if (anterior.compareTo(BigDecimal.ZERO) == 0) {
-            return 0.0;
-        }
-        return atual.subtract(anterior)
-                .divide(anterior.abs(), 4, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100))
-                .doubleValue();
-    }
 }

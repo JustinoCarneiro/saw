@@ -1,5 +1,6 @@
 package com.sawhub.hub.financeiro;
 
+import com.sawhub.hub.common.VariacaoCalculator;
 import com.sawhub.hub.financeiro.dto.ComparativoMes;
 import com.sawhub.hub.financeiro.dto.ComposicaoReceita;
 import com.sawhub.hub.financeiro.dto.DashboardFaturamentoResponse;
@@ -30,7 +31,7 @@ public class RelatorioFinanceiroService {
 
         BigDecimal resultadoAtual = atual.resultado();
         BigDecimal resultadoAnterior = anterior.resultado();
-        double variacaoPct = variacaoPct(resultadoAnterior, resultadoAtual);
+        double variacaoPct = VariacaoCalculator.pct(resultadoAnterior, resultadoAtual);
 
         return new DreResponse(periodo.toString(), atual.receitaBruta, atual.deducoes, atual.receitaLiquida(),
                 atual.custos, atual.despesasOperacionais, resultadoAtual,
@@ -82,16 +83,6 @@ public class RelatorioFinanceiroService {
                 somaPorGrupo(lancamentos, GrupoDre.DEDUCOES),
                 somaPorGrupo(lancamentos, GrupoDre.CUSTOS),
                 somaPorGrupo(lancamentos, GrupoDre.DESPESA_OPERACIONAL));
-    }
-
-    private static double variacaoPct(BigDecimal anterior, BigDecimal atual) {
-        if (anterior.compareTo(BigDecimal.ZERO) == 0) {
-            return 0.0;
-        }
-        return atual.subtract(anterior)
-                .divide(anterior.abs(), 4, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100))
-                .doubleValue();
     }
 
     private static BigDecimal somaOrigemAssinatura(List<LancamentoFinanceiro> lancamentos) {
