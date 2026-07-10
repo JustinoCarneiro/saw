@@ -92,6 +92,8 @@ class DemoDataSeederTest {
     @Mock
     private com.sawhub.hub.loja.PedidoRepository pedidoRepository;
     @Mock
+    private com.sawhub.hub.aviso.AvisoRepository avisoRepository;
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private DemoDataSeeder seeder() {
@@ -99,7 +101,7 @@ class DemoDataSeederTest {
                 encaminhamentoRepository, categoriaFinanceiraRepository, lancamentoFinanceiroRepository,
                 contaPagarReceberRepository, leadRepository, metaComercialRepository, mentoriaRepository,
                 ataRepository, ataEncaminhamentoSugeridoRepository, conteudoRepository, eventoRepository,
-                inscricaoEventoRepository, produtoRepository, pedidoRepository, passwordEncoder);
+                inscricaoEventoRepository, produtoRepository, pedidoRepository, avisoRepository, passwordEncoder);
     }
 
     @BeforeEach
@@ -383,5 +385,31 @@ class DemoDataSeederTest {
         // mockado sem seed de verdade), então o pedido de exemplo não roda e não gera um save extra.
         verify(produtoRepository, times(6)).save(captor.capture());
         assertThat(captor.getAllValues()).filteredOn(p -> !p.isPublicado()).hasSize(1);
+    }
+
+    @Test
+    void naoRecriaAvisosSeJaExistirAlgum() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(avisoRepository.count()).thenReturn(1L);
+
+        seeder().run(null);
+
+        verify(avisoRepository, never()).save(any());
+    }
+
+    @Test
+    void seedaQuatroAvisosCobrindoAsQuatroCategorias() {
+        when(colaboradorRepository.count()).thenReturn(2L);
+        when(mentoradoRepository.count()).thenReturn(1L);
+        when(avisoRepository.count()).thenReturn(0L);
+        when(avisoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        seeder().run(null);
+
+        ArgumentCaptor<com.sawhub.hub.aviso.Aviso> captor = ArgumentCaptor.forClass(com.sawhub.hub.aviso.Aviso.class);
+        verify(avisoRepository, times(4)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(a -> a.getCategoria().name())
+                .containsExactlyInAnyOrder("MENTORIAS", "MATERIAIS", "EVENTOS", "GERAL");
     }
 }

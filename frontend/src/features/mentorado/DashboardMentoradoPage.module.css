@@ -51,6 +51,36 @@
   margin-bottom: 14px;
 }
 
+.avisosList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.avisoItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.avisoTitulo {
+  flex: 1;
+}
+
+.avisoDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--gold);
+  flex: none;
+}
+
 .proximaReuniao {
   display: flex;
   flex-direction: column;

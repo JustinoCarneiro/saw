@@ -1,5 +1,6 @@
 package com.sawhub.hub.mentorado;
 
+import com.sawhub.hub.aviso.AvisoMentoradoService;
 import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.conteudo.TipoConteudo;
 import com.sawhub.hub.mentorado.dto.DashboardMentoradoResponse;
@@ -14,24 +15,30 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /** H2.1–H2.3 (M08) — agrega dado que já existe (nenhuma entidade nova, ver Blueprint M08 no
- * ROADMAP.md). "meta semanal" (E3) e "avisos" (E16) ainda não têm entidade nenhuma no sistema —
- * voltam null/vazio nesta leva, não é bug. */
+ * ROADMAP.md). "meta semanal" (E3) ainda não tem entidade própria ligada aqui — volta null nesta
+ * leva, não é bug. "avisos" (E16) fechado no M17 — reaproveita {@link AvisoMentoradoService},
+ * sem duplicar a agregação de plano/leitura. */
 @Service
 public class MentoradoDashboardService {
+
+    private static final int MAX_AVISOS_DASHBOARD = 3;
 
     private final MentoradoRepository mentoradoRepository;
     private final EncaminhamentoRepository encaminhamentoRepository;
     private final MentoriaRepository mentoriaRepository;
     private final ConteudoRepository conteudoRepository;
+    private final AvisoMentoradoService avisoMentoradoService;
 
     public MentoradoDashboardService(MentoradoRepository mentoradoRepository,
                                       EncaminhamentoRepository encaminhamentoRepository,
                                       MentoriaRepository mentoriaRepository,
-                                      ConteudoRepository conteudoRepository) {
+                                      ConteudoRepository conteudoRepository,
+                                      AvisoMentoradoService avisoMentoradoService) {
         this.mentoradoRepository = mentoradoRepository;
         this.encaminhamentoRepository = encaminhamentoRepository;
         this.mentoriaRepository = mentoriaRepository;
         this.conteudoRepository = conteudoRepository;
+        this.avisoMentoradoService = avisoMentoradoService;
     }
 
     public DashboardMentoradoResponse dashboard(UUID usuarioId) {
@@ -59,7 +66,7 @@ public class MentoradoDashboardService {
                 proximaReuniao,
                 compromissos,
                 dicaDestaque(mentorado),
-                List.of() // avisos — E16 não construído nesta leva (ver Blueprint M08)
+                avisoMentoradoService.listar(usuarioId, null, null).stream().limit(MAX_AVISOS_DASHBOARD).toList()
         );
     }
 

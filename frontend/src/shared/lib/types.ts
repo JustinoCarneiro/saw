@@ -306,7 +306,32 @@ export interface DashboardMentoradoResponse {
   proximaReuniao: CompromissoMentorado | null;
   compromissos: CompromissoMentorado[];
   dicaDestaque: DicaDestaque | null;
-  avisos: string[];
+  avisos: AvisoMentorado[];
+}
+
+// M17 — E16 Avisos & Notificações.
+export type CategoriaAviso = 'GERAL' | 'MENTORIAS' | 'MATERIAIS' | 'EVENTOS';
+
+export interface Aviso {
+  id: string;
+  titulo: string;
+  descricao: string;
+  categoria: CategoriaAviso;
+  planoMinimo: Plano;
+  criadoEm: string;
+}
+
+export interface AvisoMentorado {
+  id: string;
+  titulo: string;
+  descricao: string;
+  categoria: CategoriaAviso;
+  lido: boolean;
+  quando: string;
+}
+
+export interface ResumoAvisos {
+  naoLidos: number;
 }
 
 // M09 · E3 (Metas Estratégicas)

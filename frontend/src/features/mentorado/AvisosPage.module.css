@@ -1,0 +1,158 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+
+.marcarTodosButton {
+  height: 40px;
+  padding: 0 18px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+}
+
+.marcarTodosButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tabs {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  font-size: 13.5px;
+  color: var(--text-soft);
+  padding-bottom: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+}
+
+.tabActive {
+  color: var(--gold);
+  font-weight: 600;
+  border-bottom-color: var(--gold);
+}
+
+.error {
+  color: var(--danger);
+  padding: 12px;
+  background: var(--danger-bg);
+  border-radius: 6px;
+}
+
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-soft);
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 820px;
+}
+
+.cardNaoLida {
+  border-color: var(--gold-soft);
+}
+
+.linha {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.icone {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 11px;
+  background: var(--elevated);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+}
+
+.conteudo {
+  flex: 1;
+  min-width: 0;
+}
+
+.tituloLinha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avisoTitulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--elevated);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.desc {
+  font-size: 12.5px;
+  color: var(--text-soft);
+  margin-top: 3px;
+}
+
+.quando {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gold);
+  margin-top: 6px;
+  flex: none;
+}

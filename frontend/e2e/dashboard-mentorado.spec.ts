@@ -36,10 +36,20 @@ test.describe('M08 — E2 Dashboard do Mentorado', () => {
     await expect(page.getByText('Nenhum compromisso futuro.')).toBeVisible();
   });
 
-  test('Avisos sempre mostram estado vazio (E16 não construído nesta leva)', async ({ page }) => {
+  test('Avisos importantes mostra os avisos reais seedados (M17 fechou o gap do E16)', async ({ page }) => {
     await loginAs(page, 'rafael@bistrogomes.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
-    await expect(page.getByText('Nenhum aviso no momento.')).toBeVisible();
+    // Rafael tem plano ESSENCIAL — vê avisos seedados com planoMinimo GRATUITO/BASICO. Não
+    // hardcoda um título específico: outras specs (avisos.spec.ts) criam avisos novos que podem
+    // ocupar as 3 vagas mais recentes do card — lê o que a API realmente devolve e confirma que
+    // a UI mostra exatamente isso (mesmo padrão de "ler o estado real" já usado em M11).
+    const res = await page.request.get('/api/v1/mentorado/dashboard');
+    const { avisos }: { avisos: { titulo: string }[] } = await res.json();
+    expect(avisos.length).toBeGreaterThan(0);
+
+    const card = page.getByTestId('avisos-importantes');
+    await expect(card.getByText('Nenhum aviso no momento.')).toHaveCount(0);
+    await expect(card.getByText(avisos[0].titulo)).toBeVisible();
   });
 
   test('isolamento por tenant: Admin não acessa /api/v1/mentorado/dashboard', async ({ page }) => {

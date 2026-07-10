@@ -7,6 +7,7 @@ import styles from './ConteudosShell.module.css';
 const TABS = [
   { to: '/admin/conteudos/lista', label: 'Conteúdos' },
   { to: '/admin/conteudos/eventos', label: 'Eventos' },
+  { to: '/admin/conteudos/avisos', label: 'Avisos' },
 ];
 
 export function ConteudosShell() {

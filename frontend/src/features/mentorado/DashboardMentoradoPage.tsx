@@ -105,14 +105,17 @@ export function DashboardMentoradoPage() {
         )}
       </Card>
 
-      <Card style={{ padding: 20, marginTop: 16 }}>
-        <div className={styles.sectionTitle}>Avisos</div>
+      <Card style={{ padding: 20, marginTop: 16 }} testId="avisos-importantes">
+        <div className={styles.sectionTitle}>Avisos importantes</div>
         {dashboard.avisos.length === 0 ? (
           <div className={styles.kpiHint}>Nenhum aviso no momento.</div>
         ) : (
-          <ul>
+          <ul className={styles.avisosList}>
             {dashboard.avisos.map((aviso) => (
-              <li key={aviso}>{aviso}</li>
+              <li key={aviso.id} className={styles.avisoItem}>
+                <span className={styles.avisoTitulo}>{aviso.titulo}</span>
+                {!aviso.lido && <span className={styles.avisoDot} />}
+              </li>
             ))}
           </ul>
         )}

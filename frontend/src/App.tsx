@@ -34,6 +34,8 @@ import { MentoriasPage } from './features/mentorado/MentoriasPage';
 import { EventosMentoradoPage } from './features/mentorado/EventosMentoradoPage';
 import { LojaPage } from './features/mentorado/LojaPage';
 import { PerfilPage } from './features/mentorado/PerfilPage';
+import { AvisosPage } from './features/mentorado/AvisosPage';
+import { AvisosAdminPage } from './features/conteudos/AvisosAdminPage';
 
 export default function App() {
   return (
@@ -120,6 +122,7 @@ export default function App() {
           <Route index element={<Navigate to="lista" replace />} />
           <Route path="lista" element={<ConteudosPage />} />
           <Route path="eventos" element={<EventosPage />} />
+          <Route path="avisos" element={<AvisosAdminPage />} />
         </Route>
       </Route>
 
@@ -131,6 +134,7 @@ export default function App() {
         <Route path="mentorias" element={<MentoriasPage />} />
         <Route path="eventos" element={<EventosMentoradoPage />} />
         <Route path="loja" element={<LojaPage />} />
+        <Route path="avisos" element={<AvisosPage />} />
         <Route path="perfil" element={<PerfilPage />} />
       </Route>
 

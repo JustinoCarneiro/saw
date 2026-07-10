@@ -1,5 +1,8 @@
 package com.sawhub.hub.security;
 
+import com.sawhub.hub.aviso.Aviso;
+import com.sawhub.hub.aviso.AvisoRepository;
+import com.sawhub.hub.aviso.CategoriaAviso;
 import com.sawhub.hub.comercial.Lead;
 import com.sawhub.hub.comercial.LeadRepository;
 import com.sawhub.hub.comercial.MetaComercial;
@@ -83,6 +86,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final InscricaoEventoRepository inscricaoEventoRepository;
     private final ProdutoRepository produtoRepository;
     private final PedidoRepository pedidoRepository;
+    private final AvisoRepository avisoRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(UsuarioRepository usuarioRepository, ColaboradorRepository colaboradorRepository,
@@ -100,6 +104,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                            InscricaoEventoRepository inscricaoEventoRepository,
                            ProdutoRepository produtoRepository,
                            PedidoRepository pedidoRepository,
+                           AvisoRepository avisoRepository,
                            PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.colaboradorRepository = colaboradorRepository;
@@ -118,6 +123,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.inscricaoEventoRepository = inscricaoEventoRepository;
         this.produtoRepository = produtoRepository;
         this.pedidoRepository = pedidoRepository;
+        this.avisoRepository = avisoRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -137,6 +143,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         seedInscricoesEventos();
         // M14: precisa que mentorados e a CategoriaFinanceira "Loja SAW" (seedFinanceiro) já existam.
         seedLoja();
+        seedAvisos();
     }
 
     private void seedColaboradores() {
@@ -384,6 +391,20 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .filter(m -> m.getNome().equals(nome))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private void seedAvisos() {
+        if (avisoRepository.count() > 0) {
+            return;
+        }
+        avisoRepository.save(new Aviso("Nova mentoria em grupo disponível", "Inscrições abertas pra Liderança que Gera Resultados.",
+                CategoriaAviso.MENTORIAS, Plano.GRATUITO));
+        avisoRepository.save(new Aviso("Novo material na biblioteca", "Planilha de Fluxo de Caixa Diário já disponível pra download.",
+                CategoriaAviso.MATERIAIS, Plano.GRATUITO));
+        avisoRepository.save(new Aviso("Workshop de Precificação Estratégica", "Vagas limitadas — garanta a sua.",
+                CategoriaAviso.EVENTOS, Plano.BASICO));
+        avisoRepository.save(new Aviso("Manutenção programada", "A plataforma ficará indisponível por 30 minutos no domingo às 2h.",
+                CategoriaAviso.GERAL, Plano.GRATUITO));
     }
 
     private void seedConteudos() {

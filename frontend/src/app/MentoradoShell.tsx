@@ -1,6 +1,9 @@
-import { NavLink, Navigate, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthContext';
 import { Avatar } from '../shared/components/Avatar';
+import { apiClient } from '../shared/lib/apiClient';
+import type { ResumoAvisos } from '../shared/lib/types';
 import styles from './MentoradoShell.module.css';
 
 const NAV_ITEMS = [
@@ -11,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/mentorado/materiais', label: 'Materiais & Dicas', end: false },
   { to: '/mentorado/eventos', label: 'Eventos', end: false },
   { to: '/mentorado/loja', label: 'Loja SAW', end: false },
+  { to: '/mentorado/avisos', label: 'Avisos', end: false },
   { to: '/mentorado/perfil', label: 'Perfil', end: false },
 ];
 
@@ -23,6 +27,17 @@ const NAV_ITEMS = [
 // Sidebar (é exclusiva do Modulo/RBAC por área do Admin/E15 — Mentorado não tem área).
 export function MentoradoShell() {
   const { user, loading, logout } = useAuth();
+  const location = useLocation();
+  const [naoLidos, setNaoLidos] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    apiClient.get<ResumoAvisos>('/mentorado/avisos/resumo')
+      .then((res) => setNaoLidos(res.data.naoLidos))
+      .catch(() => {});
+    // Refaz a contagem ao voltar de /mentorado/avisos (onde o mentorado pode ter marcado como
+    // lido) — sem websocket/polling, só reagindo à navegação de rota.
+  }, [user, location.pathname]);
 
   if (loading) {
     return <div style={{ padding: 40, color: 'var(--text-soft)' }}>Carregando…</div>;
@@ -43,6 +58,13 @@ export function MentoradoShell() {
           <span className={styles.brandWord}>SAW HUB</span>
         </div>
         <div className={styles.right}>
+          <NavLink to="/mentorado/avisos" className={styles.bellButton} aria-label="Notificações" data-testid="sino-avisos">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {naoLidos > 0 && <span className={styles.bellBadge}>{naoLidos}</span>}
+          </NavLink>
           <div className={styles.userChip}>
             <Avatar name={user.nome} size={32} />
             <span className={styles.userName}>{user.nome}</span>

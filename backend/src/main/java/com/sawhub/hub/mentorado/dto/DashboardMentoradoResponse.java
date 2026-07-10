@@ -1,5 +1,6 @@
 package com.sawhub.hub.mentorado.dto;
 
+import com.sawhub.hub.aviso.dto.AvisoMentoradoResponse;
 import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.mentoria.Mentoria;
 import com.sawhub.hub.mentoria.TipoMentoria;
@@ -8,7 +9,9 @@ import java.util.List;
 import java.util.UUID;
 
 /** H2.1–H2.3 (M08) — agregado de leitura pro Dashboard do Mentorado, sem entidade própria: junta
- * {@code Mentorado}, {@code Encaminhamento}, {@code Mentoria} e {@code Conteudo} já existentes. */
+ * {@code Mentorado}, {@code Encaminhamento}, {@code Mentoria} e {@code Conteudo} já existentes.
+ * {@code avisos} passou de {@code List<String>} pra {@code List<AvisoMentoradoResponse>} no M17 —
+ * gap documentado desde o M08 ("E16 não construído nesta leva") fechado. */
 public record DashboardMentoradoResponse(
         String nome,
         int evolucaoGeralPct,
@@ -17,7 +20,7 @@ public record DashboardMentoradoResponse(
         Compromisso proximaReuniao,
         List<Compromisso> compromissos,
         DicaDestaque dicaDestaque,
-        List<String> avisos
+        List<AvisoMentoradoResponse> avisos
 ) {
     public record Compromisso(UUID id, TipoMentoria tipo, Instant dataHora, String linkOnline, String local) {
         public static Compromisso from(Mentoria m) {

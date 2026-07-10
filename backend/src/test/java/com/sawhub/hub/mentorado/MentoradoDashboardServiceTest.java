@@ -2,8 +2,14 @@ package com.sawhub.hub.mentorado;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.aviso.AvisoMentoradoService;
+import com.sawhub.hub.aviso.dto.AvisoMentoradoResponse;
+import com.sawhub.hub.aviso.CategoriaAviso;
 import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.conteudo.TipoConteudo;
@@ -36,9 +42,18 @@ class MentoradoDashboardServiceTest {
     private MentoriaRepository mentoriaRepository;
     @Mock
     private ConteudoRepository conteudoRepository;
+    @Mock
+    private AvisoMentoradoService avisoMentoradoService;
 
     private MentoradoDashboardService service() {
-        return new MentoradoDashboardService(mentoradoRepository, encaminhamentoRepository, mentoriaRepository, conteudoRepository);
+        return new MentoradoDashboardService(mentoradoRepository, encaminhamentoRepository, mentoriaRepository,
+                conteudoRepository, avisoMentoradoService);
+    }
+
+    // lenient(): nem todo teste inspeciona avisos, mas a chamada sempre acontece dentro de
+    // dashboard() — mesmo padrão de semCompromissosNemDica() abaixo pras outras dependências.
+    private void semAvisos(UUID usuarioId) {
+        lenient().when(avisoMentoradoService.listar(eq(usuarioId), isNull(), isNull())).thenReturn(List.of());
     }
 
     private static Mentorado mentorado(UUID id, Plano plano) {
@@ -72,6 +87,7 @@ class MentoradoDashboardServiceTest {
         UUID usuarioId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        semAvisos(usuarioId);
 
         Encaminhamento concluido = new Encaminhamento(mentorado, "Ficha técnica", 2, true);
         Encaminhamento aberto1 = new Encaminhamento(mentorado, "DRE", 1, false);
@@ -94,19 +110,27 @@ class MentoradoDashboardServiceTest {
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         semCompromissosNemDica(mentorado);
+        semAvisos(usuarioId);
 
         assertThat(service().dashboard(usuarioId).metaSemanalPct()).isNull();
     }
 
     @Test
-    void avisosSempreVazioPorqueE16NaoExisteAinda() {
+    void avisosVemDoAvisoMentoradoServiceLimitadosATres() {
         UUID usuarioId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         semCompromissosNemDica(mentorado);
 
-        assertThat(service().dashboard(usuarioId).avisos()).isEmpty();
+        List<AvisoMentoradoResponse> quatroAvisos = List.of(
+                new AvisoMentoradoResponse(UUID.randomUUID(), "Aviso 1", "desc", CategoriaAviso.GERAL, false, Instant.now()),
+                new AvisoMentoradoResponse(UUID.randomUUID(), "Aviso 2", "desc", CategoriaAviso.GERAL, false, Instant.now()),
+                new AvisoMentoradoResponse(UUID.randomUUID(), "Aviso 3", "desc", CategoriaAviso.GERAL, false, Instant.now()),
+                new AvisoMentoradoResponse(UUID.randomUUID(), "Aviso 4", "desc", CategoriaAviso.GERAL, false, Instant.now()));
+        when(avisoMentoradoService.listar(usuarioId, null, null)).thenReturn(quatroAvisos);
+
+        assertThat(service().dashboard(usuarioId).avisos()).hasSize(3);
     }
 
     @Test
@@ -116,6 +140,7 @@ class MentoradoDashboardServiceTest {
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of());
+        semAvisos(usuarioId);
 
         Colaborador mentor = mentor();
         Instant agora = Instant.now();
@@ -152,6 +177,7 @@ class MentoradoDashboardServiceTest {
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         semCompromissosNemDica(mentorado);
+        semAvisos(usuarioId);
 
         var dashboard = service().dashboard(usuarioId);
 
@@ -166,6 +192,7 @@ class MentoradoDashboardServiceTest {
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
+        semAvisos(usuarioId);
 
         // Repositório já devolve ordenado DESC por criadoEm (buscarComFiltro real) — o mais
         // recente vem primeiro na lista simulada aqui.
@@ -187,6 +214,7 @@ class MentoradoDashboardServiceTest {
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
+        semAvisos(usuarioId);
 
         Conteudo profissionalForaDoAlcance = new Conteudo("Vídeo avançado", TipoConteudo.VIDEO, "url1", Plano.PROFISSIONAL);
         when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of(profissionalForaDoAlcance));

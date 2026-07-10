@@ -33,6 +33,41 @@
   gap: 14px;
 }
 
+.bellButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-soft);
+}
+
+.bellButton:hover {
+  color: var(--text);
+  border-color: var(--gold-soft);
+}
+
+.bellBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--on-gold);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .userChip {
   display: flex;
   align-items: center;

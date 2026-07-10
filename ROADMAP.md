@@ -44,6 +44,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M14** | **E8 · Loja SAW (catálogo, carrinho, checkout, gateway)** | **Grande · risco alto** | **6d** | **H8.1–H8.4** |
 | **M15** | **E9 · Perfil & Gamificação** | **Médio** | **3.5d** | **H9.1–H9.3** |
 | **M16** | **E10 · Painel Administrativo & Métricas** | **Médio** | **3.5d** | **H10.1–H10.3** |
+| **M17** | **E16 · Avisos & Notificações** | **Pequeno** | **1.5d** | **H12.1–H12.2** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -2012,6 +2013,129 @@ transição, só o status atual — só cobre eventos de criação (mentorado ca
 conteúdo publicado). "Crescimento de mentorados" e a variação de "mentorados ativos" usam
 `criadoEm` como proxy (sem histórico de ativar/desativar). Sem pendência de credencial externa.
 
+## Blueprint (M17 · E16 · Avisos & Notificações)
+
+**Por que Pequeno, sem `revisor-seguranca` obrigatório por CLAUDE.md (revisado do mesmo jeito, por
+convenção desta esteira):** épico transversal pequeno — 1 entidade nova + 1 join de leitura
+(mesmo formato de `ConteudoMentorado`, M11), sem integração externa, sem dado financeiro. Fecha
+dois gaps documentados desde o M08: `DashboardMentoradoResponse.avisos` sempre vazio, e a seção
+"Avisos" do menu do mentorado nunca construída.
+
+**Leitura do mockup congelado** (`design/prototipo/index.html`, `showAvisos`): página dedicada
+"Avisos" (título + subtítulo, botão "Marcar todos como lidos", abas Todos/Não lidos/Mentorias/
+Materiais/Eventos, lista de cartões com ícone, título, tag de categoria, descrição, tempo relativo
+e indicador de não-lido), sino no topo com indicador (só um ponto, sem contador numérico no
+mockup), card "Avisos importantes" no Dashboard (M08, `avisos`, hoje sempre vazio). **Sem nenhuma
+tela de autoria no mockup** — a Fase 2b nunca desenhou a UI de "publicar aviso" do Admin.
+
+**Suposições (decisões conscientes, documentadas, não escondidas):**
+1. **"Categoria" do aviso é um enum fechado** (`GERAL, MENTORIAS, MATERIAIS, EVENTOS`), extraído
+   direto das abas do mockup (`Mentorias/Materiais/Eventos` + uma 4ª pra tudo que não se encaixa
+   nas três) — "Não lidos" não é categoria, é filtro por estado de leitura, tratado à parte.
+2. **"Mentorados-alvo" (H12.2) usa o mesmo padrão de segmentação já estabelecido em
+   `Conteudo.planoMinimo`** — um único `Plano` mínimo, "visível a partir deste plano" (não
+   multi-seleção, não lista explícita de mentorados). É o único precedente de segmentação que já
+   existe no projeto (`ConteudoMentoradoService.planosPermitidos`); inventar um segundo modelo de
+   segmentação só pra Avisos duplicaria conceito sem necessidade.
+3. **Sem estado de rascunho** — "criar" um aviso já é "publicar" (H12.2: "quando publico, os
+   mentorados-alvo passam a vê-lo", sem menção a revisão prévia, diferente de Ata/M06 e
+   Conteudo/M11, que têm rascunho→publicado). Documentado pra não virar suposição silenciosa.
+4. **Sem edição/exclusão de aviso nesta leva** — `spec.md` H12.2 só descreve publicar. Editar ou
+   remover um aviso já visto por mentorados levanta uma pergunta de produto (o que acontece com
+   quem já leu?) que não foi respondida — mesma disciplina de "não inventar escopo silenciosamente"
+   já usada em módulos anteriores.
+5. **RBAC do lado Admin: `Modulo.CONTEUDOS`, não um módulo novo.** `spec.md` não define uma área
+   dedicada pra Avisos, e o `CLAUDE.md` já levanta a mesma dúvida pra Marketing ("reaproveita
+   Conteúdos, ou é nova?" — Suposição 7 do `docs/spec.md`). "Publicar aviso" é, na prática, a mesma
+   ação de "publicar conteúdo" — mesma área RBAC (Marketing já tem `Modulo.CONTEUDOS`), sem criar
+   um `Modulo.AVISOS` novo pra um épico Pequeno.
+6. **Sino é um link com contador de não lidos, sem dropdown/popover.** O mockup mostra só um ponto
+   decorativo, sem contador numérico nem painel suspenso — self-service completo (contador real +
+   navegação pra página de Avisos) sem construir um componente de dropdown novo só pro sino.
+
+**Modelagem de banco:**
+
+```sql
+CREATE TABLE aviso (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    titulo       VARCHAR(200) NOT NULL,
+    descricao    VARCHAR(1000) NOT NULL,
+    categoria    VARCHAR(20) NOT NULL,
+    plano_minimo VARCHAR(20) NOT NULL DEFAULT 'GRATUITO',
+    criado_em    TIMESTAMP NOT NULL DEFAULT now(),
+    versao       BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_aviso_categoria CHECK (categoria IN ('GERAL','MENTORIAS','MATERIAIS','EVENTOS'))
+);
+
+-- Mesmo formato de conteudo_mentorado (M11): join de leitura, sem BaseEntity (chave composta).
+CREATE TABLE aviso_mentorado (
+    mentorado_id UUID NOT NULL REFERENCES mentorado(id),
+    aviso_id     UUID NOT NULL REFERENCES aviso(id),
+    lido         BOOLEAN NOT NULL DEFAULT false,
+    lido_em      TIMESTAMP,
+    versao       BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (mentorado_id, aviso_id)
+);
+```
+
+**Contratos de API:**
+
+```
+POST /api/v1/admin/avisos                          // H12.2 — criar = publicar
+GET  /api/v1/admin/avisos                           // H12.2 — listar todos já publicados
+
+GET  /api/v1/mentorado/avisos?categoria=&apenasNaoLidos=   // H12.1
+GET  /api/v1/mentorado/avisos/resumo                       // { naoLidos: 3 } — pro sino
+PATCH /api/v1/mentorado/avisos/{id}/lido                   // marca um como lido
+PATCH /api/v1/mentorado/avisos/marcar-todos-lidos           // "Marcar todos como lidos"
+```
+
+`DashboardMentoradoResponse.avisos` (H2.1, gap do M08 fechado): muda de `List<String>` pra
+`List<AvisoResumoResponse>` (id/titulo/categoria/quando), reaproveitando a mesma listagem do
+mentee, limitada aos mais recentes.
+
+**Rastreabilidade:**
+
+| História | Cobertura |
+|---|---|
+| H12.1 — receber avisos no sino e na seção de avisos | `GET /mentorado/avisos`, `GET /mentorado/avisos/resumo`, sino no header, `AvisosPage` |
+| H12.2 — Admin publica avisos pros mentorados-alvo | `POST /admin/avisos` (segmentado por `planoMinimo`) |
+
+**Status: ✅ M17 concluído** (2026-07-10) — backend (300/300 testes, incluindo `AvisoAdminServiceTest`,
+`AvisoMentoradoServiceTest` (isolamento por tenant, upsert de leitura, "marcar todos" idempotente),
+mais 2 testes novos no `DemoDataSeederTest`) + frontend (sino com contador no header do mentorado,
+`AvisosPage` com abas de categoria/não-lidos, card "Avisos importantes" do Dashboard fechando o
+gap documentado desde o M08, `AvisosAdminPage` como nova aba em Conteúdos) + E2E (`avisos.spec.ts`,
+7 testes) — **66/66 verde na suíte completa**.
+
+**Gap fechado do M08:** `DashboardMentoradoResponse.avisos` mudou de `List<String>` (sempre vazio,
+"E16 não construído nesta leva") pra `List<AvisoMentoradoResponse>` real, reaproveitando
+`AvisoMentoradoService` — mesmo padrão de reaproveitamento de agregação já usado entre M08/E17
+(`ProgressoCalculator`). O teste `avisosSempreVazioPorqueE16NaoExisteAinda` foi substituído por um
+teste real de que os avisos vêm do serviço, limitados a 3.
+
+**`revisor-seguranca` (mesmo tratamento de todo módulo desta esteira): Seguro** — sexta revisão
+limpa seguida (M08-M10, M13, M15, M16). RBAC do Admin (`Modulo.CONTEUDOS`, reaproveitado por
+decisão de escopo, ver Suposição 5) confirmado sem brecha, isolamento por tenant confirmado em
+todos os 4 endpoints do mentorado, TOCTOU do upsert de `AvisoMentorado` (mesma classe de risco já
+endereçada em `ConteudoMentorado`/M11) confirmado coberto pelo `GlobalExceptionHandler` já
+existente, XSS/tamanho de campo confirmados. Observação não-bloqueante, julgada corretamente como
+não-exploração: `marcarLido()` não valida se o plano do mentorado permite o aviso antes de marcar
+como lido — sem vazamento de dado (Aviso não tem payload sensível), o pior caso é o mentorado sujar
+o próprio estado de leitura de algo que não devia ver.
+
+**Achado ao vivo, não relacionado ao código do módulo:** a suíte completa quebrou 3 testes
+(`comercial.spec.ts`, `mentorados.spec.ts`) por causa do rate limiter de `POST /api/v1/leads`
+(5 req/10min por IP, achado do `revisor-seguranca` do M05) esgotado pelas várias execuções da
+suíte completa nesta mesma sessão — confirmado não ser regressão limpando a chave Redis
+(`leadrate:127.0.0.1`) e reexecutando: 66/66 verde.
+
+**Pendência real, documentada, não escondida:** sem edição/exclusão de aviso (Suposição 4 do
+Blueprint) — publicar é definitivo nesta leva. Sem pendência de credencial externa.
+
+**MVP completo:** M17 fecha o último módulo do pipeline geral (ver tabela abaixo). Resta só a
+Fase 5 · Homologação (smoke test, deploy Coolify, pass transversal de `pgcrypto`).
+
 ## Fórmula de prazo
 
 ```
@@ -2050,7 +2174,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ✅ Concluído — backend (270/270 testes) + `revisor-seguranca` obrigatório (Seguro — 2 achados de hardening corrigidos: teto de quantidade, janela de frescor da assinatura do webhook) + frontend (`LojaPage`, `ProdutosPage`/`PedidosPage` Admin) + E2E (52/52, `loja.spec.ts`). Gateway Mercado Pago (Checkout Pro), sem credencial neste ambiente — verificado só até a borda, validar contra sandbox real antes de produção |
 | 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ✅ Concluído — backend (280/280 testes) + `revisor-seguranca` (sem achado bloqueante — quarta revisão limpa da esteira) + frontend (`PerfilPage`) + E2E (57/57, `perfil.spec.ts`). XP/nível/conquistas calculados por leitura, sem persistência (ver Blueprint) — pendência real: sem data de desbloqueio de conquista, sem histórico de XP. Achado e corrigido: gap entre o Blueprint (vencimentoPlano via admin) e a implementação inicial (nunca fazia isso) |
 | 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ✅ Concluído — backend (290/290 testes) + `revisor-seguranca` (sem achado bloqueante — quinta revisão limpa da esteira) + frontend (`DashboardAdminPage`, substitui o placeholder que ocupava `/admin/dashboard`) + E2E (59/59, `dashboard-admin.spec.ts`). Refatoração proativa: `variacaoPct` (duplicado em E13/E14) centralizado em `VariacaoCalculator` antes do código novo. Pendência: "atividades recentes" só cobre eventos de criação, sem histórico de transição de status |
-| 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ⬜ |
+| 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ✅ Concluído — backend (300/300 testes) + `revisor-seguranca` (sem achado bloqueante — sexta revisão limpa da esteira) + frontend (sino + `AvisosPage` + `AvisosAdminPage`) + E2E (66/66, `avisos.spec.ts`). Fecha o gap do `avisos` do Dashboard (M08). RBAC reaproveita `Modulo.CONTEUDOS`. Pendência: sem edição/exclusão de aviso nesta leva. **Último módulo do pipeline — MVP completo, resta só Fase 5** |
 | — | **Fase 5 · Homologação** (smoke test via Docker, validação humana E2E, revisão final de segurança, deploy Coolify, **pass transversal de `pgcrypto` nas colunas sensíveis** — ver notas em M04 e M05) | — | 2d | ⬜ |
 
 **Total restante (peso somado): ≈ 60 dias de engenharia.** Responsividade mobile fica **fora
