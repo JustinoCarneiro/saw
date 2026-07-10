@@ -183,6 +183,7 @@ export interface MentoradoAdmin {
   email: string;
   negocio: string | null;
   plano: Plano;
+  vencimentoPlano: string | null;
   status: StatusMentorado;
   criadoEm: string;
 }
@@ -476,4 +477,54 @@ export interface PedidoAdmin {
   referenciaGateway: string | null;
   criadoEm: string;
   itens: ItemPedidoAdmin[];
+}
+
+// M15 — E9 Perfil & Gamificação.
+export interface PerfilMentorado {
+  nome: string;
+  negocio: string | null;
+  email: string;
+  telefone: string | null;
+  bio: string | null;
+  areasInteresse: string[];
+  fotoUrl: string | null;
+  plano: Plano;
+  vencimentoPlano: string | null;
+  membroDesde: string;
+}
+
+export type NivelJornada = 'BRONZE' | 'PRATA' | 'OURO' | 'DIAMANTE';
+
+export interface StatsJornada {
+  materiaisAcessados: number;
+  dicasAssistidas: number;
+  eventosParticipados: number;
+  mentoriasRealizadas: number;
+}
+
+export interface Conquista {
+  codigo: string;
+  titulo: string;
+  descricao: string;
+  desbloqueada: boolean;
+}
+
+export interface Jornada {
+  nivelAtual: NivelJornada;
+  xp: number;
+  xpProximoNivel: number | null;
+  progressoPct: number;
+  stats: StatsJornada;
+  conquistas: Conquista[];
+}
+
+export interface PlanoDisponivel {
+  plano: Plano;
+  acimaDoPlanoAtual: boolean;
+}
+
+export interface Assinatura {
+  planoAtual: Plano;
+  vencimentoPlano: string | null;
+  planosDisponiveis: PlanoDisponivel[];
 }

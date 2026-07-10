@@ -32,6 +32,7 @@ import { MateriaisPage } from './features/mentorado/MateriaisPage';
 import { MentoriasPage } from './features/mentorado/MentoriasPage';
 import { EventosMentoradoPage } from './features/mentorado/EventosMentoradoPage';
 import { LojaPage } from './features/mentorado/LojaPage';
+import { PerfilPage } from './features/mentorado/PerfilPage';
 
 export default function App() {
   return (
@@ -129,6 +130,7 @@ export default function App() {
         <Route path="mentorias" element={<MentoriasPage />} />
         <Route path="eventos" element={<EventosMentoradoPage />} />
         <Route path="loja" element={<LojaPage />} />
+        <Route path="perfil" element={<PerfilPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/login" replace />} />

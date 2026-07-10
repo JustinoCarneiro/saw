@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "mentorado")
@@ -41,6 +42,21 @@ public class Mentorado extends BaseEntity {
     @Column(nullable = false)
     private StatusMentorado status = StatusMentorado.ATIVO;
 
+    @Column(length = 30)
+    private String telefone;
+
+    @Column(length = 500)
+    private String bio;
+
+    @Column(name = "areas_interesse", length = 300)
+    private String areasInteresse;
+
+    @Column(name = "foto_url", length = 500)
+    private String fotoUrl;
+
+    @Column(name = "vencimento_plano")
+    private LocalDate vencimentoPlano;
+
     protected Mentorado() {
     }
 
@@ -69,6 +85,19 @@ public class Mentorado extends BaseEntity {
 
     public void desativar() {
         this.status = StatusMentorado.INATIVO;
+    }
+
+    /** H9.1 — autoedição do mentorado: só contato/preferências, nunca identidade/plano (esses são admin-only via {@link #atualizar}). */
+    public void atualizarPerfil(String telefone, String bio, String areasInteresse, String fotoUrl) {
+        this.telefone = telefone;
+        this.bio = bio;
+        this.areasInteresse = areasInteresse;
+        this.fotoUrl = fotoUrl;
+    }
+
+    /** H9.3 — setado pelo Admin junto com o plano (M02/E15); ver Suposição 4 do Blueprint do M15. */
+    public void definirVencimentoPlano(LocalDate vencimentoPlano) {
+        this.vencimentoPlano = vencimentoPlano;
     }
 
     public StatusMentorado getStatus() {
@@ -101,5 +130,25 @@ public class Mentorado extends BaseEntity {
 
     public Integer getFerramentasTotal() {
         return ferramentasTotal;
+    }
+
+    public String getTelefone() {
+        return telefone;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public String getAreasInteresse() {
+        return areasInteresse;
+    }
+
+    public String getFotoUrl() {
+        return fotoUrl;
+    }
+
+    public LocalDate getVencimentoPlano() {
+        return vencimentoPlano;
     }
 }

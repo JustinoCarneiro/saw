@@ -44,6 +44,7 @@ public class MentoradoAdminService {
     public Mentorado atualizar(UUID id, AtualizarMentoradoRequest request) {
         Mentorado mentorado = buscar(id);
         mentorado.atualizar(request.nome(), request.negocio(), request.plano());
+        mentorado.definirVencimentoPlano(request.vencimentoPlano());
         return mentoradoRepository.save(mentorado);
     }
 

@@ -55,11 +55,13 @@ class MentoradoAdminServiceTest {
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var request = new AtualizarMentoradoRequest("Novo Nome", "Novo Negócio", Plano.ESSENCIAL);
+        var request = new AtualizarMentoradoRequest("Novo Nome", "Novo Negócio", Plano.ESSENCIAL,
+                java.time.LocalDate.of(2026, 12, 1));
         Mentorado atualizado = service().atualizar(id, request);
 
         assertThat(atualizado.getNome()).isEqualTo("Novo Nome");
         assertThat(atualizado.getPlano()).isEqualTo(Plano.ESSENCIAL);
+        assertThat(atualizado.getVencimentoPlano()).isEqualTo(java.time.LocalDate.of(2026, 12, 1));
     }
 
     @Test

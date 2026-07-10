@@ -103,7 +103,7 @@ export function MentoradosListaPage() {
         {mentorados?.map((m) => {
           const st = STATUS_LABEL[m.status];
           return (
-            <DataGridRow key={m.id} columns={COLUMNS}>
+            <DataGridRow key={m.id} columns={COLUMNS} testId={`mentorado-row-${m.id}`}>
               <div className={styles.strong}>{m.nome}</div>
               <div className={styles.muted}>{m.negocio ?? '—'}</div>
               <div className={`${styles.muted} ${styles.email}`}>{m.email}</div>
@@ -151,6 +151,7 @@ function EditarMentoradoForm({ mentorado, onSalvo, onCancelar }: {
   const [nome, setNome] = useState(mentorado.nome);
   const [negocio, setNegocio] = useState(mentorado.negocio ?? '');
   const [plano, setPlano] = useState<Plano>(mentorado.plano);
+  const [vencimentoPlano, setVencimentoPlano] = useState(mentorado.vencimentoPlano ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -159,7 +160,9 @@ function EditarMentoradoForm({ mentorado, onSalvo, onCancelar }: {
     setError(null);
     setSubmitting(true);
     try {
-      await apiClient.put(`/admin/mentorados/${mentorado.id}`, { nome, negocio: negocio || null, plano });
+      await apiClient.put(`/admin/mentorados/${mentorado.id}`, {
+        nome, negocio: negocio || null, plano, vencimentoPlano: vencimentoPlano || null,
+      });
       onSalvo();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível salvar. Tente novamente.'));
@@ -188,6 +191,10 @@ function EditarMentoradoForm({ mentorado, onSalvo, onCancelar }: {
                 <option key={p} value={p}>{PLANO_LABEL[p]}</option>
               ))}
             </select>
+          </label>
+          <label className={styles.formField}>
+            Vencimento do plano
+            <input className={styles.textInput} type="date" value={vencimentoPlano} onChange={(e) => setVencimentoPlano(e.target.value)} />
           </label>
         </div>
         {error && <div className={styles.error}>{error}</div>}

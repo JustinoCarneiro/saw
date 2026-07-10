@@ -42,6 +42,7 @@ E11 Mentoria+Ata+IA, módulos do mentorado) ganham sua própria seção aqui qua
 | **M12** | **E5 · Mentorias & Atas (lado mentorado)** | **Médio** | **4d** | **H5.1–H5.3** |
 | **M13** | **E7 · Eventos & Inscrições (lado mentorado)** | **Médio** | **4.5d** | **H7.1–H7.3** |
 | **M14** | **E8 · Loja SAW (catálogo, carrinho, checkout, gateway)** | **Grande · risco alto** | **6d** | **H8.1–H8.4** |
+| **M15** | **E9 · Perfil & Gamificação** | **Médio** | **3.5d** | **H9.1–H9.3** |
 
 ### M04 — E14 · Financeiro & DRE
 
@@ -1742,6 +1743,172 @@ SAW HUB, nunca chamam a API de estorno de verdade do Mercado Pago — decisão d
 Blueprint, não uma lacuna; (4) sem nota fiscal (fora de escopo desde o Blueprint, `spec.md` já
 lista como pendência separada da escolha de gateway).
 
+## Blueprint (M15 · E9 · Perfil & Gamificação)
+
+**Por que Médio, sem `revisor-seguranca` obrigatório por CLAUDE.md (mas revisado do mesmo jeito,
+por convenção desta esteira):** módulo mentee-facing self-service, mesmo formato de M08-M13 — sem
+dinheiro (H8/M14 já é o único módulo de risco alto do lado mentorado), sem integração externa nova.
+Risco real é o de sempre (isolamento por tenant num endpoint de escrita nova), não um risco de
+categoria alta como Auth/Pagamento.
+
+**Leitura do mockup congelado** (`design/prototipo/uploads/05-loja-perfil.png`, tela "Meu perfil"):
+cartão de identidade (foto, nome, cargo/negócio, bio, contato, tags de "áreas de interesse", botão
+"Editar perfil"), abas (Visão geral / Preferências / Segurança / Notificações / Integrações — só
+"Visão geral" tem conteúdo desenhado, as demais são placeholders visuais sem wireframe detalhado),
+bloco "Minha jornada SAW" (nível atual com ícone, barra de progresso pro próximo nível, 4
+indicadores: materiais acessados / dicas assistidas / eventos participados / conquistas),
+"Conquistas recentes" (badges com data de desbloqueio), barra lateral "Resumo da conta" (plano,
+vencimento, contadores, botão "Gerenciar plano") e "Minha assinatura" (plano ativo, próxima
+cobrança).
+
+**Suposições (decisões conscientes, documentadas, não escondidas):**
+1. **Só a aba "Visão geral" entra nesta leva.** Preferências/Segurança/Notificações/Integrações
+   não têm wireframe no mockup (nenhum campo detalhado) nem história correspondente em `spec.md`
+   além do que H9.1 já cobre (editar dados/preferências básicas) — construir abas vazias seria
+   forçar escopo que o cliente nunca especificou. "Preferências" que H9.1 pede (bio, telefone,
+   áreas de interesse, foto) entra dentro da própria Visão geral, no cartão de identidade, mesmo
+   padrão do mockup (não há uma aba "Preferências" separada nele — o botão único é "Editar perfil").
+2. **XP não é event-sourced/persistido — é derivado por fórmula, recalculado a cada leitura**, a
+   partir de contadores que já existem hoje: materiais acessados/dicas assistidas
+   (`ConteudoMentorado`, M11), eventos participados (`InscricaoEvento.status=PARTICIPOU`, M13),
+   mentorias realizadas (`Mentoria.status=REALIZADA`, M12), metas concluídas (`Meta.status=
+   CONCLUIDA`, M09), tarefas concluídas (`Encaminhamento/Tarefa.status=CONCLUIDA`, M10). Decisão
+   consciente pra **não** retrofitar side-effects de "ganhar XP" dentro de 5 módulos já fechados,
+   testados e revisados nesta esteira (M09-M13) — inserir um incremento de XP em cada fluxo já
+   fechado é editar código estável sem necessidade (contraria a Diretiva Primária do `CLAUDE.md`) e
+   arrisca reabrir regressão em módulos com `revisor-seguranca` já aprovado. Se o cliente quiser XP
+   com histórico de eventos (ex.: "quando ganhei cada ponto"), é trabalho adicional documentado à
+   parte, não implícito nesta leva.
+3. **Conquistas (badges) também são calculadas ao vivo por limiar, sem data de desbloqueio
+   persistida** — mesma razão do item 2 (sem histórico de eventos, não dá pra saber quando o
+   limiar foi cruzado). O mockup mostra "Conquistado em DD/MM/AAAA"; aqui a conquista aparece
+   como desbloqueada/bloqueada, sem data. Documentado como lacuna real, não escondida.
+4. **"Vencimento do plano" é um campo novo, setado pelo Admin** (estende `AtualizarMentoradoRequest`
+   existente do M02/E15), não uma regra de cobrança recorrente calculada — não existe hoje nenhuma
+   integração de assinatura recorrente com o Mercado Pago (M14/E8 cobriu só compra avulsa da Loja).
+   Seedado com uma data prevista pra cada mentorado de demonstração.
+5. **"Upgrade/downgrade" (H9.3) é informativo, não self-service com cobrança.** O mentorado vê o
+   plano atual, o vencimento e a lista de planos disponíveis (nome + posição na hierarquia); mudar
+   de plano de fato continua sendo uma ação do Admin (`PUT /admin/mentorados/{id}`, já existe desde
+   M02). Trocar de plano com prorateamento e cobrança automática de assinatura recorrente é uma
+   funcionalidade bem maior (gateway de assinatura recorrente, não coberto por `spec.md` H9.3, que
+   só pede "vejo vencimento e opções de upgrade/downgrade" — ver, não necessariamente executar).
+   Documentado aqui pra não virar suposição silenciosa depois.
+6. **"Áreas de interesse" é texto livre (CSV), sem taxonomia fixa.** `spec.md` H9.1 só diz "editar
+   dados/preferências", sem especificar uma lista fechada de áreas — diferente do RBAC do E15
+   (`Modulo` enum), que é uma classificação de acesso administrativo, não um dado de perfil do
+   mentorado. Misturar os dois conceitos seria errado.
+7. **Foto de perfil é uma URL externa (`fotoUrl`), não upload de arquivo** — mesmo padrão já
+   usado em `Conteudo.url`/`Produto.imagemUrl` (M11/M14), sem nova infraestrutura de upload de
+   imagem pra este módulo.
+
+**Modelagem de banco (M15 — só ALTER, nenhuma tabela nova):**
+
+```sql
+ALTER TABLE mentorado ADD COLUMN telefone VARCHAR(30);
+ALTER TABLE mentorado ADD COLUMN bio VARCHAR(500);
+ALTER TABLE mentorado ADD COLUMN areas_interesse VARCHAR(300);
+ALTER TABLE mentorado ADD COLUMN foto_url VARCHAR(500);
+ALTER TABLE mentorado ADD COLUMN vencimento_plano DATE;
+```
+
+Sem tabela nova pra XP/conquistas — ambos calculados em memória a partir de dados já existentes
+(item 2/3 das Suposições), zero risco de nova race condition ou índice.
+
+**Fórmula de XP (documentada, ajustável):**
+
+```
+xp = materiaisAcessados*10 + dicasAssistidas*15 + eventosParticipados*150
+   + mentoriasRealizadas*200 + metasConcluidas*100 + tarefasConcluidas*15
+```
+
+`NivelJornada`: `BRONZE (0)`, `PRATA (1500)`, `OURO (4000)`, `DIAMANTE (8000)` — nível = maior
+patamar cujo `xpMinimo` ≤ xp atual; progresso = `xp` normalizado entre o patamar atual e o próximo
+(Diamante não tem "próximo nível", barra fica cheia).
+
+**Conquistas (limiares fixos, sem persistência):** Primeiro Evento (eventos≥1) · Mentoria Realizada
+(mentorias≥1) · Maratonista (materiais≥10) · Sempre Ligado (dicas≥5) · Meta Batida (metas
+concluídas≥1) · Produtivo (tarefas concluídas≥10) · Em Crescimento (`crescimentoFaturamentoPct`>0)
+· Ferramentas em Dia (`ferramentasConcluidas == ferramentasTotal`, `ferramentasTotal`>0).
+
+**Contratos de API:**
+
+```
+GET /api/v1/mentorado/perfil
+// Response 200
+{
+  "nome": "Ana Costa", "negocio": "Ana Costa Restaurante", "email": "ana@anacosta.com.br",
+  "telefone": "(11) 98765-4321", "bio": "...", "areasInteresse": ["Gestão", "Finanças"],
+  "fotoUrl": "https://...", "plano": "ESSENCIAL", "vencimentoPlano": "2026-09-15",
+  "membroDesde": "2026-01-10T12:00:00Z"
+}
+
+PATCH /api/v1/mentorado/perfil
+// Request — só campos de auto-edição (nome/negócio/plano continuam admin-only)
+{ "telefone": "...", "bio": "...", "areasInteresse": ["Gestão"], "fotoUrl": "https://..." }
+// Response 200 — mesmo shape do GET
+
+GET /api/v1/mentorado/perfil/jornada
+// Response 200
+{
+  "nivelAtual": "OURO", "xp": 4820, "xpProximoNivel": 8000, "progressoPct": 62,
+  "stats": { "materiaisAcessados": 12, "dicasAssistidas": 6, "eventosParticipados": 1, "mentoriasRealizadas": 2 },
+  "conquistas": [ { "codigo": "PRIMEIRO_EVENTO", "titulo": "Primeiro Evento", "descricao": "...", "desbloqueada": true } ]
+}
+
+GET /api/v1/mentorado/perfil/assinatura
+// Response 200
+{
+  "planoAtual": "ESSENCIAL", "vencimentoPlano": "2026-09-15",
+  "planosDisponiveis": [ { "plano": "PROFISSIONAL", "label": "Profissional", "acimaDoPlanoAtual": true } ]
+}
+```
+
+Validação: `telefone` ≤30 chars, `bio` ≤500 chars, `fotoUrl` opcional com
+`@Pattern(regexp="^https?://.+")` (mesmo padrão de `Conteudo.url`/`Produto.imagemUrl`),
+`areasInteresse` lista de string, cada uma ≤50 chars, lista ≤10 itens.
+
+**Rastreabilidade:**
+
+| História | Cobertura |
+|---|---|
+| H9.1 — ver e editar perfil | `GET/PATCH /mentorado/perfil` |
+| H9.2 — ver jornada e conquistas | `GET /mentorado/perfil/jornada` |
+| H9.3 — gerenciar assinatura (vencimento + opções) | `GET /mentorado/perfil/assinatura` |
+
+**Status: ✅ M15 concluído** (2026-07-09) — backend (280/280 testes, incluindo `NivelJornadaTest`
+(fronteiras de patamar), `PerfilMentoradoServiceTest` (isolamento por tenant, campos admin-only
+intocados por `atualizar()`), `PerfilJornadaServiceTest` (fórmula de XP, limiares de conquistas,
+progresso no topo da escala)) + frontend (`PerfilPage` — cartão de identidade/edição, jornada com
+barra de progresso e conquistas, sidebar de assinatura) + E2E (`perfil.spec.ts`, 5 testes) —
+**57/57 verde na suíte completa**.
+
+**Achado do próprio Blueprint, corrigido antes do `revisor-seguranca` fechar a revisão:** a
+Suposição 4 do Blueprint dizia que `vencimentoPlano` "estende `AtualizarMentoradoRequest`
+existente do M02/E15", mas a implementação inicial só tocou o `Mentorado`/seeder — o formulário
+admin de edição (`MentoradosListaPage.tsx`) nunca ganhou o campo. Além de ficar incoerente com o
+Blueprint, isso era um bug real: salvar nome/negócio/plano pelo Admin sem o campo silenciosamente
+zerava o `vencimentoPlano` que já existisse (o backend sempre grava o valor recebido, e o campo
+nunca era enviado). Corrigido: `AtualizarMentoradoRequest`/`MentoradoResponse` ganharam o campo,
+`MentoradoAdminService.atualizar()` grava `vencimentoPlano`, e o formulário admin ganhou o input de
+data — verificado via curl que um `PUT` sem tocar o campo agora preserva o valor.
+
+**`revisor-seguranca` (mesmo tratamento de todo módulo desta esteira): Seguro** — isolamento por
+tenant confirmado nos 4 endpoints (sempre via `findByUsuarioId(principal.getUsuarioId())`, nunca
+parâmetro de request), `PerfilJornadaService.jornada()` auditado ponta a ponta (as 5 agregações
+usam o id do mesmo mentorado resolvido, sem vazamento cross-tenant), `AtualizarPerfilMentoradoRequest`
+confirmado incapaz de alterar nome/negócio/plano, `fotoUrl` com `@Pattern` bloqueando esquemas
+perigosos e renderizada só como atributo `<img src>` (sem risco de XSS via atributo, sem SSRF —
+backend nunca busca a URL), `bio`/`areasInteresse` renderizados como texto puro em React (sem
+`dangerouslySetInnerHTML`) com limites de tamanho aplicados via Bean Validation batendo com as
+colunas do `V12`. Nenhum achado bloqueante — quarta revisão limpa desde M08-M10/M13.
+
+**Pendência real, documentada, não escondida:** XP/nível/conquistas são 100% calculados por
+leitura (ver Suposições 2/3 do Blueprint acima) — não há histórico de eventos, então não é possível
+mostrar "conquistado em DD/MM" como o mockup sugere, e o XP não é ajustável manualmente. Se o
+cliente quiser XP com histórico real de eventos, é trabalho adicional (event sourcing), não uma
+extensão trivial deste módulo. Sem pendência de credencial externa.
+
 ## Fórmula de prazo
 
 ```
@@ -1778,7 +1945,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 9 | E5 · Mentorias & Atas (lado mentorado) | Médio | 4d | ✅ Concluído — backend (213/213 testes) + `revisor-seguranca` (2 achados corrigidos: injeção de CR solto no .ics, `linkOnline` sem validação de esquema) + frontend (`MentoriasPage`) + E2E (42/42, `mentorias.spec.ts`). Fecha H5.1-H5.3, deferidas desde o M06. Achado ao vivo: `LazyInitializationException` na listagem Admin, corrigido. Pendência: UI de curadoria de materiais recomendados no Admin (endpoint existe, tela não) |
 | 10 | E7 · Eventos & Inscrições (lado mentorado) | Médio | 4.5d | ✅ Concluído — backend (226/226 testes) + `revisor-seguranca` (sem achado bloqueante — primeira revisão limpa desde M08-M10) + frontend (`EventosMentoradoPage`, calendário próprio) + E2E (46/46, `eventos.spec.ts`). Fecha H7.1-H7.3, deferidas desde o M06. Nova entidade `InscricaoEvento` com corrida de última vaga protegida por `@Version`. Pendência: janela de corrida rara em `marcarParticipacoes` (baixo impacto) |
 | 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ✅ Concluído — backend (270/270 testes) + `revisor-seguranca` obrigatório (Seguro — 2 achados de hardening corrigidos: teto de quantidade, janela de frescor da assinatura do webhook) + frontend (`LojaPage`, `ProdutosPage`/`PedidosPage` Admin) + E2E (52/52, `loja.spec.ts`). Gateway Mercado Pago (Checkout Pro), sem credencial neste ambiente — verificado só até a borda, validar contra sandbox real antes de produção |
-| 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ⬜ |
+| 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ✅ Concluído — backend (280/280 testes) + `revisor-seguranca` (sem achado bloqueante — quarta revisão limpa da esteira) + frontend (`PerfilPage`) + E2E (57/57, `perfil.spec.ts`). XP/nível/conquistas calculados por leitura, sem persistência (ver Blueprint) — pendência real: sem data de desbloqueio de conquista, sem histórico de XP. Achado e corrigido: gap entre o Blueprint (vencimentoPlano via admin) e a implementação inicial (nunca fazia isso) |
 | 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ⬜ |
 | 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ⬜ |
 | — | **Fase 5 · Homologação** (smoke test via Docker, validação humana E2E, revisão final de segurança, deploy Coolify, **pass transversal de `pgcrypto` nas colunas sensíveis** — ver notas em M04 e M05) | — | 2d | ⬜ |
