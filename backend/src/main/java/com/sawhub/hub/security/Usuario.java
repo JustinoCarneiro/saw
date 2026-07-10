@@ -30,6 +30,12 @@ public class Usuario extends BaseEntity {
         this.perfil = perfil;
     }
 
+    /** H1.4 (M18) — recebe o hash já codificado (chamador usa {@code PasswordEncoder}), nunca a
+     * senha em texto puro; mesmo cuidado do construtor. */
+    public void atualizarSenha(String novoPasswordHash) {
+        this.passwordHash = novoPasswordHash;
+    }
+
     public String getEmail() {
         return email;
     }

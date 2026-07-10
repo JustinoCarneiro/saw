@@ -128,6 +128,9 @@ export function LoginPage() {
                 {showPw ? 'Ocultar' : 'Ver'}
               </button>
             </div>
+            <Link className={styles.forgotPasswordLink} to="/esqueci-senha">
+              Esqueci minha senha
+            </Link>
 
             {error && <div className={styles.error}>{error}</div>}
 

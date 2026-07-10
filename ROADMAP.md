@@ -2136,6 +2136,139 @@ Blueprint) — publicar é definitivo nesta leva. Sem pendência de credencial e
 **MVP completo:** M17 fecha o último módulo do pipeline geral (ver tabela abaixo). Resta só a
 Fase 5 · Homologação (smoke test, deploy Coolify, pass transversal de `pgcrypto`).
 
+## Blueprint (M18 · H1.4 · Recuperar senha)
+
+**Por que Médio · risco alto, `revisor-seguranca` obrigatório por CLAUDE.md:** é Auth — CLAUDE.md
+nomeia "Auth e Pagamento" como os dois módulos de maior risco do sistema, tratamento obrigatório
+independente de peso. Achado numa auditoria de cobertura pós-MVP (cruzamento de toda história do
+`spec.md` contra o que estava de fato construído): H1.4 nunca tinha sido implementado — nem
+backend, nem tela, nem um link morto no login. E1 (Auth) inteiro foi construído antes do processo
+de Blueprint desta esteira (`ROADMAP.md` já documenta isso na "Nota sobre esta Fase 3"), então essa
+lacuna nunca tinha um Blueprint prévio pra comparar contra.
+
+**BDD do `spec.md` (H1.4):** "Dado que esqueci a senha, quando peço recuperação, então recebo um
+link temporário por e-mail."
+
+**Suposições (decisões conscientes, documentadas, não escondidas):**
+1. **Sem infraestrutura de e-mail no projeto até agora** (confirmado: sem `spring-boot-starter-mail`,
+   sem `JavaMailSender`, sem SMTP configurado em lugar nenhum). Mesmo tratamento do M06 (Whisper/
+   Claude) e M14 (Mercado Pago): constrói a integração de verdade (`EmailService` +
+   `EmailProperties`, mesmo "Pattern A" do `GoogleOAuthProperties`/`MercadoPagoProperties` —
+   `@Value` com default vazio, `isEnabled()` como fonte única), mas sem credencial SMTP real
+   neste ambiente de dev. **Sem credencial configurada, o e-mail não é enviado — o corpo (com o
+   link) é logado em nível WARN no backend**, uma prática comum de dev/staging pra não bloquear o
+   fluxo de teste do resto do sistema. Documentado como pendência de credencial externa, mesma
+   classe do M06/M07/M14.
+2. **Token de reset: aleatório, alta entropia, hash armazenado (nunca o valor bruto)** — mesmo
+   raciocínio de nunca guardar senha em texto puro (`Usuario.passwordHash`), aplicado ao token.
+   Gerado com `SecureRandom` (mesmo padrão já usado em
+   `MentoradoAdminService.gerarSenhaTemporaria()`), hash via SHA-256 (não BCrypt — o token já tem
+   entropia alta o bastante que o custo computacional do BCrypt não soma segurança real aqui,
+   diferente de senha escolhida por humano).
+3. **Token de uso único, validade de 30 minutos.** Ao redefinir com sucesso, todos os outros
+   tokens pendentes do mesmo usuário são invalidados também (defesa em profundidade — se o
+   usuário pediu reset várias vezes, só o primeiro uso vale).
+4. **Resposta de `POST /esqueci-senha` é sempre genérica, sempre 200** — nunca revela se o e-mail
+   existe ou não. Mesmo princípio já estabelecido no H1.1 (login sempre "Credenciais inválidas",
+   nunca diferencia "senha errada" de "conta não existe") e reforçado pelo achado do
+   `revisor-seguranca` no M07 (Google OAuth: oráculo de enumeração de contas corrigido).
+5. **Rate limit por IP** (`POST /esqueci-senha`), mesmo padrão Redis já usado em
+   `LeadRateLimitFilter` (M05) — endpoint público sem autenticação é sempre candidato a abuso.
+6. **Verificado ao vivo via curl, não 100% coberto por E2E automatizado.** O pedido de reset
+   (formulário + resposta genérica) tem E2E completo. A redefinição de fato (usar um token real
+   pra trocar a senha) exige o valor bruto do token, que só existe no e-mail/log — Playwright não
+   tem acesso a isso. Verificado manualmente via curl + leitura do log/banco durante o
+   desenvolvimento, mesmo tratamento "verificado só até a borda" do M06/M07/M14.
+
+**Modelagem de banco:**
+
+```sql
+CREATE TABLE password_reset_token (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id  UUID NOT NULL REFERENCES usuario(id),
+    token_hash  VARCHAR(64) NOT NULL UNIQUE,
+    expira_em   TIMESTAMP NOT NULL,
+    usado_em    TIMESTAMP,
+    criado_em   TIMESTAMP NOT NULL DEFAULT now(),
+    versao      BIGINT NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_password_reset_token_usuario ON password_reset_token(usuario_id);
+```
+
+**Contratos de API:**
+
+```
+POST /api/v1/auth/esqueci-senha   { "email": "ana@x.com" }
+// Response 200 sempre, mesma mensagem independente de o e-mail existir
+{ "message": "Se esse e-mail existir na nossa base, você vai receber um link de redefinição." }
+
+POST /api/v1/auth/redefinir-senha { "token": "...", "novaSenha": "..." }
+// Response 200 se o token é válido
+// Response 400 se token inválido/expirado/já usado — mensagem genérica, não distingue qual caso
+```
+
+**Rastreabilidade:** H1.4 → `POST /auth/esqueci-senha` + `POST /auth/redefinir-senha` +
+`EsqueciSenhaPage`/`RedefinirSenhaPage` + link "Esqueci minha senha" no `LoginPage`.
+
+## Blueprint (M19 · H15.1 · UI de cadastro de colaborador)
+
+**Por que Pequeno, sem `revisor-seguranca` obrigatório por CLAUDE.md (revisado do mesmo jeito por
+convenção desta esteira):** o backend já existe e já é testado desde antes desta sessão
+(`TeamService.criar()`, `POST /api/v1/admin/team`, `TeamServiceTest` com 2 testes) — achado na
+mesma auditoria de cobertura do M18: a `TeamPage.tsx` nunca ganhou um formulário chamando esse
+endpoint. Hoje os únicos colaboradores existentes vêm do `DemoDataSeeder`, não de uso real da
+tela. Este módulo é puramente frontend — nenhuma mudança de backend.
+
+**BDD do `spec.md` (H15.1):** "Dado um colaborador novo, quando defino sua área (Comercial /
+Marketing / Gestão de Performance / Fundador), então o sistema aplica automaticamente as
+permissões daquela área." — a aplicação automática de permissões por área já é garantida pelo
+`AreaModuloMatrix` existente (não depende de nada novo aqui), só falta o caminho de criação.
+
+**Suposição:** senha do novo colaborador é definida pelo próprio Admin no formulário (campo
+obrigatório, mínimo 8 caracteres — mesma validação já existente em `CriarColaboradorRequest`), não
+uma senha temporária gerada automaticamente como no fluxo de Lead→Mentorado (M06). Mais simples e
+consistente com o fato de colaboradores internos normalmente combinarem a credencial diretamente
+com quem está cadastrando, diferente do fluxo de lead (onde não há esse contato direto).
+
+**Contrato de API:** já existe — `POST /api/v1/admin/team` com `CriarColaboradorRequest`
+`{ nome, email, senha, area }`, retorna `ColaboradorResponse` 201. Nenhuma mudança de contrato.
+
+**Rastreabilidade:** H15.1 → formulário "+ Novo colaborador" na `TeamPage.tsx`, reaproveitando o
+endpoint já existente.
+
+**Status: ✅ M18 e M19 concluídos** (2026-07-10) — achados numa auditoria de cobertura pós-MVP
+(cruzamento de toda história do `spec.md` contra o que estava de fato construído), tratados juntos
+por serem fast-follows pequenos e relacionados (Auth/E15).
+
+**M18 — backend (311/311 testes, incluindo `PasswordResetServiceTest` (token de uso único,
+expiração, invalidação de tokens pendentes, resposta sempre genérica mesmo com falha de envio) e
+`EmailServiceTest` (fallback sem credencial)) + frontend (`EsqueciSenhaPage`, `RedefinirSenhaPage`,
+link no `LoginPage`) + E2E (`esqueci-senha.spec.ts`, 6 testes) — 73/73 verde na suíte completa.**
+Verificado ao vivo via curl o fluxo inteiro ponta a ponta (não só até a borda, diferente do
+M06/M07/M14): solicitação → link real capturado do log de WARN → redefinição com token real →
+login com a senha nova funciona → login com a senha antiga falha → reuso do mesmo token é
+rejeitado (uso único confirmado) → rate limit confirmado (5 chamadas OK, 6ª bloqueada).
+
+**`revisor-seguranca` (obrigatório por CLAUDE.md — Auth): achado corrigido antes de fechar.**
+`PasswordResetService.solicitar()` não tinha `try/catch` ao redor do envio de e-mail — quando uma
+credencial SMTP real estiver configurada em produção, uma falha de envio (SMTP fora do ar, caixa
+rejeitando) faria a chamada propagar uma exceção não tratada e virar 500 só para e-mails que
+EXISTEM (e-mail inexistente sempre retorna 200 silenciosamente), um oráculo de enumeração de
+contas — exatamente a classe de falha que o design já tentava evitar. Corrigido com
+`try/catch` + log, garantindo que a resposta seja sempre a mesma independente do resultado do
+envio. Teste de regressão adicionado. Sem outros achados — restante do fluxo (token de alta
+entropia, hash SHA-256 nunca o valor bruto, uso único protegido por `@Version`, CSRF/permitAll
+escopados só às 2 rotas certas, sem necessidade de rate limit em `/redefinir-senha` dado o espaço
+de 2²⁵⁶ do token) confirmado correto.
+
+**M19 — frontend puro (backend já existia e já era testado desde antes desta sessão) + E2E
+(`team.spec.ts`, 1 teste novo) — sem achado do `revisor-seguranca`.**
+
+**Pendência real, documentada, não escondida (M18):** sem SMTP configurado neste ambiente — e-mail
+de redefinição é logado em WARN (não enviado de verdade), mesma classe de pendência do M06
+(Whisper/Claude)/M07 (Google OAuth)/M14 (Mercado Pago). Validar contra um provedor SMTP real antes
+de produção. Sem outra pendência de credencial nesta leva (M19 não depende de nenhuma).
+
 ## Fórmula de prazo
 
 ```
@@ -2174,7 +2307,9 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ✅ Concluído — backend (270/270 testes) + `revisor-seguranca` obrigatório (Seguro — 2 achados de hardening corrigidos: teto de quantidade, janela de frescor da assinatura do webhook) + frontend (`LojaPage`, `ProdutosPage`/`PedidosPage` Admin) + E2E (52/52, `loja.spec.ts`). Gateway Mercado Pago (Checkout Pro), sem credencial neste ambiente — verificado só até a borda, validar contra sandbox real antes de produção |
 | 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ✅ Concluído — backend (280/280 testes) + `revisor-seguranca` (sem achado bloqueante — quarta revisão limpa da esteira) + frontend (`PerfilPage`) + E2E (57/57, `perfil.spec.ts`). XP/nível/conquistas calculados por leitura, sem persistência (ver Blueprint) — pendência real: sem data de desbloqueio de conquista, sem histórico de XP. Achado e corrigido: gap entre o Blueprint (vencimentoPlano via admin) e a implementação inicial (nunca fazia isso) |
 | 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ✅ Concluído — backend (290/290 testes) + `revisor-seguranca` (sem achado bloqueante — quinta revisão limpa da esteira) + frontend (`DashboardAdminPage`, substitui o placeholder que ocupava `/admin/dashboard`) + E2E (59/59, `dashboard-admin.spec.ts`). Refatoração proativa: `variacaoPct` (duplicado em E13/E14) centralizado em `VariacaoCalculator` antes do código novo. Pendência: "atividades recentes" só cobre eventos de criação, sem histórico de transição de status |
-| 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ✅ Concluído — backend (300/300 testes) + `revisor-seguranca` (sem achado bloqueante — sexta revisão limpa da esteira) + frontend (sino + `AvisosPage` + `AvisosAdminPage`) + E2E (66/66, `avisos.spec.ts`). Fecha o gap do `avisos` do Dashboard (M08). RBAC reaproveita `Modulo.CONTEUDOS`. Pendência: sem edição/exclusão de aviso nesta leva. **Último módulo do pipeline — MVP completo, resta só Fase 5** |
+| 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ✅ Concluído — backend (300/300 testes) + `revisor-seguranca` (sem achado bloqueante — sexta revisão limpa da esteira) + frontend (sino + `AvisosPage` + `AvisosAdminPage`) + E2E (66/66, `avisos.spec.ts`). Fecha o gap do `avisos` do Dashboard (M08). RBAC reaproveita `Modulo.CONTEUDOS`. Pendência: sem edição/exclusão de aviso nesta leva. Último módulo do pipeline original — MVP completo naquele ponto, ver M18/M19 abaixo (fast-follows achados numa auditoria de cobertura pós-MVP) |
+| 15 | H1.4 · Recuperar senha (fast-follow de E1, achado em auditoria pós-MVP) | — | — | ✅ Concluído — backend (311/311 testes) + `revisor-seguranca` **obrigatório** (achado corrigido: falta de try/catch no envio de e-mail criava oráculo de enumeração de contas) + frontend (`EsqueciSenhaPage`, `RedefinirSenhaPage`) + E2E (73/73, `esqueci-senha.spec.ts`). Verificado ao vivo ponta a ponta com token real (solicitação → log → redefinição → login). Sem SMTP configurado neste ambiente — e-mail logado em WARN, mesma classe de pendência do M06/M07/M14 |
+| 16 | H15.1 · UI de cadastro de colaborador (fast-follow de E15, achado em auditoria pós-MVP) | — | — | ✅ Concluído — frontend puro (backend já existia e já era testado) + E2E (73/73, `team.spec.ts`). Sem achado do `revisor-seguranca` |
 | — | **Fase 5 · Homologação** (smoke test via Docker, validação humana E2E, revisão final de segurança, deploy Coolify, **pass transversal de `pgcrypto` nas colunas sensíveis** — ver notas em M04 e M05) | — | 2d | ⬜ |
 
 **Total restante (peso somado): ≈ 60 dias de engenharia.** Responsividade mobile fica **fora

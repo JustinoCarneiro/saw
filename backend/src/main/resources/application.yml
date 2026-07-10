@@ -87,6 +87,16 @@ sawhub:
     mercadopago-webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
     frontend-base-url: ${LOJA_FRONTEND_BASE_URL:http://localhost:5173}
     backend-base-url: ${LOJA_BACKEND_BASE_URL:http://localhost:8080}
+  # H1.4 (M18) — recuperação de senha. Default vazio de propósito, mesmo raciocínio dos blocos
+  # `ia`/`pagamento` acima: sem SMTP configurado, o e-mail não é enviado de verdade — o link é
+  # logado em WARN (ver EmailService), não derruba o fluxo de dev/teste do resto do sistema.
+  email:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    remetente: ${MAIL_REMETENTE:no-reply@sawhub.com.br}
+    frontend-base-url: ${EMAIL_FRONTEND_BASE_URL:http://localhost:5173}
 
 logging:
   level:

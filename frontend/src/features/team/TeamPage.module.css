@@ -20,6 +20,103 @@
   font-size: 13px;
 }
 
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.newButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  background: var(--gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: 10px;
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.formTitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formRow {
+  display: flex;
+  gap: 14px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-soft);
+  flex: 1;
+}
+
+.textInput,
+.select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: 400 13px var(--font-ui);
+}
+
+.textInput:focus,
+.select:focus {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancelButton {
+  height: 40px;
+  padding: 0 18px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+}
+
+.actionButton {
+  height: 40px;
+  padding: 0 18px;
+  background: var(--gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: 10px;
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+}
+
+.actionButton:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 1fr 340px;

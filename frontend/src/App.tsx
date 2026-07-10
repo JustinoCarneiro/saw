@@ -5,6 +5,8 @@ import { MentoradoShell } from './app/MentoradoShell';
 import { RequireModulo } from './app/RequireModulo';
 import { LoginPage } from './features/auth/LoginPage';
 import { SolicitarAcessoPage } from './features/auth/SolicitarAcessoPage';
+import { EsqueciSenhaPage } from './features/auth/EsqueciSenhaPage';
+import { RedefinirSenhaPage } from './features/auth/RedefinirSenhaPage';
 import { TeamPage } from './features/team/TeamPage';
 import { ConsolidatedPage } from './features/consolidated/ConsolidatedPage';
 import { DashboardAdminPage } from './features/dashboard/DashboardAdminPage';
@@ -42,6 +44,8 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/solicitar-acesso" element={<SolicitarAcessoPage />} />
+      <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+      <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
 
       <Route path="/admin" element={<AdminShell />}>
         <Route index element={<AdminIndexRedirect />} />

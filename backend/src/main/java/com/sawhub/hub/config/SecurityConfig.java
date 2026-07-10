@@ -11,6 +11,7 @@ import com.sawhub.hub.security.JsonAuthEntryPoint;
 import com.sawhub.hub.security.JsonLoginFilter;
 import com.sawhub.hub.security.OAuth2FailureHandler;
 import com.sawhub.hub.security.OAuth2SuccessHandler;
+import com.sawhub.hub.security.PasswordResetRateLimitFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -49,6 +50,7 @@ public class SecurityConfig {
     private final CsrfCookieFilter csrfCookieFilter;
     private final LeadRateLimitFilter leadRateLimitFilter;
     private final AtaAudioRateLimitFilter ataAudioRateLimitFilter;
+    private final PasswordResetRateLimitFilter passwordResetRateLimitFilter;
     private final GoogleOAuth2UserService googleOAuth2UserService;
     private final OAuth2SuccessHandler oauth2SuccessHandler;
     private final OAuth2FailureHandler oauth2FailureHandler;
@@ -61,6 +63,7 @@ public class SecurityConfig {
     public SecurityConfig(AuthSuccessHandler authSuccessHandler, AuthFailureHandler authFailureHandler,
                            JsonAuthEntryPoint jsonAuthEntryPoint, CsrfCookieFilter csrfCookieFilter,
                            LeadRateLimitFilter leadRateLimitFilter, AtaAudioRateLimitFilter ataAudioRateLimitFilter,
+                           PasswordResetRateLimitFilter passwordResetRateLimitFilter,
                            GoogleOAuth2UserService googleOAuth2UserService, OAuth2SuccessHandler oauth2SuccessHandler,
                            OAuth2FailureHandler oauth2FailureHandler, GoogleOAuthProperties googleOAuthProperties,
                            ObjectMapper objectMapper) {
@@ -70,6 +73,7 @@ public class SecurityConfig {
         this.csrfCookieFilter = csrfCookieFilter;
         this.leadRateLimitFilter = leadRateLimitFilter;
         this.ataAudioRateLimitFilter = ataAudioRateLimitFilter;
+        this.passwordResetRateLimitFilter = passwordResetRateLimitFilter;
         this.googleOAuth2UserService = googleOAuth2UserService;
         this.oauth2SuccessHandler = oauth2SuccessHandler;
         this.oauth2FailureHandler = oauth2FailureHandler;
@@ -119,10 +123,14 @@ public class SecurityConfig {
                         // endpoints públicos além do login — quem chama nunca tem sessão prévia pra ter
                         // recebido o cookie XSRF-TOKEN. O webhook é protegido por verificação de
                         // assinatura HMAC própria (MercadoPagoGatewayService.verificarAssinatura), não CSRF.
-                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/leads", "/api/v1/webhooks/**"))
+                        // H1.4 (M18): esqueci-senha/redefinir-senha entram no mesmo grupo — quem chama
+                        // nunca tem sessão prévia (visitante deslogado recuperando acesso).
+                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/leads", "/api/v1/webhooks/**",
+                                "/api/v1/auth/esqueci-senha", "/api/v1/auth/redefinir-senha"))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/oauth2-config").permitAll()
+                        .requestMatchers("/api/v1/auth/esqueci-senha", "/api/v1/auth/redefinir-senha").permitAll()
                         .requestMatchers("/api/v1/leads").permitAll()
                         .requestMatchers("/api/v1/webhooks/**").permitAll()
                         // /oauth2/** e /login/oauth2/** só existem de fato quando
@@ -157,6 +165,9 @@ public class SecurityConfig {
                 // Achado M1 da revisão de segurança do E13 — roda antes de qualquer filtro de
                 // autenticação, já que /leads nunca autentica (rejeita cedo, sem custo extra).
                 .addFilterBefore(leadRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                // H1.4 (M18) — mesmo raciocínio do leadRateLimitFilter: /esqueci-senha nunca
+                // autentica, roda cedo e barato.
+                .addFilterBefore(passwordResetRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 // Achado (médio) da revisão de segurança do M06 — roda depois (não antes) do filtro
                 // de login: precisa do SecurityContextHolder já populado (via sessão, carregado bem
                 // mais cedo no chain) pra identificar o usuário autenticado, diferente do leadRateLimitFilter.
