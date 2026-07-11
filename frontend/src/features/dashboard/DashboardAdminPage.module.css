@@ -44,11 +44,6 @@
   margin: 8px 0 2px;
 }
 
-.kpiSparkline {
-  margin: 6px 0;
-  opacity: 0.85;
-}
-
 .kpiHint {
   font-size: 11px;
   color: var(--text-faint);
@@ -71,66 +66,45 @@
   font-size: 13px;
 }
 
-/* Crescimento de mentorados — bar chart simples (sem lib de gráfico) */
-.barChart {
+/* Crescimento de mentorados — gráfico de linha (LineChart, SVG puro) */
+.chartHeader {
   display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  height: 160px;
-}
-
-.barColumn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  height: 100%;
-}
-
-.barTrack {
-  flex: 1;
-  width: 100%;
-  display: flex;
-  align-items: flex-end;
-}
-
-.barFill {
-  width: 100%;
-  min-height: 2px;
-  background: var(--gold);
-  border-radius: 4px 4px 0 0;
-}
-
-.barValue {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text);
-  margin-top: 6px;
-}
-
-.barLabel {
-  font-size: 11px;
-  color: var(--text-faint);
-}
-
-/* Distribuição por plano — mesma linguagem visual do funil comercial (E13) */
-.funilList {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.funilHeader {
-  display: flex;
   justify-content: space-between;
-  font-size: 12.5px;
-  margin-bottom: 6px;
+  margin-bottom: 16px;
 }
 
-.funilLabel {
+.chartHeader .sectionTitle {
+  margin-bottom: 0;
+}
+
+.periodoLabel {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  background: var(--elevated);
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+}
+
+/* Distribuição por plano — donut (DonutChart) + legenda lateral, réplica do mockup */
+.donutRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 28px;
+}
+
+.legendaLista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.legendaItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
 }
 
 .dot {
@@ -140,20 +114,14 @@
   flex: none;
 }
 
-.funilValue {
+.legendaLabel {
+  flex: 1;
+  color: var(--text);
+}
+
+.legendaValor {
   font-weight: 700;
-}
-
-.track {
-  height: 6px;
-  border-radius: var(--r-pill);
-  background: var(--line);
-  overflow: hidden;
-}
-
-.fill {
-  height: 100%;
-  border-radius: var(--r-pill);
+  color: var(--text-soft);
 }
 
 .listaAtividades {
@@ -178,7 +146,11 @@
 .atividadeIcone {
   flex: none;
   display: flex;
-  color: var(--gold-soft);
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
 }
 
 .atividadeDescricao {

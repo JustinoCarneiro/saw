@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { DonutChart } from '../../shared/components/DonutChart';
 import { ICON_PROPS } from '../../shared/components/iconProps';
+import { LineChart } from '../../shared/components/LineChart';
 import { areaLabel } from '../../shared/components/Pill';
-import { Sparkline } from '../../shared/components/Sparkline';
 import { Topbar } from '../../shared/components/Topbar';
 import { formatBRL, formatPct } from '../../shared/lib/format';
 import type { DashboardAdminResponse, Plano } from '../../shared/lib/types';
@@ -20,11 +21,11 @@ const PLANO_COLOR: Record<Plano, string> = {
 
 // M23 — trocado de emoji (único lugar do sistema que usava; quebrava design/DESIGN.md §8:
 // "Linear, traço ~1.6px, cantos arredondados, currentColor") por SVG no mesmo ICON_PROPS da
-// Sidebar. Pessoa/documento reaproveitam exatamente o traço dos ícones de nav de Mentorados/
-// Conteúdos; calendário replica o já usado em PeriodoPicker.
+// Sidebar, dentro de um selo colorido — réplica do mockup (design/mockups-ref/06-admin.png,
+// Tela 11), que usa um quadrado arredondado colorido por tipo de atividade, não um ícone solto.
 const ATIVIDADE_ICONE: Record<string, JSX.Element> = {
   MENTORADO_CADASTRADO: (
-    <svg {...ICON_PROPS} width={16} height={16}>
+    <svg {...ICON_PROPS} width={15} height={15}>
       <circle cx="9" cy="8" r="3" />
       <path d="M3 20c0-3.3 3-5 6-5s6 1.7 6 5" />
       <circle cx="17.5" cy="9" r="2.2" />
@@ -32,7 +33,7 @@ const ATIVIDADE_ICONE: Record<string, JSX.Element> = {
     </svg>
   ),
   EVENTO_CRIADO: (
-    <svg {...ICON_PROPS} width={16} height={16} viewBox="0 0 24 24">
+    <svg {...ICON_PROPS} width={15} height={15} viewBox="0 0 24 24">
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8" y1="2" x2="8" y2="6" />
@@ -40,11 +41,17 @@ const ATIVIDADE_ICONE: Record<string, JSX.Element> = {
     </svg>
   ),
   CONTEUDO_PUBLICADO: (
-    <svg {...ICON_PROPS} width={16} height={16}>
+    <svg {...ICON_PROPS} width={15} height={15}>
       <path d="M4 5h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2Z" />
       <path d="M8 9h6M8 13h6" />
     </svg>
   ),
+};
+
+const ATIVIDADE_COR: Record<string, { bg: string; color: string }> = {
+  MENTORADO_CADASTRADO: { bg: 'var(--success-bg)', color: 'var(--success)' },
+  EVENTO_CRIADO: { bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  CONTEUDO_PUBLICADO: { bg: 'var(--info-bg)', color: 'var(--info)' },
 };
 
 function variacaoCor(pct: number): string {
@@ -98,7 +105,7 @@ export function DashboardAdminPage() {
 }
 
 function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminResponse }) {
-  const maiorCrescimento = Math.max(1, ...dashboard.crescimentoMentorados.map((c) => c.total));
+  const totalDistribuicao = dashboard.distribuicaoPlano.reduce((soma, d) => soma + d.quantidade, 0);
 
   return (
     <div className={styles.container}>
@@ -106,12 +113,6 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         <Card style={{ padding: 18 }} testId="kpi-mentorados-ativos">
           <div className={styles.kpiLabel}>Mentorados ativos</div>
           <div className={styles.kpiValue}>{dashboard.mentoradosAtivos}</div>
-          <div className={styles.kpiSparkline} data-testid="kpi-mentorados-ativos-sparkline">
-            <Sparkline
-              pontos={dashboard.crescimentoMentorados.map((c) => ({ mes: c.mes, valor: c.total }))}
-              color={variacaoCor(dashboard.variacaoMentoradosAtivosPct)}
-            />
-          </div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoMentoradosAtivosPct) }}>
             {formatPct(dashboard.variacaoMentoradosAtivosPct)} este mês
           </div>
@@ -119,9 +120,6 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         <Card style={{ padding: 18 }} testId="kpi-mentorias-realizadas">
           <div className={styles.kpiLabel}>Mentorias realizadas</div>
           <div className={styles.kpiValue}>{dashboard.mentoriasRealizadas}</div>
-          <div className={styles.kpiSparkline} data-testid="kpi-mentorias-realizadas-sparkline">
-            <Sparkline pontos={dashboard.historicoMentoriasRealizadas} color={variacaoCor(dashboard.variacaoMentoriasRealizadasPct)} />
-          </div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoMentoriasRealizadasPct) }}>
             {formatPct(dashboard.variacaoMentoriasRealizadasPct)} este mês
           </div>
@@ -129,9 +127,6 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         <Card style={{ padding: 18 }} testId="kpi-eventos-realizados">
           <div className={styles.kpiLabel}>Eventos realizados</div>
           <div className={styles.kpiValue}>{dashboard.eventosRealizados}</div>
-          <div className={styles.kpiSparkline} data-testid="kpi-eventos-realizados-sparkline">
-            <Sparkline pontos={dashboard.historicoEventosRealizados} color={variacaoCor(dashboard.variacaoEventosRealizadosPct)} />
-          </div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoEventosRealizadosPct) }}>
             {formatPct(dashboard.variacaoEventosRealizadosPct)} este mês
           </div>
@@ -139,9 +134,6 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         <Card style={{ padding: 18 }} testId="kpi-receita-mes">
           <div className={styles.kpiLabel}>Receita este mês</div>
           <div className={styles.kpiValue}>{formatBRL(dashboard.receitaMes)}</div>
-          <div className={styles.kpiSparkline} data-testid="kpi-receita-mes-sparkline">
-            <Sparkline pontos={dashboard.historicoReceitaMes} color={variacaoCor(dashboard.variacaoReceitaMesPct)} />
-          </div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoReceitaMesPct) }}>
             {formatPct(dashboard.variacaoReceitaMesPct)} este mês
           </div>
@@ -149,38 +141,33 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
       </div>
 
       <div className={styles.row}>
-        <Card style={{ padding: '20px 22px' }}>
-          <div className={styles.sectionTitle}>Crescimento de mentorados</div>
-          <div className={styles.barChart}>
-            {dashboard.crescimentoMentorados.map((c) => (
-              <div key={c.mes} className={styles.barColumn}>
-                <div className={styles.barTrack}>
-                  <div className={styles.barFill} style={{ height: `${(c.total / maiorCrescimento) * 100}%` }} />
-                </div>
-                <div className={styles.barValue}>{c.total}</div>
-                <div className={styles.barLabel}>{formatarMesCurto(c.mes)}</div>
-              </div>
-            ))}
+        <Card style={{ padding: '20px 22px' }} testId="grafico-crescimento-mentorados">
+          <div className={styles.chartHeader}>
+            <div className={styles.sectionTitle}>Crescimento de mentorados</div>
+            <span className={styles.periodoLabel}>Últimos 6 meses</span>
           </div>
+          <LineChart
+            pontos={dashboard.crescimentoMentorados.map((c) => ({ chave: c.mes, rotulo: formatarMesCurto(c.mes), valor: c.total }))}
+          />
         </Card>
 
-        <Card style={{ padding: '20px 22px' }}>
+        <Card style={{ padding: '20px 22px' }} testId="grafico-distribuicao-plano">
           <div className={styles.sectionTitle}>Distribuição por plano</div>
-          <div className={styles.funilList}>
-            {dashboard.distribuicaoPlano.map((d) => (
-              <div key={d.plano} className={styles.funilRow}>
-                <div className={styles.funilHeader}>
-                  <span className={styles.funilLabel}>
-                    <span className={styles.dot} style={{ background: PLANO_COLOR[d.plano] }} />
-                    {PLANO_LABEL[d.plano]}
+          <div className={styles.donutRow}>
+            <DonutChart
+              segmentos={dashboard.distribuicaoPlano.map((d) => ({ chave: d.plano, valor: d.quantidade, cor: PLANO_COLOR[d.plano] }))}
+            />
+            <div className={styles.legendaLista}>
+              {dashboard.distribuicaoPlano.map((d) => (
+                <div key={d.plano} className={styles.legendaItem}>
+                  <span className={styles.dot} style={{ background: PLANO_COLOR[d.plano] }} />
+                  <span className={styles.legendaLabel}>{PLANO_LABEL[d.plano]}</span>
+                  <span className={styles.legendaValor}>
+                    {totalDistribuicao === 0 ? '—' : `${d.pct.toFixed(0)}%`}
                   </span>
-                  <span className={styles.funilValue}>{d.quantidade} ({d.pct.toFixed(0)}%)</span>
                 </div>
-                <div className={styles.track}>
-                  <div className={styles.fill} style={{ width: `${d.pct}%`, background: PLANO_COLOR[d.plano] }} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Card>
       </div>
@@ -190,13 +177,18 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
           <div className={styles.sectionTitle}>Atividades recentes</div>
           {dashboard.atividadesRecentes.length === 0 && <div className={styles.emptyState}>Nenhuma atividade recente.</div>}
           <div className={styles.listaAtividades}>
-            {dashboard.atividadesRecentes.map((a, i) => (
-              <div key={i} className={styles.atividadeRow}>
-                <span className={styles.atividadeIcone}>{ATIVIDADE_ICONE[a.tipo] ?? '•'}</span>
-                <span className={styles.atividadeDescricao}>{a.descricao}</span>
-                <span className={styles.atividadeQuando}>{formatarQuando(a.quando)}</span>
-              </div>
-            ))}
+            {dashboard.atividadesRecentes.map((a, i) => {
+              const cor = ATIVIDADE_COR[a.tipo] ?? { bg: 'var(--line)', color: 'var(--text-soft)' };
+              return (
+                <div key={i} className={styles.atividadeRow}>
+                  <span className={styles.atividadeIcone} style={{ background: cor.bg, color: cor.color }}>
+                    {ATIVIDADE_ICONE[a.tipo] ?? '•'}
+                  </span>
+                  <span className={styles.atividadeDescricao}>{a.descricao}</span>
+                  <span className={styles.atividadeQuando}>{formatarQuando(a.quando)}</span>
+                </div>
+              );
+            })}
           </div>
         </Card>
 

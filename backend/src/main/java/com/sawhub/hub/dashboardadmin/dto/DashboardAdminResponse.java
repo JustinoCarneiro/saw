@@ -22,12 +22,7 @@ public record DashboardAdminResponse(
         List<CrescimentoMesItem> crescimentoMentorados,
         List<DistribuicaoPlanoItem> distribuicaoPlano,
         List<AtividadeRecente> atividadesRecentes,
-        List<MentoriaHojeItem> mentoriasHoje,
-        // M23 — sparkline nos KPIs (pedido do Marcos: "cliente é bastante visual"). Campos
-        // aditivos, não tocam em nenhum contrato existente (Diretiva Primária, CLAUDE.md).
-        List<SparklinePonto> historicoMentoriasRealizadas,
-        List<SparklinePonto> historicoEventosRealizados,
-        List<SparklinePonto> historicoReceitaMes
+        List<MentoriaHojeItem> mentoriasHoje
 ) {
     public record CrescimentoMesItem(String mes, long total) {
     }
@@ -40,10 +35,5 @@ public record DashboardAdminResponse(
 
     public record MentoriaHojeItem(TipoMentoria tipo, String mentorNome, String mentoradoNomes, String hora,
                                     StatusMentoria status) {
-    }
-
-    // M23 — mesma janela de 6 meses de CrescimentoMesItem, mas genérico o bastante pra qualquer
-    // métrica de sparkline (contagem ou valor monetário) sem precisar de um record por métrica.
-    public record SparklinePonto(String mes, double valor) {
     }
 }

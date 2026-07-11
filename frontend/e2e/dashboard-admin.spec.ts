@@ -16,20 +16,18 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     await expect(page.getByTestId('kpi-eventos-realizados').getByText(/\d+/).first()).toBeVisible();
     await expect(page.getByTestId('kpi-receita-mes').getByText('R$', { exact: false })).toBeVisible();
 
-    // M23 — sparkline em cada KPI (SVG com polyline, sem lib de gráfico), sempre presente
-    // independente do dado real (mesmo com histórico zerado, o svg é renderizado).
-    for (const testId of ['kpi-mentorados-ativos', 'kpi-mentorias-realizadas', 'kpi-eventos-realizados', 'kpi-receita-mes']) {
-      await expect(page.getByTestId(`${testId}-sparkline`).locator('svg polyline')).toHaveCount(1);
-    }
-
-    // Crescimento de mentorados: sempre 6 meses (Blueprint M16), independente do dado real.
+    // M23 — gráfico de linha (réplica do mockup design/mockups-ref/06-admin.png, Tela 11):
+    // path da linha sempre presente, mesmo com histórico zerado.
     await expect(page.getByText('Crescimento de mentorados')).toBeVisible();
+    await expect(page.getByTestId('grafico-crescimento-mentorados').locator('svg path').first()).toBeVisible();
 
-    // Distribuição por plano: sempre os 4 planos, mesmo que algum tenha 0 mentorados.
-    await expect(page.getByText('Gratuito')).toBeVisible();
-    await expect(page.getByText('Básico')).toBeVisible();
-    await expect(page.getByText('Essencial')).toBeVisible();
-    await expect(page.getByText('Profissional')).toBeVisible();
+    // Distribuição por plano: donut (M23) + legenda com os 4 planos, mesmo que algum tenha 0.
+    const distribuicao = page.getByTestId('grafico-distribuicao-plano');
+    await expect(distribuicao.locator('svg circle').first()).toBeVisible();
+    await expect(distribuicao.getByText('Gratuito')).toBeVisible();
+    await expect(distribuicao.getByText('Básico')).toBeVisible();
+    await expect(distribuicao.getByText('Essencial')).toBeVisible();
+    await expect(distribuicao.getByText('Profissional')).toBeVisible();
 
     // Atividades recentes: a suíte completa já gera mentorados/eventos/conteúdos em outras
     // specs, então a lista real tem itens — confirma que não é o estado vazio.
