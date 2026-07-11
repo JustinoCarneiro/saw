@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { areaLabel } from '../../shared/components/Pill';
+import { Topbar } from '../../shared/components/Topbar';
 import { formatBRL, formatPct } from '../../shared/lib/format';
 import type { DashboardAdminResponse, Plano } from '../../shared/lib/types';
 import styles from './DashboardAdminPage.module.css';
@@ -36,6 +39,7 @@ function formatarQuando(iso: string): string {
 }
 
 export function DashboardAdminPage() {
+  const { user } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardAdminResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,14 +51,26 @@ export function DashboardAdminPage() {
       .catch(() => setError('Não foi possível carregar o dashboard.'));
   }, []);
 
-  if (error) {
-    return <div className={styles.error} data-testid="dashboard-admin-erro">{error}</div>;
-  }
+  if (!user) return null;
 
-  if (!dashboard) {
-    return <div className={styles.loading}>Carregando…</div>;
-  }
+  return (
+    <div className={styles.page}>
+      <Topbar
+        title="Dashboard"
+        subtitle="Visão geral da operação: mentorados, mentorias, eventos e receita."
+        userName={user.nome}
+        userRole={areaLabel(user.area ?? '')}
+      />
+      <div className={styles.content}>
+        {error && <div className={styles.error} data-testid="dashboard-admin-erro">{error}</div>}
+        {!error && !dashboard && <div className={styles.loading}>Carregando…</div>}
+        {dashboard && <DashboardAdminConteudo dashboard={dashboard} />}
+      </div>
+    </div>
+  );
+}
 
+function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminResponse }) {
   const maiorCrescimento = Math.max(1, ...dashboard.crescimentoMentorados.map((c) => c.total));
 
   return (
