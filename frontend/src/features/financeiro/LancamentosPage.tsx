@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import type { CategoriaFinanceira, Lancamento, StatusLancamento, TipoLancamento } from '../../shared/lib/types';
@@ -67,9 +68,18 @@ export function LancamentosPage() {
             <option value="DESPESA">Despesa</option>
           </select>
         </div>
-        <button className={styles.newButton} onClick={() => setShowForm((v) => !v)}>
-          <span style={{ fontSize: 16 }}>+</span>Novo lançamento
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <CsvImportExport
+            exportUrl="/admin/financeiro/lancamentos/export"
+            exportParams={{ de, ate, tipo: tipo || undefined }}
+            exportFilename="lancamentos.csv"
+            importUrl="/admin/financeiro/lancamentos/import"
+            onImportado={carregar}
+          />
+          <button className={styles.newButton} onClick={() => setShowForm((v) => !v)}>
+            <span style={{ fontSize: 16 }}>+</span>Novo lançamento
+          </button>
+        </div>
       </div>
 
       {showForm && (

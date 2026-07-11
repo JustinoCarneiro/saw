@@ -1,0 +1,45 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.erro {
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+.erro ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.sucesso {
+  color: var(--success);
+  font-size: 12.5px;
+}

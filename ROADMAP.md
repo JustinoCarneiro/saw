@@ -2395,6 +2395,159 @@ pra eles; `metaFechamentos`/`realizado`/`pctAtingido` só aparece pra quem já t
 (seria um novo subsistema de configuração de metas, não um fast-follow pequeno) — ver Suposição 3
 no Blueprint acima.
 
+## Blueprint (M21 · Import/Export CSV — Financeiro)
+
+**Por que Médio, `revisor-seguranca` obrigatório mesmo não sendo Auth/Pagamento:** o CLAUDE.md
+marca E14 · Financeiro & DRE como "risco alto" no próprio épico, e este módulo introduz duas
+superfícies novas de risco ao mesmo tempo — upload de arquivo (mesma categoria do M06/áudio) e
+escrita em massa em dados financeiros. Pedido do Marcos: "normalmente as informações podem vir de
+um lugar externo, preciso ter sempre, em todos os ambientes de dados, opções para importar e
+exportar dados" — escopo inicial acordado com ele (via pergunta explícita): **só Financeiro
+(Lançamentos + Contas a pagar/receber)** primeiro, formato **CSV**, tratado como urgente (à frente
+da Fase 5 · Homologação, que ainda não começou).
+
+**Achado ao pesquisar o módulo antes de desenhar:** `LancamentoFinanceiro` é **imutável depois de
+criado** — sem `atualizar`/`excluir` em `LancamentoService` nem na entidade (só
+construtor+getters). Isso muda a decisão de design mais importante do import: **não existe hoje
+nenhuma forma de desfazer um import ruim pela API**. Por isso o import é **tudo-ou-nada
+(transacional)**: toda linha do CSV é validada ANTES de qualquer `save()`; se qualquer linha falhar,
+nada é persistido e a resposta traz a lista completa de erros (linha + motivo) pro usuário corrigir
+o arquivo e reenviar. Rejeitado de propósito o modelo "importa o que é válido, reporta o resto" —
+mais amigável, mas cria estado parcial impossível de reverter dado o design atual da entidade.
+
+**Suposições (decisões tomadas sem confirmação explícita, documentadas em vez de escondidas):**
+1. **Delimitador do CSV é auto-detectado entre `,` e `;`** (lendo a linha de cabeçalho) — Excel
+   pt-BR exporta CSV com `;` como delimitador e `,` como separador decimal por padrão (já que `,` é
+   o separador decimal em pt-BR), enquanto Google Sheets/ferramentas internacionais usam `,`. Sem
+   essa detecção, o primeiro arquivo real exportado de um Excel brasileiro provavelmente falharia.
+   Quando o delimitador é `;`, o valor numérico é lido com `,` como separador decimal (`1234,56` →
+   `1234.56`); quando é `,`, o valor é lido com `.` decimal padrão (`1234.56`). Sem suporte a
+   separador de milhar (`1.234,56` ou `1,234.56`) nesta leva — fora de escopo, adiciona ambiguidade
+   real sem necessidade clara ainda.
+2. **Datas no formato `dd/MM/yyyy`** (convenção "Datas em pt-BR" do CLAUDE.md), tanto import quanto
+   export — arquivo exportado por este mesmo sistema pode ser reimportado sem edição de formato.
+3. **Categoria é resolvida por NOME (case-insensitive, trim), não por ID** — `CategoriaFinanceira`
+   não tem CRUD (só leitura, populada via seed), e pedir ao usuário externo que descubra UUIDs
+   internos pra montar a planilha não faz sentido. Nome não encontrado → linha rejeitada. Nome
+   ambíguo (mais de uma categoria com o mesmo nome — o schema não tem `UNIQUE` em `nome`) → linha
+   rejeitada com erro explícito, em vez de escolher uma arbitrariamente.
+4. **Import valida que o `tipo` da linha bate com o `tipo` da categoria resolvida** (RECEITA↔RECEITA,
+   DESPESA↔DESPESA) — achado ao pesquisar: `LancamentoService.criar()` (o endpoint manual já
+   existente) **não faz essa validação hoje**, só o `<select>` do frontend impede a inconsistência
+   na UI. O import é uma superfície nova sem esse guarda-corpo de UI, então a validação entra aqui
+   pra não abrir um jeito de gravar dado inconsistente que o formulário manual já impedia. Não
+   estendido retroativamente ao endpoint manual (fora do escopo pedido, e mudar um endpoint já
+   testado/em produção por uma validação nova é uma decisão à parte) — registrado como achado, não
+   corrigido, ver Pendência no fechamento deste módulo.
+5. **Sem deduplicação entre imports** — reimportar o mesmo arquivo duas vezes cria lançamentos
+   duplicados (mesmo comportamento de qualquer import CSV sem chave externa de referência). Fora de
+   escopo adicionar um campo de "referência externa"/idempotência nesta leva — documentado, não
+   escondido.
+6. **CSV parseado com Apache Commons CSV** (`commons-csv`, nova dependência em `pom.xml`) em vez de
+   parser artesanal — o projeto já pagou o custo de um bug real de escaping num gerador
+   artesanal de formato (.ics no M12, CR solto quebrando o escaping) por não usar uma lib; campos
+   `descricao` livres podem conter vírgula/aspas/quebra de linha, exatamente o tipo de caso que um
+   `split(",")` ingênuo erra.
+7. **Sem armazenamento persistente do arquivo CSV enviado** (diferente do áudio do M06) — o arquivo
+   é lido, validado, usado pra criar entidades, e descartado; nada precisa referenciá-lo depois.
+
+**Segurança — CSV injection na exportação (achado proativo, aplicado antes da revisão):** campos de
+texto livre (`descricao`) exportados pra CSV que serão abertos no Excel são um vetor conhecido de
+"CSV/Formula Injection" (OWASP) — uma descrição que comece com `=`, `+`, `-`, `@` pode ser
+interpretada como fórmula pelo Excel ao abrir o arquivo exportado (ex.: alguém cadastra uma
+descrição `=HYPERLINK(...)` via API, e o próprio time da SAW é vítima ao abrir o export mais tarde).
+Mitigação padrão OWASP aplicada na exportação: prefixar com `'` (aspas simples) qualquer campo cujo
+primeiro caractere seja um desses símbolos, neutralizando sem alterar o valor pro usuário.
+
+**Limites de upload (import):** endpoint próprio de import é mais restrito que o limite global do
+`application.yml` (150MB, dimensionado pra áudio) — validação de extensão `.csv`/content-type
+`text/csv` (mesmo padrão "defesa em profundidade" do `AudioStorageService`, M06) e um teto de
+**5.000 linhas por arquivo**, rejeitando acima disso com mensagem clara, em vez de deixar uma
+requisição gigante prender uma transação inteira.
+
+**Modelagem — sem tabela nova.** Import/export operam sobre as entidades `LancamentoFinanceiro` e
+`ContaPagarReceber` já existentes; nenhuma migration necessária.
+
+**Contratos de API:**
+
+```
+GET /api/v1/admin/financeiro/lancamentos/export?de=&ate=&tipo=&categoriaId=
+// Mesmos filtros de GET /lancamentos. Content-Type: text/csv; charset=UTF-8
+// Content-Disposition: attachment; filename="lancamentos.csv"
+// Cabeçalho: tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia
+
+POST /api/v1/admin/financeiro/lancamentos/import
+// multipart/form-data, campo "arquivo" (.csv, mesmas colunas do export acima)
+// Response 200 (tudo validado e persistido) ou 422 (nada persistido, ver erros):
+{
+  "totalLinhas": 12,
+  "importados": 12,
+  "erros": []
+}
+// ou, se qualquer linha falhar:
+{
+  "totalLinhas": 12,
+  "importados": 0,
+  "erros": [
+    { "linha": 4, "motivo": "Categoria \"Aluguel\" não encontrada." },
+    { "linha": 9, "motivo": "Valor \"abc\" inválido." }
+  ]
+}
+
+GET /api/v1/admin/financeiro/contas/export?tipo=&status=
+// Content-Disposition: attachment; filename="contas.csv"
+// Cabeçalho: tipo;descricao;valor;dataVencimento;categoria
+
+POST /api/v1/admin/financeiro/contas/import
+// multipart/form-data, campo "arquivo" — mesma forma de resposta do import de lançamentos
+```
+
+**Rastreabilidade:** não mapeado a nenhuma história de `spec.md` (pedido direto do Marcos, fora do
+levantamento original) — registrado aqui e no CLAUDE.md como uma capacidade transversal nova,
+começando por Financeiro; Mentorados/Comercial ficam como próximos candidatos se este piloto for
+aprovado.
+
+**Status: ✅ Concluído** — backend (357/357 testes, incluindo `CsvUtilsTest`,
+`LancamentoCsvServiceTest`, `ContaCsvServiceTest` e `ContaPagarReceberRepositoryTest`) +
+`revisor-seguranca` (2 achados corrigidos, nenhum bloqueante — ver abaixo) + frontend
+(`CsvImportExport`, componente compartilhado entre `LancamentosPage`/`ContasPage`) + E2E (5/5 novos
+em `financeiro-import-export.spec.ts`, 80/80 na suíte completa).
+
+**Achado ao vivo (bug real, não do revisor-seguranca):** `ContaCsvService.exportar()` foi o
+primeiro consumidor de `ContaPagarReceberService.listar()` a ler `conta.getCategoria().getNome()`
+— `ContaResponse` nunca expunha esse campo, então o proxy LAZY da categoria nunca precisava ser
+inicializado antes, e os finders de `ContaPagarReceberRepository` nunca tinham `LEFT JOIN FETCH
+categoria`. 500 genérico (`LazyInitializationException`, `open-in-view=false`) só descoberto na
+verificação via curl. Corrigido convertendo os 3 finders usados por `listar()` pra `@Query` JPQL
+com `LEFT JOIN FETCH c.categoria` (mesmo padrão já usado em `LancamentoFinanceiroRepository`,
+`MentoriaRepository` etc.) — virou regressão permanente em `ContaPagarReceberRepositoryTest`
+(`@DataJpaTest`, sessão real do Hibernate, mesmo raciocínio do `LeadRepositoryTest` do M05: um
+mock nunca reproduz um proxy LAZY não inicializado).
+
+**Achados do `revisor-seguranca`, ambos corrigidos:**
+1. **(Médio)** O limite de 5.000 linhas só era checado depois de o arquivo inteiro (até os 150MB
+   do limite global do servlet, dimensionado pro áudio do M06) já ter sido lido/decodificado/
+   parseado por completo em memória — o custo já tinha sido pago antes da rejeição. Corrigido com
+   `CsvUtils.exigirArquivoCsv()` checando `arquivo.getSize()` contra um teto de 2MB (generoso pro
+   volume de 5.000 linhas de CSV financeiro) antes de qualquer parsing.
+2. **(Baixo)** `exigirCsv()` só validava a extensão `.csv`, divergindo do que o próprio Blueprint
+   descrevia como "mesmo padrão de defesa em profundidade do `AudioStorageService`" (que valida
+   extensão E content-type). Corrigido com uma allow-list permissiva de content-type (`text/csv`,
+   `application/csv`, `application/vnd.ms-excel`, `text/plain`, `application/octet-stream`) — mais
+   solta que a de áudio de propósito, já que o content-type de CSV varia bastante entre navegador/
+   SO e o arquivo nunca é executado, só parseado como dado.
+3. Único achado sem correção: `exigirCsv`/o resto da lógica de import não são elas mesmas
+   protegidas por `@RequiresModulo` (só o controller é) — mesmo padrão de todos os outros services
+   do módulo Financeiro (`LancamentoService`, `ContaPagarReceberService`), não é uma regressão
+   introduzida aqui, só registrado para consciência.
+4. Confirmado que o endpoint manual `POST /lancamentos` (pré-existente) continua sem validar
+   tipo↔categoria — a lacuna documentada na Suposição 4 não piorou, e o import implementa a
+   validação que falta ali sem estendê-la retroativamente (fora do escopo pedido).
+
+Ambas as correções viraram testes novos (`CsvUtilsTest.exigirArquivoCsv*`) e foram reverificadas
+ao vivo via curl (PDF disfarçado de `.csv` → 400 por content-type; arquivo de 2.16MB → 400 por
+tamanho; import válido continua funcionando).
+
 ## Fórmula de prazo
 
 ```

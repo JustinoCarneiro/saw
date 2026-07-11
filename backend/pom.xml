@@ -74,6 +74,14 @@
 			<groupId>org.springframework.session</groupId>
 			<artifactId>spring-session-data-redis</artifactId>
 		</dependency>
+		<dependency>
+			<!-- M21 — import/export CSV do Financeiro. Não gerenciado pelo BOM do Spring Boot,
+			     versão explícita. Parser de verdade em vez de split(",") artesanal — o projeto já
+			     pagou o custo de um bug de escaping num gerador de formato feito à mão (.ics, M12). -->
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.11.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>

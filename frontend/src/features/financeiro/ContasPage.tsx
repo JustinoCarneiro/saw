@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import type { CategoriaFinanceira, Conta, StatusConta, TipoConta } from '../../shared/lib/types';
@@ -59,9 +60,18 @@ export function ContasPage() {
             <option value="VENCIDO">Vencido</option>
           </select>
         </div>
-        <button className={styles.newButton} onClick={() => setShowForm((v) => !v)}>
-          <span style={{ fontSize: 16 }}>+</span>Nova conta
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <CsvImportExport
+            exportUrl="/admin/financeiro/contas/export"
+            exportParams={{ tipo: tipo || undefined, status: status || undefined }}
+            exportFilename="contas.csv"
+            importUrl="/admin/financeiro/contas/import"
+            onImportado={carregar}
+          />
+          <button className={styles.newButton} onClick={() => setShowForm((v) => !v)}>
+            <span style={{ fontSize: 16 }}>+</span>Nova conta
+          </button>
+        </div>
       </div>
 
       {showForm && (

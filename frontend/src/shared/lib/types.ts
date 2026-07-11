@@ -142,6 +142,18 @@ export interface DashboardFaturamentoResponse {
   composicao: ComposicaoReceita[];
 }
 
+// M21 — import CSV é tudo-ou-nada: erros vazio = todas as linhas foram persistidas.
+export interface ImportErro {
+  linha: number;
+  motivo: string;
+}
+
+export interface ImportResultResponse {
+  totalLinhas: number;
+  importados: number;
+  erros: ImportErro[];
+}
+
 // E13 · Comercial & Vendas
 export type StatusLead = 'SOLICITACAO' | 'EM_CONTATO' | 'PROPOSTA' | 'FECHADO' | 'PERDIDO';
 
