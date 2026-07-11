@@ -1,6 +1,7 @@
 package com.sawhub.hub.mentoria;
 
 import com.sawhub.hub.mentorado.Mentorado;
+import com.sawhub.hub.team.Colaborador;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,4 +49,11 @@ public interface MentoriaRepository extends JpaRepository<Mentoria, UUID> {
             + "WHERE :mentorado MEMBER OF m.mentorados "
             + "ORDER BY m.dataHora ASC")
     List<Mentoria> buscarPorMentorado(@Param("mentorado") Mentorado mentorado);
+
+    // H15.6/H15.7 (M20) — carteira de clientes e mentorias realizadas por mentor. LEFT JOIN
+    // FETCH em mentorados: TeamService/DesempenhoTimeService leem getMentorados() fora da
+    // transação (open-in-view=false), mesmo achado do LazyInitializationException já corrigido
+    // nos outros métodos deste repositório.
+    @Query("SELECT DISTINCT m FROM Mentoria m LEFT JOIN FETCH m.mentorados WHERE m.mentor = :mentor")
+    List<Mentoria> buscarPorMentor(@Param("mentor") Colaborador mentor);
 }

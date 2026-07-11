@@ -47,7 +47,7 @@ class MentoriaMentoradoServiceTest {
     }
 
     private static Colaborador mentor() {
-        return new Colaborador(null, "Brayan Silva", Area.GESTAO_PERFORMANCE, null, null);
+        return new Colaborador(null, "Brayan Silva", Area.GESTAO_PERFORMANCE);
     }
 
     private static Mentoria mentoria(UUID id, StatusMentoria status, Set<Conteudo> materiais) {

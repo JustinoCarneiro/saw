@@ -139,7 +139,7 @@ class DashboardAdminServiceTest {
         YearMonth anterior = atual.minusMonths(1);
         mockarVazio(atual, anterior);
 
-        Colaborador mentor = new Colaborador(null, "Brayan", Area.GESTAO_PERFORMANCE, null, null);
+        Colaborador mentor = new Colaborador(null, "Brayan", Area.GESTAO_PERFORMANCE);
         Mentorado mentorado = mentoradoEm("Ana", Plano.ESSENCIAL, emMes(anterior, 1), true);
 
         Mentoria realizadaEsteMes = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(mentorado), emMes(atual, 10), 60, null, null);
@@ -168,7 +168,7 @@ class DashboardAdminServiceTest {
         YearMonth anterior = atual.minusMonths(1);
         mockarVazio(atual, anterior);
 
-        Colaborador mentor = new Colaborador(null, "Brayan", Area.GESTAO_PERFORMANCE, null, null);
+        Colaborador mentor = new Colaborador(null, "Brayan", Area.GESTAO_PERFORMANCE);
         Mentorado mentorado = mentoradoEm("Ana", Plano.ESSENCIAL, emMes(anterior, 1), true);
         Instant hojeAs10 = LocalDate.now(ZONA).atTime(10, 0).atZone(ZONA).toInstant();
         Instant amanha = LocalDate.now(ZONA).plusDays(1).atTime(10, 0).atZone(ZONA).toInstant();

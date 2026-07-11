@@ -53,7 +53,7 @@ class MentoriaRepositoryTest {
 
     private Colaborador criarMentor(String sufixo) {
         Usuario usuario = usuarioRepository.save(new Usuario("mentor" + sufixo + "@sawhub.com.br", "hash", Perfil.ADMIN));
-        return colaboradorRepository.save(new Colaborador(usuario, "Mentor " + sufixo, Area.GESTAO_PERFORMANCE, null, null));
+        return colaboradorRepository.save(new Colaborador(usuario, "Mentor " + sufixo, Area.GESTAO_PERFORMANCE));
     }
 
     private Mentorado criarMentorado(String sufixo) {

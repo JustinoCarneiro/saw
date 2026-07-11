@@ -43,7 +43,7 @@ class CustomUserDetailsServiceTest {
     @Test
     void adminMontaPrincipalComRoleAdminEModulosDaSuaArea() {
         Usuario usuario = new Usuario("paula@sawhub.com.br", "hash", Perfil.ADMIN);
-        Colaborador colaborador = new Colaborador(usuario, "Paula Mendes", Area.COMERCIAL, null, new BigDecimal("22.5"));
+        Colaborador colaborador = new Colaborador(usuario, "Paula Mendes", Area.COMERCIAL);
         when(usuarioRepository.findByEmail("paula@sawhub.com.br")).thenReturn(Optional.of(usuario));
         when(colaboradorRepository.findByUsuario(usuario)).thenReturn(Optional.of(colaborador));
 

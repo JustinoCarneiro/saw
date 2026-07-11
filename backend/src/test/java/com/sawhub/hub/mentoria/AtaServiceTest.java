@@ -57,7 +57,7 @@ class AtaServiceTest {
     }
 
     private static Mentoria mentoriaConfirmada(Set<Mentorado> mentorados) {
-        Colaborador mentor = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE, 10, BigDecimal.TEN);
+        Colaborador mentor = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE);
         Mentoria m = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, mentorados, Instant.now(), 60, null, null);
         m.confirmar();
         return m;

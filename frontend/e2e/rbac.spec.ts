@@ -47,4 +47,31 @@ test.describe('RBAC por área', () => {
 
     await page.screenshot({ path: 'e2e/screenshots/rbac-gestao-performance.png' });
   });
+
+  // H15.3 (M20) — achado da auditoria de cobertura: RBAC de Marketing já existia no backend
+  // (AreaModuloMatrix) desde o início do E15, mas nunca tinha E2E cobrindo o próprio papel.
+  test('Marketing só vê o módulo Conteúdos na sidebar e não acessa Time/Comercial/Financeiro', async ({ page }) => {
+    await loginAs(page, 'juliana@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+
+    // getByRole('navigation') de propósito, mesmo raciocínio do teste de Gestão de Performance
+    // acima: a ConteudosShell tem sua própria aba "Conteúdos", texto igual ao link da sidebar.
+    const sidebar = page.getByRole('navigation');
+    await expect(sidebar.getByRole('link', { name: 'Conteúdos' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Comercial' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Time' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Financeiro' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Painel Consolidado' })).toHaveCount(0);
+
+    await page.goto('/admin/time');
+    await expect(page.getByText('Sem acesso')).toBeVisible();
+
+    await page.goto('/admin/comercial');
+    await expect(page.getByText('Sem acesso')).toBeVisible();
+
+    await page.goto('/admin/financeiro/dre');
+    await expect(page.getByText('Sem acesso')).toBeVisible();
+
+    await page.screenshot({ path: 'e2e/screenshots/rbac-marketing.png' });
+  });
 });

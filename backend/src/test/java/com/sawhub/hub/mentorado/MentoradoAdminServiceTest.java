@@ -41,7 +41,7 @@ class MentoradoAdminServiceTest {
         Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
         Usuario vendedorUsuario = null;
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(vendedorUsuario, "Paula",
-                com.sawhub.hub.team.Area.COMERCIAL, null, null));
+                com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
         lead.fechar(planoFechado);
         return lead;

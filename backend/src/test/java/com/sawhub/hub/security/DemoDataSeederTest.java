@@ -125,7 +125,7 @@ class DemoDataSeederTest {
     }
 
     private static Colaborador colaborador(String nome, Area area) {
-        Colaborador c = new Colaborador(null, nome, area, null, null);
+        Colaborador c = new Colaborador(null, nome, area);
         return c;
     }
 
@@ -240,7 +240,7 @@ class DemoDataSeederTest {
         when(leadRepository.count()).thenReturn(0L);
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(metaComercialRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        Colaborador paula = new Colaborador(null, "Paula Mendes", Area.COMERCIAL, null, new BigDecimal("22.5"));
+        Colaborador paula = new Colaborador(null, "Paula Mendes", Area.COMERCIAL);
         when(colaboradorRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(paula));
 
         seeder().run(null);

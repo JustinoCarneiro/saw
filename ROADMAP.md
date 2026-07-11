@@ -2269,6 +2269,132 @@ de redefinição é logado em WARN (não enviado de verdade), mesma classe de pe
 (Whisper/Claude)/M07 (Google OAuth)/M14 (Mercado Pago). Validar contra um provedor SMTP real antes
 de produção. Sem outra pendência de credencial nesta leva (M19 não depende de nenhuma).
 
+## Blueprint (M20 · H15.6 · Carteira real + H15.7 · Desempenho do time + H15.3 · RBAC Marketing)
+
+**Por que Médio, sem `revisor-seguranca` obrigatório por CLAUDE.md (revisado do mesmo jeito por
+convenção desta esteira):** três achados da mesma auditoria de cobertura pós-MVP que geraram
+M18/M19, todos dentro de E15 (Gestão de Time) — o épico que o `ROADMAP.md` já registra como
+"implementado sem Blueprint formal" (construído antes do processo desta esteira existir).
+Agrupados num módulo só por serem pequenos, relacionados (mesma tela/área) e descobertos juntos.
+
+**BDD do `spec.md`:**
+- H15.6 — "Dado os mentores, então vejo quantos mentorados cada um atende e a distribuição da
+  carteira."
+- H15.7 — "Dado metas por colaborador, então vejo mentorias realizadas, conversões e realizado x
+  meta no período."
+- H15.3 — "Dado minha área = Marketing, quando entro na Área Admin, então vejo apenas a curadoria
+  de Conteúdos; não vejo Financeiro, Comercial ou Mentorados."
+
+**Achado principal, mais sério que "falta uma tela":** `Colaborador.carteira` e
+`Colaborador.conversaoPct` são colunas reais no banco, mas **nunca foram calculadas** — são só o
+valor literal que o `DemoDataSeeder` escreveu na primeira carga (`carteira=38`, `conversaoPct=
+"15.2"` etc.) e `TeamService.criar()` grava `null` pra todo colaborador novo. A tela de Time
+mostra esses números como se fossem reais. Isso não é uma lacuna de funcionalidade ausente — é um
+**dado falso exibido como se fosse verdadeiro**, pior que uma tela em branco.
+
+**Suposições (decisões conscientes, documentadas, não escondidas):**
+1. **`carteira` deixa de ser uma coluna armazenada e passa a ser sempre calculada** — contagem de
+   `Mentorado` distintos entre todas as `Mentoria` em que o colaborador é `mentor` (não filtrado
+   por período: "carteira" é uma carteira atual, não uma métrica mensal). Migration remove a
+   coluna em vez de só parar de escrevê-la — manter uma coluna morta que nunca é lida convida a
+   próxima pessoa a reintroduzir o mesmo bug (escrever um valor "por enquanto"), e o projeto já
+   tem o precedente de nunca guardar um dado que pode ser derivado com uma leitura barata (mesma
+   razão do XP do M15, das "atividades recentes" do M16 — computar na leitura em vez de manter uma
+   segunda fonte de verdade que pode divergir da real).
+2. **`conversaoPct` é removida sem substituto direto** — nunca foi ligada a nenhum cálculo real
+   (confirmado: zero leitura fora da própria `TeamPage.tsx`), e H15.7 pede "conversões... no
+   período" (uma métrica por período), não um número estático por colaborador. O substituto real
+   é o novo endpoint de desempenho (H15.7), que já mostra fechamentos comerciais reais por período
+   pra quem tem `MetaComercial` configurada — não um valor solto sem contexto temporal.
+3. **H15.7 mostra "realizado x meta" só pra quem já tem meta configurada (Comercial, via
+   `MetaComercial`/E13, já existente).** Não existe hoje nenhum conceito de "meta de mentorias"
+   pra Gestão de Performance (nenhuma entidade, nenhuma tela de configuração) — inventar um
+   subsistema de metas novo pra mentores está fora do escopo deste fast-follow. `mentoriasRealizadas`
+   aparece pra todos como contagem real no período, sem comparação contra uma meta que não existe.
+   Documentado como pendência real, não escondida (ver Status abaixo).
+4. **H15.3 não precisa de código novo** — o RBAC já funciona corretamente (`AreaModuloMatrix.
+   MARKETING = EnumSet.of(Modulo.CONTEUDOS)`), só faltava a verificação automatizada. Fechado só
+   com um teste E2E novo, mesma lacuna de categoria do M13 (Eventos) antes de ganhar cobertura.
+
+**Modelagem de banco:**
+
+```sql
+ALTER TABLE colaborador DROP COLUMN carteira;
+ALTER TABLE colaborador DROP COLUMN conversao_pct;
+```
+
+**Contratos de API:**
+
+```
+GET /api/v1/admin/team
+// Response — carteira agora sempre um número real (0 pra quem nunca foi mentor), sem conversaoPct
+[{ "id": "...", "nome": "Lucas Alves", "email": "...", "area": "GESTAO_PERFORMANCE", "carteira": 2 }]
+
+GET /api/v1/admin/team/desempenho?ano=2026&mes=7
+// H15.7 — mentoriasRealizadas sempre presente; metaFechamentos/fechamentosRealizados/pctAtingido
+// só quando o colaborador tem MetaComercial configurada pro período (hoje só Comercial via E13)
+[
+  { "id": "...", "nome": "Lucas Alves", "area": "GESTAO_PERFORMANCE", "mentoriasRealizadas": 2,
+    "metaFechamentos": null, "fechamentosRealizados": null, "pctAtingidoFechamentos": null },
+  { "id": "...", "nome": "Paula Mendes", "area": "COMERCIAL", "mentoriasRealizadas": 0,
+    "metaFechamentos": 10, "fechamentosRealizados": 6, "pctAtingidoFechamentos": 60.0 }
+]
+```
+
+**Rastreabilidade:**
+
+| História | Cobertura |
+|---|---|
+| H15.6 — carteira de clientes por mentor | `GET /admin/team.carteira`, computado de `Mentoria.mentor` |
+| H15.7 — metas e desempenho do time no período | `GET /admin/team/desempenho?ano=&mes=` |
+| H15.3 — RBAC de Marketing só vê Conteúdos | `rbac.spec.ts` (teste novo, sem código de produção novo) |
+
+**Status: ✅ M20 concluído** (2026-07-10) — três achados da mesma auditoria de cobertura pós-MVP
+que gerou M18/M19, tratados juntos por serem todos dentro de E15 (Gestão de Time).
+
+**Backend (315/315 testes, incluindo `TeamServiceTest` (carteira computada como contagem de
+Mentorado distintos via `Mentoria.mentor`, não mais lida da entidade) e `DesempenhoTimeServiceTest`
+novo (3 testes: mentorias contadas só dentro do período com limite superior exclusivo, colaborador
+sem `MetaComercial` recebe null nos três campos de meta, colaborador com `MetaComercial` traz
+meta/realizado/pct corretos)) + frontend (`TeamPage.tsx` — carteira real na tabela existente, coluna
+"Conversões" removida, novo card "Desempenho do Time" com `PeriodoPicker`) + E2E (`team.spec.ts`
++1 teste, `rbac.spec.ts` +1 teste para Marketing) — 75/75 verde na suíte completa.**
+
+Verificado ao vivo via curl como Fundador: `GET /admin/team` mostra carteira real computada (Lucas
+Alves 29→30 mentorados distintos conforme mentorias reais foram criadas por outros specs da suíte,
+Ricardo Costa 4 — nada mais parecido com os valores fixos 38/42 que o seeder escrevia antes),
+`GET /admin/team/desempenho?ano=2026&mes=7` mostra `mentoriasRealizadas` correto por mentor e
+`metaFechamentos`/`fechamentosRealizados`/`pctAtingidoFechamentos` só para Paula Mendes (única com
+`MetaComercial` no período) — os demais corretamente `null`. RBAC confirmado por curl: Juliana Lima
+(Marketing) recebe 403 tanto em `GET /admin/team` quanto em `GET /admin/team/desempenho`.
+
+**`revisor-seguranca` (não obrigatório por CLAUDE.md — não é Auth/Pagamento — revisado por
+convenção): sem achado.** Confirmado: sem SQL injection (JPQL parametrizado/derived queries em
+todo lugar), `GET /admin/team/desempenho` herda `@RequiresModulo(Modulo.TIME)` da classe
+(`AreaModuloMatrix` só concede `TIME` a `Area.FUNDADOR`), validação `@Min`/`@Max` em `ano`/`mes`
+idêntica ao padrão de `ComercialController`, divisão por zero tratada explicitamente (mesmo padrão
+de `RankingComercialService`), nenhum dado sensível exposto nos DTOs novos. Nota não bloqueante
+registrada (não é achado de segurança): `TeamService.listar()`/`DesempenhoTimeService.desempenho()`
+disparam uma query por colaborador dentro do `.stream()` — padrão N+1 aceito de propósito, mesmo
+raciocínio já usado em `LancamentoService`/`RankingComercialService` (dataset de poucas dezenas de
+colaboradores, endpoint admin autenticado, sem o volume que justificaria complicar a query).
+
+**Achado corrigido durante a verificação E2E (não um bug de produção, mas documentado como lição):**
+a primeira versão de `team.spec.ts` para o M20 afirmava valores exatos acumulados (carteira "29",
+`pctAtingidoFechamentos` "1040.0%") que quebravam ao rodar a suíte completa mais de uma vez, porque
+`comercial.spec.ts`/`mentorados.spec.ts` criam leads/mentorias reais que alteram esses números
+entre execuções. Corrigido para afirmar propriedades estruturais (carteira não é mais o "38" fixo
+do seeder antigo; a meta de 5 fechamentos de Paula é estável, pois vem do seed) em vez de contagens
+acumuladas — mesma classe de lição de "não assumir dado estático" já registrada para os módulos
+`comercial`/`mentorados` desta suíte.
+
+**Pendência real, documentada, não escondida (H15.7):** sem meta de mentorias configurável para
+colaboradores de Gestão de Performance — só `mentoriasRealizadas` (contagem simples) é mostrado
+pra eles; `metaFechamentos`/`realizado`/`pctAtingido` só aparece pra quem já tem `MetaComercial`
+(hoje, só Comercial). Criar uma nova entidade de meta de mentorias ficou fora de escopo desta leva
+(seria um novo subsistema de configuração de metas, não um fast-follow pequeno) — ver Suposição 3
+no Blueprint acima.
+
 ## Fórmula de prazo
 
 ```

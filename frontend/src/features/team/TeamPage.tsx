@@ -4,13 +4,15 @@ import { apiClient } from '../../shared/lib/apiClient';
 import { Avatar } from '../../shared/components/Avatar';
 import { Card } from '../../shared/components/Card';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
+import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
 import { AreaPill, areaLabel, areaDotColor } from '../../shared/components/Pill';
 import { Topbar } from '../../shared/components/Topbar';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
-import type { Area, Colaborador, Modulo, PermissionMatrixRow } from '../../shared/lib/types';
+import type { Area, Colaborador, DesempenhoColaborador, Modulo, PermissionMatrixRow } from '../../shared/lib/types';
 import styles from './TeamPage.module.css';
 
-const TEAM_COLUMNS = '1.6fr 1.5fr .9fr 1fr';
+const TEAM_COLUMNS = '1.6fr 1.5fr 1fr';
+const DESEMPENHO_COLUMNS = '1.6fr 1.5fr 1.2fr 1fr 1fr 1.4fr';
 const MATRIX_COLUMNS = '1.6fr .8fr .8fr .8fr .9fr .9fr .8fr 1.1fr';
 const MATRIX_MODULOS: Modulo[] = ['DASHBOARD', 'COMERCIAL', 'FINANCEIRO', 'MENTORADOS', 'CONTEUDOS', 'TIME', 'PAINEL_CONSOLIDADO'];
 
@@ -28,6 +30,12 @@ export function TeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
 
+  const now = new Date();
+  const [ano, setAno] = useState(now.getFullYear());
+  const [mes, setMes] = useState(now.getMonth() + 1);
+  const [desempenho, setDesempenho] = useState<DesempenhoColaborador[] | null>(null);
+  const [erroDesempenho, setErroDesempenho] = useState<string | null>(null);
+
   const carregar = () => {
     Promise.all([
       apiClient.get<Colaborador[]>('/admin/team'),
@@ -41,6 +49,14 @@ export function TeamPage() {
   };
 
   useEffect(carregar, []);
+
+  useEffect(() => {
+    setDesempenho(null);
+    apiClient
+      .get<DesempenhoColaborador[]>('/admin/team/desempenho', { params: { ano, mes } })
+      .then((res) => setDesempenho(res.data))
+      .catch(() => setErroDesempenho('Não foi possível carregar o desempenho do time.'));
+  }, [ano, mes]);
 
   if (!user) return null;
 
@@ -70,7 +86,7 @@ export function TeamPage() {
         {error && <div className={styles.error}>{error}</div>}
 
         <div className={styles.layout}>
-          <DataGrid columns={TEAM_COLUMNS} headers={['Colaborador', 'Área', 'Carteira (Ment.)', 'Conversões']}>
+          <DataGrid columns={TEAM_COLUMNS} headers={['Colaborador', 'Área', 'Carteira (Ment.)']}>
             {colaboradores === null && !error && <div className={styles.loading}>Carregando…</div>}
             {colaboradores?.map((c) => (
               <DataGridRow key={c.id} columns={TEAM_COLUMNS} testId={`colaborador-row-${c.id}`}>
@@ -84,8 +100,7 @@ export function TeamPage() {
                 <div>
                   <AreaPill area={c.area} />
                 </div>
-                <div className={styles.metric}>{c.carteira ?? '—'}</div>
-                <div className={styles.metricGood}>{c.conversaoPct != null ? `${c.conversaoPct}%` : '—'}</div>
+                <div className={styles.metric}>{c.carteira}</div>
               </DataGridRow>
             ))}
           </DataGrid>
@@ -111,6 +126,41 @@ export function TeamPage() {
             </div>
           </Card>
         </div>
+
+        <Card style={{ marginTop: 16, overflow: 'hidden' }}>
+          <div className={styles.matrixHeader}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div>
+                <div className={styles.sectionTitle} style={{ marginBottom: 2 }}>Desempenho do Time</div>
+                <div className={styles.matrixSubtitle}>
+                  Mentorias realizadas por todo mundo; meta x realizado de fechamentos só pra quem já tem meta comercial no período.
+                </div>
+              </div>
+              <PeriodoPicker ano={ano} mes={mes} onChange={(a, m) => { setAno(a); setMes(m); }} />
+            </div>
+          </div>
+          {erroDesempenho && <div className={styles.error} style={{ padding: '0 22px 12px' }}>{erroDesempenho}</div>}
+          <DataGrid
+            columns={DESEMPENHO_COLUMNS}
+            headers={['Colaborador', 'Área', 'Mentorias realizadas', 'Meta', 'Realizado', '% atingido']}
+          >
+            {desempenho === null && !erroDesempenho && <div className={styles.loading}>Carregando…</div>}
+            {desempenho?.map((d) => (
+              <DataGridRow key={d.id} columns={DESEMPENHO_COLUMNS} testId={`desempenho-row-${d.id}`}>
+                <div className={styles.personName}>{d.nome}</div>
+                <div>
+                  <AreaPill area={d.area} />
+                </div>
+                <div className={styles.metric}>{d.mentoriasRealizadas}</div>
+                <div className={styles.metric}>{d.metaFechamentos ?? '—'}</div>
+                <div className={styles.metric}>{d.fechamentosRealizados ?? '—'}</div>
+                <div className={styles.metricGood}>
+                  {d.pctAtingidoFechamentos != null ? `${d.pctAtingidoFechamentos.toFixed(1)}%` : '—'}
+                </div>
+              </DataGridRow>
+            ))}
+          </DataGrid>
+        </Card>
 
         <Card style={{ marginTop: 16, overflow: 'hidden' }} className={styles.matrixCard}>
           <div className={styles.matrixHeader}>

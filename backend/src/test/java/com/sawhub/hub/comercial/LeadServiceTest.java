@@ -38,7 +38,7 @@ class LeadServiceTest {
     }
 
     private static Colaborador colaborador(UUID id, String nome) {
-        Colaborador c = new Colaborador(null, nome, Area.COMERCIAL, 0, BigDecimal.ZERO);
+        Colaborador c = new Colaborador(null, nome, Area.COMERCIAL);
         ReflectionTestUtils.setField(c, "id", id);
         return c;
     }

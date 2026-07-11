@@ -150,17 +150,16 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (colaboradorRepository.count() > 1) {
             return; // já rodou (sobra só o Fundador do FundadorBootstrap na 1ª execução)
         }
-        criarColaborador("Lucas Alves", "lucas@sawhub.com.br", Area.GESTAO_PERFORMANCE, 38, "15.2");
-        criarColaborador("Paula Mendes", "paula@sawhub.com.br", Area.COMERCIAL, null, "22.5");
-        criarColaborador("Ricardo Costa", "ricardo@sawhub.com.br", Area.GESTAO_PERFORMANCE, 42, "12.8");
-        criarColaborador("Juliana Lima", "juliana@sawhub.com.br", Area.MARKETING, null, null);
+        criarColaborador("Lucas Alves", "lucas@sawhub.com.br", Area.GESTAO_PERFORMANCE);
+        criarColaborador("Paula Mendes", "paula@sawhub.com.br", Area.COMERCIAL);
+        criarColaborador("Ricardo Costa", "ricardo@sawhub.com.br", Area.GESTAO_PERFORMANCE);
+        criarColaborador("Juliana Lima", "juliana@sawhub.com.br", Area.MARKETING);
     }
 
-    private void criarColaborador(String nome, String email, Area area, Integer carteira, String conversaoPct) {
+    private void criarColaborador(String nome, String email, Area area) {
         Usuario usuario = usuarioRepository.save(
                 new Usuario(email, passwordEncoder.encode("trocar-no-primeiro-login"), Perfil.ADMIN));
-        colaboradorRepository.save(new Colaborador(usuario, nome, area, carteira,
-                conversaoPct == null ? null : new BigDecimal(conversaoPct)));
+        colaboradorRepository.save(new Colaborador(usuario, nome, area));
     }
 
     private void seedMentorados() {

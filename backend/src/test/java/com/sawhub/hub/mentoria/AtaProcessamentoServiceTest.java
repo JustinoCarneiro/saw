@@ -45,7 +45,7 @@ class AtaProcessamentoServiceTest {
     }
 
     private static Ata ataProcessando() {
-        Colaborador mentor = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE, 10, BigDecimal.TEN);
+        Colaborador mentor = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE);
         var mentoria = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(), Instant.now(), 60, null, null);
         mentoria.confirmar();
         mentoria.realizar();

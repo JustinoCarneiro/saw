@@ -27,7 +27,7 @@ class MentoriaMentoradoResponseTest {
     private static final int DURACAO_MIN = 60;
 
     private static Colaborador mentor() {
-        return new Colaborador(null, "Brayan Silva", Area.GESTAO_PERFORMANCE, null, null);
+        return new Colaborador(null, "Brayan Silva", Area.GESTAO_PERFORMANCE);
     }
 
     private static Mentoria mentoriaOnline(StatusMentoria status) {

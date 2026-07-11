@@ -41,7 +41,7 @@ class LeadRepositoryTest {
     private Colaborador criarVendedor(String sufixo) {
         Usuario usuario = usuarioRepository.save(
                 new Usuario("vendedor" + sufixo + "@sawhub.com.br", "hash", Perfil.ADMIN));
-        return colaboradorRepository.save(new Colaborador(usuario, "Paula", Area.COMERCIAL, null, null));
+        return colaboradorRepository.save(new Colaborador(usuario, "Paula", Area.COMERCIAL));
     }
 
     @Test

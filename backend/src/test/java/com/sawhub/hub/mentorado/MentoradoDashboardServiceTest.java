@@ -63,7 +63,7 @@ class MentoradoDashboardServiceTest {
     }
 
     private static Colaborador mentor() {
-        Colaborador c = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE, 10, BigDecimal.TEN);
+        Colaborador c = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE);
         ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
         return c;
     }

@@ -28,8 +28,20 @@ export interface Colaborador {
   nome: string;
   email: string;
   area: Area;
-  carteira: number | null;
-  conversaoPct: number | null;
+  carteira: number;
+}
+
+// M20 · H15.7 — desempenho do time no período: metaFechamentos/fechamentosRealizados/
+// pctAtingidoFechamentos só existem pra quem já tem meta comercial configurada no período (hoje,
+// só área Comercial) — null pros demais, mentoriasRealizadas sempre computado.
+export interface DesempenhoColaborador {
+  id: string;
+  nome: string;
+  area: Area;
+  mentoriasRealizadas: number;
+  metaFechamentos: number | null;
+  fechamentosRealizados: number | null;
+  pctAtingidoFechamentos: number | null;
 }
 
 export interface PermissionMatrixRow {

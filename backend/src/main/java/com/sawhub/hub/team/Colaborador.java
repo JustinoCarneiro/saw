@@ -9,8 +9,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 
+// H15.6/H15.7 (M20): carteira e conversaoPct eram colunas armazenadas nunca calculadas (só o
+// valor que o seeder escrevia) — removidas. Carteira agora é sempre computada por leitura em
+// TeamService (contagem de Mentorado distintos via Mentoria.mentor), mesmo raciocínio de nunca
+// guardar um dado derivável (XP do M15, atividades recentes do M16).
 @Entity
 @Table(name = "colaborador")
 public class Colaborador extends BaseEntity {
@@ -26,20 +29,13 @@ public class Colaborador extends BaseEntity {
     @Column(nullable = false)
     private Area area;
 
-    private Integer carteira;
-
-    @Column(name = "conversao_pct")
-    private BigDecimal conversaoPct;
-
     protected Colaborador() {
     }
 
-    public Colaborador(Usuario usuario, String nome, Area area, Integer carteira, BigDecimal conversaoPct) {
+    public Colaborador(Usuario usuario, String nome, Area area) {
         this.usuario = usuario;
         this.nome = nome;
         this.area = area;
-        this.carteira = carteira;
-        this.conversaoPct = conversaoPct;
     }
 
     public Usuario getUsuario() {
@@ -52,14 +48,6 @@ public class Colaborador extends BaseEntity {
 
     public Area getArea() {
         return area;
-    }
-
-    public Integer getCarteira() {
-        return carteira;
-    }
-
-    public BigDecimal getConversaoPct() {
-        return conversaoPct;
     }
 
     public void setNome(String nome) {

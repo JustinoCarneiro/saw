@@ -51,7 +51,7 @@ class MentoriaServiceTest {
     }
 
     private static Colaborador mentor(UUID id) {
-        Colaborador c = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE, 10, BigDecimal.TEN);
+        Colaborador c = new Colaborador(null, "Lucas", Area.GESTAO_PERFORMANCE);
         ReflectionTestUtils.setField(c, "id", id);
         return c;
     }
