@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import com.sawhub.hub.comercial.dto.RankingItem;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;

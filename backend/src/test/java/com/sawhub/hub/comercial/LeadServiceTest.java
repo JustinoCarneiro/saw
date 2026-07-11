@@ -14,7 +14,6 @@ import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

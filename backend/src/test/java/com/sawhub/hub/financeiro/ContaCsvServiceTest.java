@@ -71,6 +71,7 @@ class ContaCsvServiceTest {
     // --- importar: caminho feliz ---
 
     @Test
+    @SuppressWarnings("unchecked")
     void importarPersisteTodasAsLinhasQuandoTudoEValido() {
         CategoriaFinanceira categoria = categoriaInfra();
         when(categoriaRepository.findByNomeIgnoreCase("Infra")).thenReturn(List.of(categoria));

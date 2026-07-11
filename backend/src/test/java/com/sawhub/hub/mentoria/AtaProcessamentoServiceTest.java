@@ -9,7 +9,6 @@ import com.sawhub.hub.mentoria.ia.RascunhoAta;
 import com.sawhub.hub.mentoria.ia.TranscricaoService;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
-import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;

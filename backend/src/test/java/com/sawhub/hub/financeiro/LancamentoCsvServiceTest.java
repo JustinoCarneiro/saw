@@ -75,6 +75,7 @@ class LancamentoCsvServiceTest {
     // --- importar: caminho feliz ---
 
     @Test
+    @SuppressWarnings("unchecked")
     void importarPersisteTodasAsLinhasQuandoTudoEValido() {
         CategoriaFinanceira categoria = categoriaAssinatura();
         when(categoriaRepository.findByNomeIgnoreCase("Assinaturas")).thenReturn(List.of(categoria));

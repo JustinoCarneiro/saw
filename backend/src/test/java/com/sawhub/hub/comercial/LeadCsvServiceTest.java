@@ -81,6 +81,7 @@ class LeadCsvServiceTest {
     // --- importar: caminho feliz (sempre SOLICITACAO) ---
 
     @Test
+    @SuppressWarnings("unchecked")
     void importarCriaLeadsNovosSempreEmSolicitacao() {
         String conteudo = "nome;email;telefone;mensagem;planoInteresse\n"
                 + "Maria Souza;maria@restaurante.com;11999998888;Quero saber mais;ESSENCIAL\n"
