@@ -16,6 +16,12 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     await expect(page.getByTestId('kpi-eventos-realizados').getByText(/\d+/).first()).toBeVisible();
     await expect(page.getByTestId('kpi-receita-mes').getByText('R$', { exact: false })).toBeVisible();
 
+    // M23 — sparkline em cada KPI (SVG com polyline, sem lib de gráfico), sempre presente
+    // independente do dado real (mesmo com histórico zerado, o svg é renderizado).
+    for (const testId of ['kpi-mentorados-ativos', 'kpi-mentorias-realizadas', 'kpi-eventos-realizados', 'kpi-receita-mes']) {
+      await expect(page.getByTestId(`${testId}-sparkline`).locator('svg polyline')).toHaveCount(1);
+    }
+
     // Crescimento de mentorados: sempre 6 meses (Blueprint M16), independente do dado real.
     await expect(page.getByText('Crescimento de mentorados')).toBeVisible();
 
@@ -29,6 +35,8 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     // specs, então a lista real tem itens — confirma que não é o estado vazio.
     const atividades = page.getByTestId('atividades-recentes');
     await expect(atividades.getByText('Nenhuma atividade recente.')).toHaveCount(0);
+    // M23 — ícone linear (SVG), não mais emoji (design/DESIGN.md §8).
+    await expect(atividades.locator('svg').first()).toBeVisible();
 
     await expect(page.getByTestId('mentorias-hoje')).toBeVisible();
   });

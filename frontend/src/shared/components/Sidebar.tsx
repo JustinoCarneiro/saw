@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { NavLink } from 'react-router-dom';
 import logoSawIcon from '../../assets/logo-saw-icon.png';
 import type { Modulo } from '../lib/types';
+import { ICON_PROPS } from './iconProps';
 import styles from './Sidebar.module.css';
 
 interface NavItem {
@@ -10,17 +11,6 @@ interface NavItem {
   label: string;
   icon: ReactElement;
 }
-
-const ICON_PROPS = {
-  width: 19,
-  height: 19,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.6,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-};
 
 const NAV_ITEMS: NavItem[] = [
   {

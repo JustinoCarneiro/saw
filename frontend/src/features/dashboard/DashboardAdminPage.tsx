@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { areaLabel } from '../../shared/components/Pill';
+import { Sparkline } from '../../shared/components/Sparkline';
 import { Topbar } from '../../shared/components/Topbar';
 import { formatBRL, formatPct } from '../../shared/lib/format';
 import type { DashboardAdminResponse, Plano } from '../../shared/lib/types';
@@ -16,8 +18,33 @@ const PLANO_COLOR: Record<Plano, string> = {
   GRATUITO: 'var(--text-faint)', BASICO: 'var(--info)', ESSENCIAL: 'var(--gold)', PROFISSIONAL: 'var(--success)',
 };
 
-const ATIVIDADE_ICONE: Record<string, string> = {
-  MENTORADO_CADASTRADO: '👤', EVENTO_CRIADO: '📅', CONTEUDO_PUBLICADO: '📄',
+// M23 — trocado de emoji (único lugar do sistema que usava; quebrava design/DESIGN.md §8:
+// "Linear, traço ~1.6px, cantos arredondados, currentColor") por SVG no mesmo ICON_PROPS da
+// Sidebar. Pessoa/documento reaproveitam exatamente o traço dos ícones de nav de Mentorados/
+// Conteúdos; calendário replica o já usado em PeriodoPicker.
+const ATIVIDADE_ICONE: Record<string, JSX.Element> = {
+  MENTORADO_CADASTRADO: (
+    <svg {...ICON_PROPS} width={16} height={16}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3 20c0-3.3 3-5 6-5s6 1.7 6 5" />
+      <circle cx="17.5" cy="9" r="2.2" />
+      <path d="M17.5 13.5c2 .4 3.5 1.7 3.5 4" />
+    </svg>
+  ),
+  EVENTO_CRIADO: (
+    <svg {...ICON_PROPS} width={16} height={16} viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
+  CONTEUDO_PUBLICADO: (
+    <svg {...ICON_PROPS} width={16} height={16}>
+      <path d="M4 5h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2Z" />
+      <path d="M8 9h6M8 13h6" />
+    </svg>
+  ),
 };
 
 function variacaoCor(pct: number): string {
@@ -79,6 +106,12 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         <Card style={{ padding: 18 }} testId="kpi-mentorados-ativos">
           <div className={styles.kpiLabel}>Mentorados ativos</div>
           <div className={styles.kpiValue}>{dashboard.mentoradosAtivos}</div>
+          <div className={styles.kpiSparkline} data-testid="kpi-mentorados-ativos-sparkline">
+            <Sparkline
+              pontos={dashboard.crescimentoMentorados.map((c) => ({ mes: c.mes, valor: c.total }))}
+              color={variacaoCor(dashboard.variacaoMentoradosAtivosPct)}
+            />
+          </div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoMentoradosAtivosPct) }}>
             {formatPct(dashboard.variacaoMentoradosAtivosPct)} este mês
           </div>
@@ -86,6 +119,9 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         <Card style={{ padding: 18 }} testId="kpi-mentorias-realizadas">
           <div className={styles.kpiLabel}>Mentorias realizadas</div>
           <div className={styles.kpiValue}>{dashboard.mentoriasRealizadas}</div>
+          <div className={styles.kpiSparkline} data-testid="kpi-mentorias-realizadas-sparkline">
+            <Sparkline pontos={dashboard.historicoMentoriasRealizadas} color={variacaoCor(dashboard.variacaoMentoriasRealizadasPct)} />
+          </div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoMentoriasRealizadasPct) }}>
             {formatPct(dashboard.variacaoMentoriasRealizadasPct)} este mês
           </div>
@@ -93,6 +129,9 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         <Card style={{ padding: 18 }} testId="kpi-eventos-realizados">
           <div className={styles.kpiLabel}>Eventos realizados</div>
           <div className={styles.kpiValue}>{dashboard.eventosRealizados}</div>
+          <div className={styles.kpiSparkline} data-testid="kpi-eventos-realizados-sparkline">
+            <Sparkline pontos={dashboard.historicoEventosRealizados} color={variacaoCor(dashboard.variacaoEventosRealizadosPct)} />
+          </div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoEventosRealizadosPct) }}>
             {formatPct(dashboard.variacaoEventosRealizadosPct)} este mês
           </div>
@@ -100,6 +139,9 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         <Card style={{ padding: 18 }} testId="kpi-receita-mes">
           <div className={styles.kpiLabel}>Receita este mês</div>
           <div className={styles.kpiValue}>{formatBRL(dashboard.receitaMes)}</div>
+          <div className={styles.kpiSparkline} data-testid="kpi-receita-mes-sparkline">
+            <Sparkline pontos={dashboard.historicoReceitaMes} color={variacaoCor(dashboard.variacaoReceitaMesPct)} />
+          </div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoReceitaMesPct) }}>
             {formatPct(dashboard.variacaoReceitaMesPct)} este mês
           </div>

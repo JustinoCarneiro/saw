@@ -76,8 +76,12 @@ class DashboardAdminServiceTest {
         when(eventoRepository.buscarComFiltro(null, null)).thenReturn(List.of());
         when(conteudoRepository.buscarComFiltro(null, null, true)).thenReturn(List.of());
         var faturamento = new DashboardFaturamentoResponse(BigDecimal.ZERO, BigDecimal.ZERO, 0.0, List.of());
-        when(relatorioFinanceiroService.dashboardFaturamento(atual.getYear(), atual.getMonthValue())).thenReturn(faturamento);
-        when(relatorioFinanceiroService.dashboardFaturamento(anterior.getYear(), anterior.getMonthValue())).thenReturn(faturamento);
+        // historicoReceita (M23) chama dashboardFaturamento pra cada um dos 6 meses da janela
+        // deslizante, não só atual/anterior — este loop cobre os dois (i=4 e i=5) também.
+        for (int i = 0; i < 6; i++) {
+            YearMonth mes = atual.minusMonths(5L - i);
+            when(relatorioFinanceiroService.dashboardFaturamento(mes.getYear(), mes.getMonthValue())).thenReturn(faturamento);
+        }
     }
 
     @Test
@@ -186,6 +190,57 @@ class DashboardAdminServiceTest {
         assertThat(resposta.mentoriasHoje()).hasSize(1);
         assertThat(resposta.mentoriasHoje().get(0).status()).isEqualTo(StatusMentoria.CONFIRMADA);
         assertThat(resposta.mentoriasHoje().get(0).mentoradoNomes()).isEqualTo("Ana");
+    }
+
+    @Test
+    void historicoMentoriasEEventosTemSeisMesesEContaPorMesDeRealizacao() {
+        YearMonth atual = YearMonth.of(2026, 7);
+        YearMonth anterior = atual.minusMonths(1);
+        mockarVazio(atual, anterior);
+
+        Colaborador mentor = new Colaborador(null, "Brayan", Area.GESTAO_PERFORMANCE);
+        Mentorado mentorado = mentoradoEm("Ana", Plano.ESSENCIAL, emMes(anterior, 1), true);
+
+        Mentoria realizadaEsteMes = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(mentorado), emMes(atual, 10), 60, null, null);
+        realizadaEsteMes.confirmar();
+        realizadaEsteMes.realizar();
+        Mentoria realizadaMesPassado = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(mentorado), emMes(anterior, 10), 60, null, null);
+        realizadaMesPassado.confirmar();
+        realizadaMesPassado.realizar();
+        when(mentoriaRepository.buscarPorStatus(null)).thenReturn(List.of(realizadaEsteMes, realizadaMesPassado));
+
+        Evento realizadoMesPassado = new Evento("Workshop", TipoEvento.AO_VIVO, "Tema", emMes(anterior, 5), null, null, 50);
+        realizadoMesPassado.iniciar();
+        realizadoMesPassado.finalizar();
+        when(eventoRepository.buscarComFiltro(null, null)).thenReturn(List.of(realizadoMesPassado));
+
+        DashboardAdminResponse resposta = service().resumo(atual.getYear(), atual.getMonthValue());
+
+        assertThat(resposta.historicoMentoriasRealizadas()).hasSize(6);
+        assertThat(resposta.historicoMentoriasRealizadas().get(5).mes()).isEqualTo("2026-07");
+        assertThat(resposta.historicoMentoriasRealizadas().get(5).valor()).isEqualTo(1.0);
+        assertThat(resposta.historicoMentoriasRealizadas().get(4).mes()).isEqualTo("2026-06");
+        assertThat(resposta.historicoMentoriasRealizadas().get(4).valor()).isEqualTo(1.0);
+
+        assertThat(resposta.historicoEventosRealizados()).hasSize(6);
+        assertThat(resposta.historicoEventosRealizados().get(4).valor()).isEqualTo(1.0);
+        assertThat(resposta.historicoEventosRealizados().get(5).valor()).isEqualTo(0.0);
+    }
+
+    @Test
+    void historicoReceitaTemSeisMesesUsandoOFaturamentoDeCadaMes() {
+        YearMonth atual = YearMonth.of(2026, 7);
+        YearMonth anterior = atual.minusMonths(1);
+        mockarVazio(atual, anterior);
+
+        var faturamentoDeJulho = new DashboardFaturamentoResponse(new BigDecimal("5000.00"), BigDecimal.ZERO, 0.0, List.of());
+        when(relatorioFinanceiroService.dashboardFaturamento(atual.getYear(), atual.getMonthValue())).thenReturn(faturamentoDeJulho);
+
+        DashboardAdminResponse resposta = service().resumo(atual.getYear(), atual.getMonthValue());
+
+        assertThat(resposta.historicoReceitaMes()).hasSize(6);
+        assertThat(resposta.historicoReceitaMes().get(5).mes()).isEqualTo("2026-07");
+        assertThat(resposta.historicoReceitaMes().get(5).valor()).isEqualTo(5000.0);
     }
 
     @Test

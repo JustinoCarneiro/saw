@@ -8,6 +8,7 @@ import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.AtividadeRecente
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.CrescimentoMesItem;
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.DistribuicaoPlanoItem;
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.MentoriaHojeItem;
+import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.SparklinePonto;
 import com.sawhub.hub.evento.Evento;
 import com.sawhub.hub.evento.EventoRepository;
 import com.sawhub.hub.evento.StatusEvento;
@@ -95,7 +96,10 @@ public class DashboardAdminService {
                 crescimentoUltimosMeses(mentorados, periodo),
                 distribuicaoPorPlano(mentorados),
                 atividadesRecentes(mentorados, eventos),
-                mentoriasDeHoje(mentorias));
+                mentoriasDeHoje(mentorias),
+                historicoMentorias(mentorias, periodo),
+                historicoEventos(eventos, periodo),
+                historicoReceita(periodo));
     }
 
     private static long contarCadastradosAte(List<Mentorado> mentorados, LocalDate fimDoMes) {
@@ -122,10 +126,43 @@ public class DashboardAdminService {
         return doInstante.equals(mes);
     }
 
-    private static List<CrescimentoMesItem> crescimentoUltimosMeses(List<Mentorado> mentorados, YearMonth periodo) {
+    // M23 — extraído pra reuso quando historicoMentorias/historicoEventos/historicoReceita
+    // passaram a precisar da mesma janela deslizante de 6 meses (mesmo critério do M16:
+    // centralizar assim que uma segunda/terceira duplicação real aparece).
+    private static List<YearMonth> ultimosMeses(YearMonth periodo) {
         return java.util.stream.IntStream.rangeClosed(0, MESES_CRESCIMENTO - 1)
                 .mapToObj(i -> periodo.minusMonths((long) MESES_CRESCIMENTO - 1 - i))
+                .toList();
+    }
+
+    private static List<CrescimentoMesItem> crescimentoUltimosMeses(List<Mentorado> mentorados, YearMonth periodo) {
+        return ultimosMeses(periodo).stream()
                 .map(mes -> new CrescimentoMesItem(mes.toString(), contarCadastradosAte(mentorados, mes.atEndOfMonth())))
+                .toList();
+    }
+
+    private static List<SparklinePonto> historicoMentorias(List<Mentoria> mentorias, YearMonth periodo) {
+        return ultimosMeses(periodo).stream()
+                .map(mes -> new SparklinePonto(mes.toString(),
+                        contarMentoriasPorStatusEMes(mentorias, StatusMentoria.REALIZADA, mes)))
+                .toList();
+    }
+
+    private static List<SparklinePonto> historicoEventos(List<Evento> eventos, YearMonth periodo) {
+        return ultimosMeses(periodo).stream()
+                .map(mes -> new SparklinePonto(mes.toString(),
+                        contarEventosPorStatusEMes(eventos, StatusEvento.REALIZADO, mes)))
+                .toList();
+    }
+
+    // Chama o dashboard de faturamento uma vez por mês da janela (6x) — dataset pequeno, endpoint
+    // admin autenticado, mesmo raciocínio de "não vale complicar por volume" já usado em
+    // Financeiro/LancamentoService pro filtro em memória.
+    private List<SparklinePonto> historicoReceita(YearMonth periodo) {
+        return ultimosMeses(periodo).stream()
+                .map(mes -> new SparklinePonto(mes.toString(),
+                        relatorioFinanceiroService.dashboardFaturamento(mes.getYear(), mes.getMonthValue())
+                                .faturamentoMensal().doubleValue()))
                 .toList();
     }
 

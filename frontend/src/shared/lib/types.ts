@@ -604,6 +604,13 @@ export interface MentoriaHojeItem {
   status: StatusMentoria;
 }
 
+// M23 — sparkline nos KPIs; mesma janela de 6 meses de CrescimentoMesItem, genérico o bastante
+// pra contagem (mentorias/eventos) ou valor monetário (receita).
+export interface SparklinePonto {
+  mes: string;
+  valor: number;
+}
+
 export interface DashboardAdminResponse {
   mentoradosAtivos: number;
   variacaoMentoradosAtivosPct: number;
@@ -617,4 +624,7 @@ export interface DashboardAdminResponse {
   distribuicaoPlano: DistribuicaoPlanoItem[];
   atividadesRecentes: AtividadeRecente[];
   mentoriasHoje: MentoriaHojeItem[];
+  historicoMentoriasRealizadas: SparklinePonto[];
+  historicoEventosRealizados: SparklinePonto[];
+  historicoReceitaMes: SparklinePonto[];
 }

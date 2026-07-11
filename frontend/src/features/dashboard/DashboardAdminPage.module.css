@@ -44,6 +44,11 @@
   margin: 8px 0 2px;
 }
 
+.kpiSparkline {
+  margin: 6px 0;
+  opacity: 0.85;
+}
+
 .kpiHint {
   font-size: 11px;
   color: var(--text-faint);
@@ -172,6 +177,8 @@
 
 .atividadeIcone {
   flex: none;
+  display: flex;
+  color: var(--gold-soft);
 }
 
 .atividadeDescricao {
