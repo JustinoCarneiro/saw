@@ -1,14 +1,19 @@
 package com.sawhub.hub.mentorado;
 
+import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.mentorado.dto.AtualizarMentoradoRequest;
 import com.sawhub.hub.mentorado.dto.MentoradoCriadoResponse;
 import com.sawhub.hub.mentorado.dto.MentoradoResponse;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /** H11.1 — CRUD administrativo de mentorados. */
 @RestController
@@ -27,9 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class MentoradoAdminController {
 
     private final MentoradoAdminService mentoradoAdminService;
+    private final MentoradoCsvService mentoradoCsvService;
 
-    public MentoradoAdminController(MentoradoAdminService mentoradoAdminService) {
+    public MentoradoAdminController(MentoradoAdminService mentoradoAdminService, MentoradoCsvService mentoradoCsvService) {
         this.mentoradoAdminService = mentoradoAdminService;
+        this.mentoradoCsvService = mentoradoCsvService;
     }
 
     @GetMapping
@@ -59,5 +67,26 @@ public class MentoradoAdminController {
     public MentoradoCriadoResponse criarAPartirDeLead(@PathVariable UUID leadId) {
         var resultado = mentoradoAdminService.criarAPartirDeLead(leadId);
         return MentoradoCriadoResponse.from(resultado.mentorado(), resultado.senhaTemporaria());
+    }
+
+    // M22 — mesmos filtros de GET /mentorados.
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportar(@RequestParam(required = false) Plano plano,
+                                            @RequestParam(required = false) StatusMentorado status,
+                                            @RequestParam(required = false) String busca) {
+        String csv = mentoradoCsvService.exportar(plano, status, busca);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"mentorados.csv\"")
+                .body(csv.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // M22 — bulk-UPDATE apenas (resolve por e-mail já existente); 200 se tudo foi validado e
+    // persistido, 422 se nada foi (ver erros no corpo).
+    @PostMapping("/import")
+    public ResponseEntity<ImportResultResponse> importar(@RequestParam("arquivo") MultipartFile arquivo) {
+        ImportResultResponse resultado = mentoradoCsvService.importar(arquivo);
+        HttpStatus status = resultado.erros().isEmpty() ? HttpStatus.OK : HttpStatus.UNPROCESSABLE_ENTITY;
+        return ResponseEntity.status(status).body(resultado);
     }
 }

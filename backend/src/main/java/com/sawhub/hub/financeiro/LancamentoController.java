@@ -1,7 +1,7 @@
 package com.sawhub.hub.financeiro;
 
+import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.financeiro.dto.CriarLancamentoRequest;
-import com.sawhub.hub.financeiro.dto.ImportResultResponse;
 import com.sawhub.hub.financeiro.dto.LancamentoResponse;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;

@@ -2548,6 +2548,138 @@ Ambas as correções viraram testes novos (`CsvUtilsTest.exigirArquivoCsv*`) e f
 ao vivo via curl (PDF disfarçado de `.csv` → 400 por content-type; arquivo de 2.16MB → 400 por
 tamanho; import válido continua funcionando).
 
+## Blueprint (M22 · Import/Export CSV — Mentorados + Comercial/Leads)
+
+Continuação do pedido do Marcos que originou o M21 ("em todos os ambientes de dados") — ele
+escolheu, via pergunta explícita, estender agora pra Mentorados e Comercial (Leads), os dois
+próximos candidatos já registrados na Rastreabilidade do Blueprint do M21.
+
+**Achado ao pesquisar antes de desenhar — Mentorados não se encaixa no padrão do M21 sem uma
+decisão de produto.** `Mentorado` é `@OneToOne` obrigatório e `UNIQUE` com `Usuario` (conta de
+login) — não existe Mentorado sem conta. Hoje a ÚNICA via de criação é
+`MentoradoAdminService.criarAPartirDeLead()`, que exige um `Lead` já `FECHADO`, gera uma senha
+temporária aleatória (`SecureRandom`, mostrada uma única vez, não recuperável depois) e não tem
+nenhuma tela pensada pra exibir N senhas de uma vez. Perguntado ao Marcos: **import de Mentorados
+faz só bulk-UPDATE de mentorados que já existem** (resolvidos por e-mail) — nunca cria conta nova,
+nunca gera senha. Isso também resolve de propósito o Comercial: **import de Lead sempre entra em
+`SOLICITACAO`**, o mesmo estágio do formulário público de captação — não precisa andar a máquina de
+estado da entidade nem resolver vendedor por nome.
+
+**Achado de design que distingue este módulo do M21 (não é só "copiar o padrão"): o import de
+Mentorados precisa ser em DUAS passadas, não uma.** No M21, cada linha do CSV vira uma entidade
+NOVA (`new LancamentoFinanceiro(...)`), nunca carregada do banco — por isso dava pra validar e
+guardar numa lista, e só chamar `saveAll()` no final se não houvesse erro nenhum (as entidades
+nunca tocaram a sessão do Hibernate antes disso). Mentorado é diferente: pra validar uma linha
+("este e-mail existe? o mentorado ligado a ele pode ser atualizado?") é preciso CARREGAR a entidade
+existente — e a partir do momento em que ela é carregada dentro da transação, ela vira uma entidade
+GERENCIADA pelo Hibernate. Se a linha 1 for válida e eu já chamar `mentorado.atualizar(...)`
+(mutando a entidade gerenciada) antes de saber se a linha 5 vai falhar, o `SELECT` da linha 2 pode
+disparar um auto-flush do Hibernate (`FlushMode.AUTO` verifica estado sujo antes de qualquer query)
+e mandar o `UPDATE` da linha 1 pro Postgres *dentro da mesma transação* — `entityManager.clear()`
+não desfaz um `UPDATE` já enviado, só desanexa os objetos Java da sessão. Resultado: um import
+"tudo-ou-nada" que na prática deixaria a linha 1 persistida mesmo com a linha 5 inválida, quebrando
+a garantia central do M21 sem nenhum teste unitário (baseado em mock) capaz de pegar isso.
+**Correção de design:** `MentoradoCsvService.importar()` faz duas passadas — a primeira só LÊ
+(resolve e-mail → `Usuario` → `Mentorado`, valida formato de todos os campos, guarda tudo num
+record temporário `LinhaValidada`, nunca chama `atualizar()`/`ativar()`/`desativar()`/
+`definirVencimentoPlano()`); só na segunda passada, e só se a primeira não tiver erro nenhum, é que
+as mutações acontecem e `saveAll()` é chamado. Verificado ao vivo via curl (não só por teste
+unitário, ver Pendência abaixo): cria 2 mentorados reais, importa um CSV com a linha 1 válida
+mudando o nome e a linha 2 com e-mail inexistente, confirma via `GET` que o nome da linha 1
+**não mudou**.
+
+**Suposições (decisões tomadas sem confirmação explícita adicional, documentadas):**
+1. Import de Comercial não precisa resolver `vendedor` por nome (confirmado com o Marcos: sempre
+   `SOLICITACAO`) — `ColaboradorRepository` não ganha nenhum método novo nesta leva.
+2. Sem deduplicação em nenhum dos dois imports — mesma decisão já documentada no M21 (Suposição 5):
+   nem `lead.email` nem `usuario.email`/`mentorado` têm um caminho de "upsert automático" fora do
+   caso já coberto (Mentorados resolve por e-mail EXISTENTE; um e-mail que não existir vira erro de
+   linha, nunca cria um novo). Reimportar o mesmo CSV de Leads duas vezes cria leads duplicados —
+   comportamento esperado de um import CSV sem chave externa, mesmo raciocínio do M21.
+3. `LeadRateLimitFilter` (5 req/10min) é hardcoded pro path exato `POST /api/v1/leads` (formulário
+   público) — confirmado que não afeta `POST /admin/comercial/leads/import` (path diferente).
+4. `ImportErro`/`ImportResultResponse` (hoje em `com.sawhub.hub.financeiro.dto`, usados só por
+   Financeiro) migram pra `com.sawhub.hub.common` — terceira e quarta reutilização real (Mentorados,
+   Comercial), mesmo critério do M16 ("centralizar na segunda duplicação real, não esperar a
+   terceira" — aqui já são a segunda E a terceira de uma vez). `CsvUtils` já nasceu em `common` no
+   M21, então os dois novos services importam de lá sem nenhuma mudança.
+5. Export de Leads traz TODOS os estágios do funil (não só `SOLICITACAO`) — é leitura, sem a
+   restrição do import; inclui `vendedor` (nome, se atribuído), `planoFechado`, `motivoPerdido`,
+   `dataFechamento` formatada em pt-BR (`dd/MM/yyyy HH:mm`, fuso `America/Sao_Paulo`).
+6. Export de Mentorados usa os mesmos filtros de `GET /admin/mentorados` (`plano`, `status`,
+   `busca`); import não filtra nada, cada linha resolve seu próprio mentorado por e-mail.
+
+**Contratos de API:**
+
+```
+GET /api/v1/admin/mentorados/export?plano=&status=&busca=
+// Content-Disposition: attachment; filename="mentorados.csv"
+// Cabeçalho: email;nome;negocio;plano;vencimentoPlano;status
+
+POST /api/v1/admin/mentorados/import
+// multipart/form-data, campo "arquivo" — mesmas colunas do export acima. email é a CHAVE (precisa
+// já existir); nome e plano e status são obrigatórios, negocio e vencimentoPlano são opcionais.
+// Bulk-UPDATE apenas — nunca cria Usuario/Mentorado novo.
+// Response 200 (tudo válido e persistido) ou 422 (nada persistido):
+{ "totalLinhas": 3, "importados": 3, "erros": [] }
+// ou
+{
+  "totalLinhas": 3, "importados": 0,
+  "erros": [{ "linha": 3, "motivo": "Mentorado com e-mail \"ex@x.com\" não encontrado." }]
+}
+
+GET /api/v1/admin/comercial/leads/export?status=&vendedorId=
+// Content-Disposition: attachment; filename="leads.csv"
+// Cabeçalho: nome;email;telefone;mensagem;planoInteresse;status;vendedor;planoFechado;motivoPerdido;dataFechamento
+
+POST /api/v1/admin/comercial/leads/import
+// multipart/form-data, campo "arquivo" — cabeçalho: nome;email;telefone;mensagem;planoInteresse
+// (subconjunto do export — os campos de funil não fazem sentido num lead que ainda não existe).
+// Toda linha vira um Lead novo em SOLICITACAO, igual ao formulário público. Mesma forma de
+// resposta 200/422 do import de Mentorados.
+```
+
+**Rastreabilidade:** mesmo caso do M21 — pedido direto do Marcos, fora do levantamento original de
+`spec.md`. Com Financeiro (M21) + Mentorados + Comercial (M22) cobertos, os três "ambientes de
+dados" mais citados na conversa original estão atendidos; qualquer extensão futura (Time, Loja,
+Conteúdos) fica como novo pedido explícito, não decisão unilateral.
+
+**Cobertura de teste da garantia de duas passadas:** Mockito não reproduz `FlushMode.AUTO` do
+Hibernate (mesma classe de limitação do `LazyInitializationException` documentada desde o M05) —
+por isso essa garantia específica ganha um `@DataJpaTest` dedicado (repositórios reais, sessão real
+do Hibernate, mesmo padrão do `ContaPagarReceberRepositoryTest` do M21), não só um teste Mockito.
+
+**Status: ✅ Concluído** — backend (376/376 testes, incluindo `MentoradoCsvServiceTest`,
+`MentoradoCsvServiceRepositoryTest` (`@DataJpaTest`, prova a garantia de duas passadas contra
+sessão real do Hibernate) e `LeadCsvServiceTest`) + `revisor-seguranca` (veredito **Seguro**, zero
+achados bloqueantes) + frontend (reaproveita `CsvImportExport` do M21 sem alteração, integrado em
+`MentoradosListaPage`/`LeadsComercialPage`) + E2E (6/6 novos em
+`mentorados-comercial-import-export.spec.ts`, 86/86 na suíte completa).
+
+**Refatoração feita como parte deste módulo:** `ImportErro`/`ImportResultResponse` migraram de
+`com.sawhub.hub.financeiro.dto` pra `com.sawhub.hub.common.dto` — Mentorados e Comercial são o
+segundo e terceiro consumidor real, mesmo critério do M16 (centralizar assim que surge duplicação
+real, não esperar).
+
+**Achados do `revisor-seguranca`, ambos informacionais, sem correção necessária:**
+1. Se o mesmo e-mail aparecer em duas linhas do CSV de Mentorados, a segunda "vence" silenciosamente
+   na segunda passada (cache de primeiro nível do Hibernate devolve a mesma entidade gerenciada nas
+   duas resoluções) — sem risco de segurança, só uma possível surpresa de UX num CSV com e-mails
+   duplicados. Não corrigido nesta leva (deduplicar exigiria uma decisão de produto — qual linha
+   deveria vencer — fora do escopo pedido).
+2. A primeira passada do import de Mentorados faz 2 SELECTs por linha (até 10.000 queries no teto
+   de 5.000 linhas) — irrelevante na escala atual (MVP, 10-15 mentorados, teto de 2MB por arquivo),
+   registrado caso o volume cresça no futuro.
+
+**Achado ao vivo durante a escrita do E2E (não é bug de produção, é lição de teste):** um teste que
+faz `loginAs()` seguido imediatamente de `page.goto()` corre risco de cortar o redirect pós-login
+antes dele assentar — `page.goto()` é uma navegação nova que não espera a resposta pendente do
+POST de login. Sintoma observado: `page.waitForEvent('download')`/`setInputFiles` davam timeout de
+30s com a página ainda mostrando o formulário de login. Todos os testes existentes desta suíte já
+evitavam isso navegando via clique em link (que só existe depois do redirect renderizar); corrigido
+adicionando `await expect(page).toHaveURL(/\/admin\//)` logo após todo `loginAs()`, antes de
+qualquer `page.goto()` subsequente — ver lição na memória do projeto.
+
 ## Fórmula de prazo
 
 ```

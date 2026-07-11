@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
@@ -69,6 +70,13 @@ export function LeadsComercialPage() {
             ))}
           </select>
         </div>
+        <CsvImportExport
+          exportUrl="/admin/comercial/leads/export"
+          exportParams={{ status: status || undefined, vendedorId: vendedorId || undefined }}
+          exportFilename="leads.csv"
+          importUrl="/admin/comercial/leads/import"
+          onImportado={carregar}
+        />
       </div>
 
       {acao && (

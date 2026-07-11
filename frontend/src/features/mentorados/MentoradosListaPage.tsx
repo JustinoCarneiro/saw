@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
@@ -58,9 +59,18 @@ export function MentoradosListaPage() {
           </select>
           <input className={styles.textInput} placeholder="Buscar por nome…" value={busca} onChange={(e) => setBusca(e.target.value)} />
         </div>
-        <button className={styles.newButton} onClick={() => setCriando(true)}>
-          <span style={{ fontSize: 16 }}>+</span>Criar a partir de um lead
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <CsvImportExport
+            exportUrl="/admin/mentorados/export"
+            exportParams={{ plano: plano || undefined, status: status || undefined, busca: busca || undefined }}
+            exportFilename="mentorados.csv"
+            importUrl="/admin/mentorados/import"
+            onImportado={carregar}
+          />
+          <button className={styles.newButton} onClick={() => setCriando(true)}>
+            <span style={{ fontSize: 16 }}>+</span>Criar a partir de um lead
+          </button>
+        </div>
       </div>
 
       {criando && (

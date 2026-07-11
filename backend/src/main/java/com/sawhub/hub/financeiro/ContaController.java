@@ -1,8 +1,8 @@
 package com.sawhub.hub.financeiro;
 
+import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.financeiro.dto.ContaResponse;
 import com.sawhub.hub.financeiro.dto.CriarContaRequest;
-import com.sawhub.hub.financeiro.dto.ImportResultResponse;
 import com.sawhub.hub.financeiro.dto.LiquidarContaRequest;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;

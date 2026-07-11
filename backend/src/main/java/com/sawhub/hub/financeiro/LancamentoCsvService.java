@@ -1,8 +1,8 @@
 package com.sawhub.hub.financeiro;
 
 import com.sawhub.hub.common.CsvUtils;
-import com.sawhub.hub.financeiro.dto.ImportErro;
-import com.sawhub.hub.financeiro.dto.ImportResultResponse;
+import com.sawhub.hub.common.dto.ImportErro;
+import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.mentorado.Plano;
 import java.io.IOException;
 import java.io.StringWriter;
