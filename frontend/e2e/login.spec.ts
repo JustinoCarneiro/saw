@@ -4,7 +4,7 @@ import { loginAs } from './helpers';
 test.describe('Login', () => {
   test('renders the login form', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByText('SAW', { exact: true })).toBeVisible();
+    await expect(page.getByAltText(/SAW/)).toBeVisible();
     await expect(page.getByLabel('E-mail')).toBeVisible();
     await expect(page.getByLabel('Senha', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();

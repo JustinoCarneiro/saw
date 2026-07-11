@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { NavLink } from 'react-router-dom';
+import logoSawIcon from '../../assets/logo-saw-icon.png';
 import type { Modulo } from '../lib/types';
 import styles from './Sidebar.module.css';
 
@@ -117,10 +118,7 @@ export function Sidebar({ modulosPermitidos, onLogout }: SidebarProps) {
   return (
     <aside className={styles.aside}>
       <div className={styles.brand}>
-        <svg width="34" height="34" viewBox="0 0 44 44" fill="none">
-          <rect x="22" y="6" width="22" height="22" rx="3.5" transform="rotate(45 22 6)" stroke="#F0B050" strokeWidth="1.5" />
-          <rect x="22" y="14" width="10" height="10" rx="2" transform="rotate(45 22 14)" stroke="#F0B050" strokeWidth="1.3" />
-        </svg>
+        <img src={logoSawIcon} alt="SAW" width={34} height={34} />
         <div className={styles.brandWord}>SAW</div>
         <span className={styles.brandTag}>ADMIN</span>
       </div>

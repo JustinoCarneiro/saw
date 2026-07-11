@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import logoSaw from '../../assets/logo-saw.png';
 import { useAuth } from './AuthContext';
 import { apiClient } from '../../shared/lib/apiClient';
 import { firstPermittedRoute } from '../../shared/lib/moduloRoutes';
@@ -77,12 +78,7 @@ export function LoginPage() {
         <div className={styles.grid}>
           <form className={styles.form} onSubmit={handleSubmit}>
             <div className={styles.logoBlock}>
-              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-                <rect x="22" y="4" width="25.5" height="25.5" rx="4" transform="rotate(45 22 4)" stroke="#F0B050" strokeWidth="1.6" />
-                <rect x="22" y="13" width="12.7" height="12.7" rx="2" transform="rotate(45 22 13)" stroke="#F0B050" strokeWidth="1.4" />
-              </svg>
-              <div className={styles.wordmark}>SAW</div>
-              <div className={styles.eyebrow}>ESCOLA DE RESTAURANTES</div>
+              <img className={styles.logoImg} src={logoSaw} alt="SAW — Escola de Restaurantes" />
             </div>
 
             <h1 className={styles.headline}>

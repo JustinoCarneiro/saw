@@ -56,8 +56,12 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
     await page.getByRole('button', { name: 'Entendi' }).click();
 
+    // "Negócio Atualizado" (fixo) sozinho colide entre execuções — só o nome é único por
+    // execução, então a checagem do negócio precisa ficar escopada à linha certa (mesma classe
+    // de lição M09/M20: nunca assumir texto fixo como identificador único num teste repetível).
+    const negocio = `Negócio Atualizado ${timestamp}`;
     const csv = `email;nome;negocio;plano;vencimentoPlano;status\n`
-        + `${email};${nome} Atualizado;Negócio Atualizado;PROFISSIONAL;;ATIVO\n`;
+        + `${email};${nome} Atualizado;${negocio};PROFISSIONAL;;ATIVO\n`;
 
     await main.getByTestId('csv-importar-input').setInputFiles({
       name: 'mentorados.csv',
@@ -66,8 +70,8 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     });
 
     await expect(main.getByTestId('csv-import-sucesso')).toContainText('1 linha(s) importada(s)');
-    await expect(main.getByText(`${nome} Atualizado`)).toBeVisible();
-    await expect(main.getByText('Negócio Atualizado')).toBeVisible();
+    const linhaAtualizada = main.locator('text=' + `${nome} Atualizado`).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await expect(linhaAtualizada.getByText(negocio)).toBeVisible();
   });
 
   test('Mentorados: importar CSV com e-mail inexistente mostra o erro por linha e não muta nada', async ({ page }) => {

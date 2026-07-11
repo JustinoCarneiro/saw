@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import logoSaw from '../../assets/logo-saw.png';
 import { apiClient } from '../../shared/lib/apiClient';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import styles from './SolicitarAcessoPage.module.css';
@@ -38,12 +39,7 @@ export function RedefinirSenhaPage() {
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.logoBlock}>
-          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-            <rect x="22" y="4" width="25.5" height="25.5" rx="4" transform="rotate(45 22 4)" stroke="#F0B050" strokeWidth="1.6" />
-            <rect x="22" y="13" width="12.7" height="12.7" rx="2" transform="rotate(45 22 13)" stroke="#F0B050" strokeWidth="1.4" />
-          </svg>
-          <div className={styles.wordmark}>SAW</div>
-          <div className={styles.eyebrow}>ESCOLA DE RESTAURANTES</div>
+          <img className={styles.logoImg} src={logoSaw} alt="SAW — Escola de Restaurantes" />
         </div>
 
         {redefinida ? (
