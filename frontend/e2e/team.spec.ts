@@ -63,7 +63,9 @@ test('M20 — H15.6/H15.7: carteira e desempenho do time são computados, não f
   // ordem de execução; a meta em si é fixa.
   const linhaDesempenho = main.locator('[data-testid^="desempenho-row-"]', { hasText: 'Paula Mendes' });
   await expect(linhaDesempenho).toBeVisible();
-  await expect(linhaDesempenho.getByText('5', { exact: true })).toBeVisible();
+  // getByText('5') sozinho é ambíguo: Meta e Realizado podem coincidir no mesmo valor
+  // dependendo da ordem de execução (ver comentário acima) — escopa pra célula certa.
+  await expect(linhaDesempenho.getByTestId('meta-fechamentos')).toHaveText('5');
 
   await page.screenshot({ path: 'e2e/screenshots/team-desempenho.png', fullPage: true });
 });

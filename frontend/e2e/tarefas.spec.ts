@@ -65,15 +65,17 @@ test.describe('M10 — E4 Tarefas & Agenda', () => {
   });
 
   test('isolamento por tenant: mentorado só vê as próprias tarefas seedadas', async ({ page }) => {
-    // Carlos Menezes: 10 encaminhamentos do seedMentorados + 1 materializado via ata do M06
-    // (AtaService.publicar -> "Revisar precificação do buffet", mentoria em grupo com Ana) = 11.
-    // Se a query vazasse dado de outro mentorado, o total não bateria com o seed conhecido.
+    // Carlos Menezes: 10 encaminhamentos do seedMentorados. A ata da mentoria em grupo com Ana
+    // (ver DemoDataSeeder) fica deliberadamente em RASCUNHO — nunca publicada em nenhum spec
+    // (ver mentorias.spec.ts "ata ainda não publicada nunca aparece...") — então suas sugestões
+    // nunca viram Encaminhamento real; não soma ao total. Se a query vazasse dado de outro
+    // mentorado, o total não bateria com o seed conhecido.
     await loginAs(page, 'carlos@pointdocarlos.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
 
     const res = await page.request.get('/api/v1/mentorado/tarefas');
     expect(res.status()).toBe(200);
     const tarefas = await res.json();
-    expect(tarefas).toHaveLength(11);
+    expect(tarefas).toHaveLength(10);
   });
 });

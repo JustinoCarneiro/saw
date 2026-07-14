@@ -33,6 +33,11 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:sawhub_redis_pass}
+      # database (índice lógico do Redis, não precisa de container separado) isola sessão e
+      # chaves de rate-limiter do ambiente de E2E (scripts/e2e-up.sh usa REDIS_DATABASE=1) do
+      # ambiente de dev interativo (índice 0) — sem isso, rodar a suíte enquanto navega o
+      # dev manualmente podia derrubar rate-limit ou sessão um do outro.
+      database: ${REDIS_DATABASE:0}
 
   session:
     store-type: redis

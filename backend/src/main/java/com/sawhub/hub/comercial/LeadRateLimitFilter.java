@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -17,18 +18,25 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Janela fixa por IP via Redis (já é dependência do projeto pra sessão, não precisa de lib nova):
  * 5 solicitações a cada 10 minutos é generoso pro caso real (visitante reenviando após um erro
  * de digitação), mas limita um flood automatizado.
+ * <p>
+ * {@code app.rate-limit.lead} é configurável (default 5) só porque a suíte E2E inteira soma mais
+ * de 5 submissões reais desse formulário público em specs diferentes (comercial.spec.ts,
+ * mentorados.spec.ts, mentorados-comercial-import-export.spec.ts) — todas batendo do mesmo IP
+ * (127.0.0.1) dentro da mesma janela de 10min. scripts/e2e-up.sh sobe o backend isolado com um
+ * teto bem mais alto; dev/produção continuam no default seguro.
  */
 @Component
 public class LeadRateLimitFilter extends OncePerRequestFilter {
 
-    private static final int LIMITE = 5;
+    private final int limite;
     private static final Duration JANELA = Duration.ofMinutes(10);
     private static final String PATH = "/api/v1/leads";
 
     private final StringRedisTemplate redisTemplate;
 
-    public LeadRateLimitFilter(StringRedisTemplate redisTemplate) {
+    public LeadRateLimitFilter(StringRedisTemplate redisTemplate, @Value("${app.rate-limit.lead:5}") int limite) {
         this.redisTemplate = redisTemplate;
+        this.limite = limite;
     }
 
     @Override
@@ -45,7 +53,7 @@ public class LeadRateLimitFilter extends OncePerRequestFilter {
             redisTemplate.expire(chave, JANELA);
         }
 
-        if (contagem != null && contagem > LIMITE) {
+        if (contagem != null && contagem > limite) {
             response.setStatus(429);
             response.setContentType("application/json");
             response.getWriter().write("{\"message\":\"Muitas solicitações. Tente novamente mais tarde.\"}");

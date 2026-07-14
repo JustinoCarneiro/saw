@@ -122,4 +122,5 @@ Cliente pediu explicitamente algo que "feche o projeto na hora". **Confirmado pa
 - **`design/prototipo/` está congelado** — protótipo estático da Fase 2b, não editar mais. Referência visual para a Fase 4, não o código de produção.
 - **Código real do MVP:** `frontend/` (React+Vite) e `backend/` (Spring Boot) na raiz do repositório, a partir da Fase 4.
 - **Dev diário:** `./scripts/dev-up.sh` / `./scripts/dev-down.sh` — sobe infra (Docker) + backend + frontend nativos (hot-reload real). Ver `docs/DEV.md`.
+- **Testes E2E:** `./scripts/e2e-up.sh` / `./scripts/e2e-down.sh` — stack isolada (banco, Redis e portas próprias) só pra rodar o Playwright. **Nunca** rodar a suíte E2E contra o `dev-up.sh` — os specs criam dados reais sem teardown e poluem o ambiente que você está navegando/demonstrando. Ver `docs/DEV.md`.
 - **Dockerfiles de produção** (`backend/Dockerfile`, `frontend/Dockerfile` + `nginx.conf`) prontos pro build do Coolify. `docker-compose.full.yml` sobe a stack inteira containerizada pra testar antes do deploy (`./scripts/full-up.sh` / `./scripts/full-down.sh`) — não é o fluxo de dev diário, só sanity-check pré-deploy.

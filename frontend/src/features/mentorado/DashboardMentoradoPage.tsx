@@ -44,7 +44,7 @@ export function DashboardMentoradoPage() {
           <div className={styles.kpiLabel}>Evolução geral</div>
           <div className={styles.kpiValue}>{dashboard.evolucaoGeralPct}%</div>
         </Card>
-        <Card style={{ padding: 18 }}>
+        <Card style={{ padding: 18 }} testId="kpi-tarefas-abertas">
           <div className={styles.kpiLabel}>Tarefas abertas</div>
           <div className={styles.kpiValue}>{dashboard.tarefasAbertas}</div>
         </Card>

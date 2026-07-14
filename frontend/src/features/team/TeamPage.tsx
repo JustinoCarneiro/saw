@@ -152,8 +152,8 @@ export function TeamPage() {
                   <AreaPill area={d.area} />
                 </div>
                 <div className={styles.metric}>{d.mentoriasRealizadas}</div>
-                <div className={styles.metric}>{d.metaFechamentos ?? '—'}</div>
-                <div className={styles.metric}>{d.fechamentosRealizados ?? '—'}</div>
+                <div className={styles.metric} data-testid="meta-fechamentos">{d.metaFechamentos ?? '—'}</div>
+                <div className={styles.metric} data-testid="fechamentos-realizados">{d.fechamentosRealizados ?? '—'}</div>
                 <div className={styles.metricGood}>
                   {d.pctAtingidoFechamentos != null ? `${d.pctAtingidoFechamentos.toFixed(1)}%` : '—'}
                 </div>

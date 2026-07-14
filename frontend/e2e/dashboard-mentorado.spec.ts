@@ -15,7 +15,9 @@ test.describe('M08 — E2 Dashboard do Mentorado', () => {
     // Rafael Gomes: peso concluído 2 / peso total 11 = 18%; 6 encaminhamentos abertos
     // (ver DemoDataSeeder.seedMentorados) — mesmo cálculo do ProgressoCalculatorTest.
     await expect(page.getByText('18%')).toBeVisible();
-    await expect(page.getByText('6', { exact: true })).toBeVisible();
+    // getByText('6', exact) sozinho é ambíguo: o sino de avisos no topo também pode mostrar "6"
+    // (contagem de não lidos), dependendo do seed — escopa pro card certo.
+    await expect(page.getByTestId('kpi-tarefas-abertas').getByText('6', { exact: true })).toBeVisible();
 
     // Meta semanal ainda não existe (E3) — estado explícito, não um número inventado.
     await expect(page.getByText('Ainda não disponível')).toBeVisible();

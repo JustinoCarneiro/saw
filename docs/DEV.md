@@ -1,7 +1,6 @@
 # Rodando o SAW HUB localmente
 
-Duas formas de subir o sistema, pra dois propósitos diferentes. Não rode as duas ao
-mesmo tempo — as portas 8080/5432/6379 colidem.
+Três formas de subir o sistema, pra três propósitos diferentes.
 
 ## 1. Dev diário — `scripts/dev-up.sh`
 
@@ -17,15 +16,43 @@ roda em Docker.
 
 - Logs: `.dev/logs/{backend,frontend}.log`
 - Login de teste (Fundador, seedado): `matheus@sawhub.com.br` / `trocar-no-primeiro-login`
-- Testes E2E (Playwright): `cd frontend && npm run test:e2e` (precisa do sistema já no ar)
 
-## 2. Sanity-check pré-deploy — `scripts/full-up.sh`
+**Não rode testes E2E contra este ambiente.** Os specs criam dados reais (leads, mentorias,
+lançamentos...) e nunca fazem teardown — rodar a suíte aqui deixa exatamente os dados que você
+está navegando/demonstrando poluídos de registros tipo "Lead M06 E2E 1783558...". Use o
+ambiente isolado abaixo pra isso.
+
+## 2. Testes E2E — `scripts/e2e-up.sh`
+
+Sobe uma stack **isolada** só pra rodar o Playwright: backend na porta 8090 (banco
+`sawhub_db_e2e`, Redis índice lógico 1) + frontend na porta 5183. Reusa o mesmo container de
+Postgres/Redis do fluxo de dev (banco/índice diferente, não infra duplicada), então pode rodar
+com o dev-up.sh no ar ao lado sem os testes poluírem o que você está navegando em `:5173`.
+
+```bash
+./scripts/e2e-up.sh        # sobe backend E2E (:8090) + frontend E2E (:5183)
+cd frontend && E2E_BASE_URL=http://localhost:5183 npm run test:e2e
+./scripts/e2e-down.sh      # para os dois (infra e banco continuam intactos)
+```
+
+- Logs: `.dev/logs/{backend,frontend}-e2e.log`
+- Cada subida reseeda o banco `sawhub_db_e2e` do zero (`SEED_DEMO_DATA=true`) — os testes
+  partem sempre do mesmo estado curado conhecido, não acumulam entre execuções.
+- Se rodar a suíte várias vezes seguidas sem reiniciar o backend E2E, o rate-limiter (Redis)
+  pode barrar os testes que criam lead/reset de senha — limpe antes de repetir:
+  `redis-cli -a sawhub_redis_pass -n 1 --scan --pattern "leadrate:*" | xargs -r redis-cli -a sawhub_redis_pass -n 1 DEL`
+  (troque `-n 1` por `-n 0` se estiver limpando o Redis do dev-up.sh, não do E2E).
+
+## 3. Sanity-check pré-deploy — `scripts/full-up.sh`
 
 Sobe a stack **inteira containerizada** (infra + backend + frontend), front e back
 atrás da mesma origem via Nginx (path-based, igual à config real do Coolify em
 produção). Serve pra validar que os Dockerfiles buildam certo e que sessão/cookie/CSRF
 funcionam na topologia de produção antes de dar deploy — não é o fluxo de dev diário
 (sem hot-reload, precisa rebuildar a imagem a cada mudança).
+
+**Não rode ao mesmo tempo que `scripts/dev-up.sh`** — as portas 8080/5432/6379 colidem
+(diferente do `e2e-up.sh`, que usa portas próprias e convive com o dev nativo).
 
 ```bash
 ./scripts/full-up.sh       # builda as imagens e sobe tudo (front :8081, back :8080)
@@ -52,7 +79,7 @@ SEED_DEMO_DATA=true BOOTSTRAP_FUNDADOR_SENHA=trocar-no-primeiro-login ./mvnw spr
 
 ## Arquivos relevantes
 
-- `docker-compose.yml` — infra base (Postgres, Redis, pgAdmin), usada pelos dois fluxos.
+- `docker-compose.yml` — infra base (Postgres, Redis, pgAdmin), usada pelos três fluxos.
 - `docker-compose.full.yml` — estende o base com `backend` + `frontend` containerizados.
 - `backend/Dockerfile`, `frontend/Dockerfile` + `frontend/nginx.conf` — build de produção,
   os mesmos usados pelo Coolify no deploy real.
