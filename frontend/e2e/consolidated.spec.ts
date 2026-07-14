@@ -21,5 +21,31 @@ test('Fundador sees the real seeded mentee progress and ranking', async ({ page 
   // Ranking por crescimento de faturamento.
   await expect(main.getByText('Ranking · Crescimento de Faturamento')).toBeVisible();
 
+  // M23 — donut de distribuição por status, mesma paleta dos KPIs/StatusPill acima.
+  const distribuicaoStatus = page.getByTestId('grafico-distribuicao-status');
+  await expect(distribuicaoStatus.locator('svg circle, svg path').first()).toBeVisible();
+  await expect(distribuicaoStatus.getByText('Em dia')).toBeVisible();
+  await expect(distribuicaoStatus.getByText('Em atenção')).toBeVisible();
+  await expect(distribuicaoStatus.getByText('Atrasados')).toBeVisible();
+
   await page.screenshot({ path: 'e2e/screenshots/consolidado.png', fullPage: true });
+});
+
+test('M23 — abas filtram a grade de mentorados por status', async ({ page }) => {
+  await loginAs(page, 'matheus@sawhub.com.br');
+  await page.getByRole('link', { name: 'Painel Consolidado' }).click();
+  await expect(page).toHaveURL(/\/admin\/consolidado$/);
+
+  const main = page.getByRole('main');
+  await expect(main.getByTestId('mentorado-row').first()).toBeVisible();
+  const todasAsLinhas = await main.getByTestId('mentorado-row').count();
+
+  await main.getByRole('tab', { name: 'Em dia' }).click();
+  await expect(main.getByRole('tab', { name: 'Em dia' })).toHaveAttribute('aria-selected', 'true');
+  const linhasFiltradas = await main.getByTestId('mentorado-row').count();
+  expect(linhasFiltradas).toBeLessThanOrEqual(todasAsLinhas);
+
+  await main.getByRole('tab', { name: 'Todos' }).click();
+  await expect(main.getByRole('tab', { name: 'Todos' })).toHaveAttribute('aria-selected', 'true');
+  await expect(main.getByTestId('mentorado-row')).toHaveCount(todasAsLinhas);
 });

@@ -23,7 +23,7 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
 
     // Distribuição por plano: donut (M23) + legenda com os 4 planos, mesmo que algum tenha 0.
     const distribuicao = page.getByTestId('grafico-distribuicao-plano');
-    await expect(distribuicao.locator('svg circle').first()).toBeVisible();
+    await expect(distribuicao.locator('svg circle, svg path').first()).toBeVisible();
     await expect(distribuicao.getByText('Gratuito')).toBeVisible();
     await expect(distribuicao.getByText('Básico')).toBeVisible();
     await expect(distribuicao.getByText('Essencial')).toBeVisible();

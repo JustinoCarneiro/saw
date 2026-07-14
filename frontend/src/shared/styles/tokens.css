@@ -37,6 +37,10 @@
   --danger-bg:    rgba(229,87,63,.14);
   --info:         #5AA9E6;   /* Informativo / Visita */
   --info-bg:      rgba(90,169,230,.14);
+  --violet:       #A78BFA;   /* categórico (gráficos com 4+ séries, ex.: planos) — hue distinto
+                                 o bastante de --info/--success/--gold pra não colidir num anel
+                                 fino de donut ou lado a lado numa legenda */
+  --violet-bg:    rgba(167,139,250,.14);
 
   /* ---- Forma & elevação ---- */
   --r-sm:   8px;

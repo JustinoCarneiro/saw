@@ -56,7 +56,7 @@
 }
 
 .sectionTitle {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   margin-bottom: 16px;
 }
@@ -104,12 +104,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 3px;
   flex: none;
 }

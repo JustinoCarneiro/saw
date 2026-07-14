@@ -15,8 +15,11 @@ const PLANO_LABEL: Record<Plano, string> = {
   GRATUITO: 'Gratuito', BASICO: 'Básico', ESSENCIAL: 'Essencial', PROFISSIONAL: 'Profissional',
 };
 
+// Mesmo mapeamento do mockup real (design/mockups-ref/06-admin.png, Tela 11) — Básico (azul) e
+// Profissional (verde) antes tinham contraste insuficiente entre si num anel fino de donut;
+// dourado/violeta/verde/cinza são 4 matizes bem separados entre si (achado do Marcos).
 const PLANO_COLOR: Record<Plano, string> = {
-  GRATUITO: 'var(--text-faint)', BASICO: 'var(--info)', ESSENCIAL: 'var(--gold)', PROFISSIONAL: 'var(--success)',
+  GRATUITO: 'var(--text-faint)', BASICO: 'var(--success)', ESSENCIAL: 'var(--violet)', PROFISSIONAL: 'var(--gold)',
 };
 
 // M23 — trocado de emoji (único lugar do sistema que usava; quebrava design/DESIGN.md §8:
@@ -155,6 +158,7 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
           <div className={styles.sectionTitle}>Distribuição por plano</div>
           <div className={styles.donutRow}>
             <DonutChart
+              tamanho={176}
               segmentos={dashboard.distribuicaoPlano.map((d) => ({ chave: d.plano, valor: d.quantidade, cor: PLANO_COLOR[d.plano] }))}
             />
             <div className={styles.legendaLista}>
