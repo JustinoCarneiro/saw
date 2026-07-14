@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import type { PedidoAdmin, StatusPedido } from '../../shared/lib/types';
@@ -25,6 +26,7 @@ export function PedidosPage() {
   const [pedidos, setPedidos] = useState<PedidoAdmin[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState<{ pedido: PedidoAdmin; acao: 'reembolsar' | 'cancelar' } | null>(null);
 
   const carregar = () => {
     setPedidos(null);
@@ -46,6 +48,12 @@ export function PedidosPage() {
     } finally {
       setProcessando(null);
     }
+  }
+
+  async function confirmarAcao() {
+    if (!confirmando) return;
+    await agir(confirmando.pedido.id, confirmando.acao);
+    setConfirmando(null);
   }
 
   return (
@@ -76,12 +84,12 @@ export function PedidosPage() {
               <div><Pill bg={info.bg} color={info.color}>{info.label}</Pill></div>
               <div className={styles.acoes}>
                 {podeReembolsar && (
-                  <button className={styles.actionButton} disabled={processando === p.id} onClick={() => agir(p.id, 'reembolsar')}>
+                  <button className={styles.actionButton} disabled={processando === p.id} onClick={() => setConfirmando({ pedido: p, acao: 'reembolsar' })}>
                     Reembolsar
                   </button>
                 )}
                 {podeCancelar && (
-                  <button className={styles.actionButton} disabled={processando === p.id} onClick={() => agir(p.id, 'cancelar')}>
+                  <button className={styles.actionButton} disabled={processando === p.id} onClick={() => setConfirmando({ pedido: p, acao: 'cancelar' })}>
                     Cancelar
                   </button>
                 )}
@@ -90,6 +98,22 @@ export function PedidosPage() {
           );
         })}
       </DataGrid>
+
+      {confirmando && (
+        <ConfirmDialog
+          title={confirmando.acao === 'reembolsar' ? 'Reembolsar pedido?' : 'Cancelar pedido?'}
+          message={
+            confirmando.acao === 'reembolsar'
+              ? `O pedido de ${confirmando.pedido.mentoradoNome} (${formatarPreco(confirmando.pedido.valorTotal)}) será marcado como reembolsado. Essa ação não pode ser desfeita.`
+              : `O pedido de ${confirmando.pedido.mentoradoNome} (${formatarPreco(confirmando.pedido.valorTotal)}) será cancelado. Essa ação não pode ser desfeita.`
+          }
+          confirmLabel={confirmando.acao === 'reembolsar' ? 'Confirmar reembolso' : 'Cancelar pedido'}
+          cancelLabel="Voltar"
+          submitting={processando === confirmando.pedido.id}
+          onConfirm={confirmarAcao}
+          onCancel={() => setConfirmando(null)}
+        />
+      )}
     </div>
   );
 }

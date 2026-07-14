@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
@@ -122,9 +123,9 @@ export function MentoradosListaPage() {
               <div className={styles.acoes}>
                 <button className={styles.actionButton} onClick={() => setEditando(m)}>Editar</button>
                 {m.status === 'ATIVO' ? (
-                  <ToggleStatusButton mentoradoId={m.id} acao="desativar" label="Desativar" onFeito={carregar} />
+                  <ToggleStatusButton mentoradoId={m.id} nome={m.nome} acao="desativar" label="Desativar" onFeito={carregar} />
                 ) : (
-                  <ToggleStatusButton mentoradoId={m.id} acao="ativar" label="Ativar" onFeito={carregar} />
+                  <ToggleStatusButton mentoradoId={m.id} nome={m.nome} acao="ativar" label="Ativar" onFeito={carregar} />
                 )}
               </div>
             </DataGridRow>
@@ -135,10 +136,12 @@ export function MentoradosListaPage() {
   );
 }
 
-function ToggleStatusButton({ mentoradoId, acao, label, onFeito }: {
-  mentoradoId: string; acao: 'ativar' | 'desativar'; label: string; onFeito: () => void;
+function ToggleStatusButton({ mentoradoId, nome, acao, label, onFeito }: {
+  mentoradoId: string; nome: string; acao: 'ativar' | 'desativar'; label: string; onFeito: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+
   async function handleClick() {
     setSubmitting(true);
     try {
@@ -146,12 +149,27 @@ function ToggleStatusButton({ mentoradoId, acao, label, onFeito }: {
       onFeito();
     } finally {
       setSubmitting(false);
+      setConfirmando(false);
     }
   }
+
   return (
-    <button className={styles.actionButtonDanger} onClick={handleClick} disabled={submitting}>
-      {label}
-    </button>
+    <>
+      <button className={styles.actionButtonDanger} onClick={() => (acao === 'desativar' ? setConfirmando(true) : handleClick())} disabled={submitting}>
+        {label}
+      </button>
+      {confirmando && (
+        <ConfirmDialog
+          title="Desativar mentorado?"
+          message={`${nome} perderá o acesso à plataforma até ser reativado. Essa ação pode ser revertida depois clicando em "Ativar".`}
+          confirmLabel="Confirmar desativação"
+          cancelLabel="Voltar"
+          submitting={submitting}
+          onConfirm={handleClick}
+          onCancel={() => setConfirmando(false)}
+        />
+      )}
+    </>
   );
 }
 

@@ -69,7 +69,9 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     // no meio da frase, então uma busca por substring bate ali também.
     await expect(page.getByText('Rascunho', { exact: true })).toBeVisible();
 
+    // M23 — "Publicar ata" agora abre um ConfirmDialog antes de publicar de verdade.
     await page.getByRole('button', { name: 'Publicar ata' }).click();
+    await page.getByRole('button', { name: 'Sim, publicar' }).click();
     await expect(page.getByText('Publicada', { exact: true })).toBeVisible();
     // Depois de publicada, o formulário de upload/edição some (ver AtaDetalhePage `!publicada`).
     await expect(page.getByRole('button', { name: 'Publicar ata' })).toHaveCount(0);

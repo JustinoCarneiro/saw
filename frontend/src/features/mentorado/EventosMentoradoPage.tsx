@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { EventoMentorado, TipoEvento } from '../../shared/lib/types';
@@ -46,6 +47,7 @@ export function EventosMentoradoPage() {
   const [processando, setProcessando] = useState<string | null>(null);
   const [mesAtual, setMesAtual] = useState(() => new Date());
   const [diaSelecionado, setDiaSelecionado] = useState<Date | null>(null);
+  const [cancelando, setCancelando] = useState<EventoMentorado | null>(null);
 
   const carregar = () => {
     apiClient.get<EventoMentorado[]>('/mentorado/eventos', { params: { tipo: filtroTipo || undefined, tema: busca || undefined } })
@@ -76,6 +78,7 @@ export function EventosMentoradoPage() {
       setError(getApiErrorMessage(err, 'Não foi possível cancelar a inscrição.'));
     } finally {
       setProcessando(null);
+      setCancelando(null);
     }
   }
 
@@ -110,7 +113,7 @@ export function EventosMentoradoPage() {
         </div>
         <div className={styles.cardActions}>
           {e.inscrito ? (
-            <button className={styles.cancelButton} disabled={processando === e.id} onClick={() => cancelar(e.id)} data-testid={`cancelar-${e.id}`}>
+            <button className={styles.cancelButton} disabled={processando === e.id} onClick={() => setCancelando(e)} data-testid={`cancelar-${e.id}`}>
               ✓ Inscrito — cancelar
             </button>
           ) : (
@@ -203,6 +206,18 @@ export function EventosMentoradoPage() {
             <div className={styles.grid}>{disponiveis.map(renderCard)}</div>
           </section>
         </>
+      )}
+
+      {cancelando && (
+        <ConfirmDialog
+          title="Cancelar inscrição?"
+          message={`Você vai perder sua vaga em "${cancelando.titulo}"${cancelando.vagasDisponiveis !== null ? ' — se o evento lotar depois, pode não sobrar vaga pra se inscrever de novo.' : '.'}`}
+          confirmLabel="Cancelar inscrição"
+          cancelLabel="Manter inscrição"
+          submitting={processando === cancelando.id}
+          onConfirm={() => cancelar(cancelando.id)}
+          onCancel={() => setCancelando(null)}
+        />
       )}
     </div>
   );

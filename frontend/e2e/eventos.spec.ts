@@ -34,7 +34,9 @@ test.describe('M13 — E7 Eventos & Inscrições (lado mentorado)', () => {
     const eventos1: { titulo: string; inscrito: boolean }[] = await res1.json();
     expect(eventos1.find((e) => e.titulo === 'Workshop de Gestão Financeira')?.inscrito).toBe(true);
 
+    // M23 — cancelar inscrição agora abre um ConfirmDialog antes de cancelar de verdade.
     await meuWorkshop.getByRole('button', { name: /Inscrito — cancelar/ }).click();
+    await page.getByRole('button', { name: 'Cancelar inscrição' }).click();
     await expect(page.getByText('Próximos eventos (você está inscrito)')).toHaveCount(0);
 
     const res2 = await page.request.get('/api/v1/mentorado/eventos');

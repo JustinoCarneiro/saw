@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
@@ -27,6 +28,8 @@ export function EventosPage() {
   const [eventos, setEventos] = useState<Evento[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
+  const [cancelando, setCancelando] = useState<Evento | null>(null);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
 
   const carregar = () => {
     setEventos(null);
@@ -45,6 +48,14 @@ export function EventosPage() {
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível concluir a ação.'));
     }
+  }
+
+  async function confirmarCancelamento() {
+    if (!cancelando) return;
+    setCancelSubmitting(true);
+    await transicionar(cancelando.id, 'CANCELADO');
+    setCancelSubmitting(false);
+    setCancelando(null);
   }
 
   return (
@@ -84,7 +95,7 @@ export function EventosPage() {
                   <button className={styles.actionButton} onClick={() => transicionar(ev.id, 'REALIZADO')}>Finalizar</button>
                 )}
                 {(ev.status === 'PROGRAMADO' || ev.status === 'AO_VIVO') && (
-                  <button className={styles.actionButtonDanger} onClick={() => transicionar(ev.id, 'CANCELADO')}>Cancelar</button>
+                  <button className={styles.actionButtonDanger} onClick={() => setCancelando(ev)}>Cancelar</button>
                 )}
                 {(ev.status === 'REALIZADO' || ev.status === 'CANCELADO') && <span className={styles.muted}>—</span>}
               </div>
@@ -92,6 +103,18 @@ export function EventosPage() {
           );
         })}
       </DataGrid>
+
+      {cancelando && (
+        <ConfirmDialog
+          title="Cancelar evento?"
+          message={`"${cancelando.titulo}" (${formatarDataHora(cancelando.dataHora)}) será marcado como cancelado. Mentorados já inscritos verão o evento como cancelado. Essa ação não pode ser desfeita.`}
+          confirmLabel="Cancelar evento"
+          cancelLabel="Voltar"
+          submitting={cancelSubmitting}
+          onConfirm={confirmarCancelamento}
+          onCancel={() => setCancelando(null)}
+        />
+      )}
     </div>
   );
 }

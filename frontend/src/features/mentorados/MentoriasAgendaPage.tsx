@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
@@ -28,6 +29,7 @@ export function MentoriasAgendaPage() {
   const [error, setError] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
   const [processando, setProcessando] = useState<string | null>(null);
+  const [cancelando, setCancelando] = useState<Mentoria | null>(null);
 
   const carregar = () => {
     setMentorias(null);
@@ -49,6 +51,12 @@ export function MentoriasAgendaPage() {
     } finally {
       setProcessando(null);
     }
+  }
+
+  async function confirmarCancelamento() {
+    if (!cancelando) return;
+    await transicionar(cancelando.id, 'CANCELADA');
+    setCancelando(null);
   }
 
   async function realizar(id: string) {
@@ -107,7 +115,7 @@ export function MentoriasAgendaPage() {
                   </button>
                 )}
                 {(m.status === 'AGENDADA' || m.status === 'CONFIRMADA') && (
-                  <button className={styles.actionButtonDanger} disabled={emProcessamento} onClick={() => transicionar(m.id, 'CANCELADA')}>
+                  <button className={styles.actionButtonDanger} disabled={emProcessamento} onClick={() => setCancelando(m)}>
                     Cancelar
                   </button>
                 )}
@@ -122,6 +130,18 @@ export function MentoriasAgendaPage() {
           );
         })}
       </DataGrid>
+
+      {cancelando && (
+        <ConfirmDialog
+          title="Cancelar mentoria?"
+          message={`A mentoria de ${formatarDataHora(cancelando.dataHora)} com ${cancelando.mentorados.map((mt) => mt.nome).join(', ')} será marcada como cancelada. Essa ação não pode ser desfeita.`}
+          confirmLabel="Cancelar mentoria"
+          cancelLabel="Voltar"
+          submitting={processando === cancelando.id}
+          onConfirm={confirmarCancelamento}
+          onCancel={() => setCancelando(null)}
+        />
+      )}
     </div>
   );
 }
@@ -136,6 +156,7 @@ function NovaMentoriaForm({ onCriada, onCancelar }: { onCriada: () => void; onCa
   const [local, setLocal] = useState('');
   const [mentores, setMentores] = useState<MentorResumo[]>([]);
   const [mentorados, setMentorados] = useState<MentoradoAdmin[]>([]);
+  const [buscaMentorado, setBuscaMentorado] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -143,6 +164,8 @@ function NovaMentoriaForm({ onCriada, onCancelar }: { onCriada: () => void; onCa
     apiClient.get<MentorResumo[]>('/admin/mentorias/mentores').then((res) => setMentores(res.data));
     apiClient.get<MentoradoAdmin[]>('/admin/mentorados', { params: { status: 'ATIVO' } }).then((res) => setMentorados(res.data));
   }, []);
+
+  const mentoradosFiltrados = mentorados.filter((m) => m.nome.toLowerCase().includes(buscaMentorado.trim().toLowerCase()));
 
   function toggleMentorado(id: string) {
     if (tipo === 'INDIVIDUAL') {
@@ -199,8 +222,15 @@ function NovaMentoriaForm({ onCriada, onCancelar }: { onCriada: () => void; onCa
 
         <div className={styles.formField}>
           {tipo === 'INDIVIDUAL' ? 'Mentorado' : 'Mentorados (selecione um ou mais)'}
+          <input
+            className={styles.textInput}
+            placeholder="Buscar mentorado..."
+            value={buscaMentorado}
+            onChange={(e) => setBuscaMentorado(e.target.value)}
+          />
           <div className={styles.checkboxList}>
-            {mentorados.map((m) => (
+            {mentoradosFiltrados.length === 0 && <div className={styles.checkboxEmpty}>Nenhum mentorado encontrado.</div>}
+            {mentoradosFiltrados.map((m) => (
               <label key={m.id} className={styles.checkboxItem}>
                 <input
                   type={tipo === 'INDIVIDUAL' ? 'radio' : 'checkbox'}

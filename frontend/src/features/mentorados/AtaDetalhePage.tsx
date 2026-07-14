@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { Ata, StatusProcessamentoAta, SugestaoEncaminhamento } from '../../shared/lib/types';
@@ -257,6 +258,7 @@ function PublicarButton({ mentoriaId, desabilitado, onPublicado }: {
 }) {
   const [error, setError] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   async function publicar() {
     setError(null);
@@ -268,6 +270,7 @@ function PublicarButton({ mentoriaId, desabilitado, onPublicado }: {
       setError(getApiErrorMessage(err, 'Não foi possível publicar a ata.'));
     } finally {
       setPublicando(false);
+      setConfirmando(false);
     }
   }
 
@@ -275,10 +278,22 @@ function PublicarButton({ mentoriaId, desabilitado, onPublicado }: {
     <div>
       {error && <div className={styles.error}>{error}</div>}
       <div className={styles.formActions}>
-        <button className={styles.publicarButton} onClick={publicar} disabled={desabilitado || publicando}>
+        <button className={styles.publicarButton} onClick={() => setConfirmando(true)} disabled={desabilitado || publicando}>
           {publicando ? 'Publicando…' : 'Publicar ata'}
         </button>
       </div>
+      {confirmando && (
+        <ConfirmDialog
+          title="Publicar ata?"
+          message="O mentorado vai poder ver o resumo da mentoria e os encaminhamentos aceitos viram tarefas de verdade. Revise as sugestões antes de confirmar — depois de publicada, a ata não pode voltar a rascunho."
+          confirmLabel="Sim, publicar"
+          cancelLabel="Revisar de novo"
+          danger={false}
+          submitting={publicando}
+          onConfirm={publicar}
+          onCancel={() => setConfirmando(false)}
+        />
+      )}
     </div>
   );
 }
