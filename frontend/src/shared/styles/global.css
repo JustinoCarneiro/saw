@@ -2,6 +2,14 @@
   box-sizing: border-box;
 }
 
+/* Tema é sempre dark — sem isso o navegador renderiza o popup nativo de <select> (lista de
+   opções) em branco/azul do SO, quebrando a estética em qualquer tela com filtro por mês/ano,
+   plano, status etc. (ex.: PeriodoPicker). Chromium/Firefox usam isso pra colorir a lista aberta. */
+:root {
+  color-scheme: dark;
+  accent-color: var(--gold);
+}
+
 html,
 body,
 #root {
@@ -33,6 +41,28 @@ a {
 
 ::placeholder {
   color: var(--text-faint);
+}
+
+/* Seta nativa do <select> fica colada na borda direita (sem respirar) em vários navegadores/SO
+   — troca pra seta própria (mesmo estilo linear dos ícones do sistema) com respiro fixo. Tudo
+   aqui é !important porque cada tela duplica sua própria classe .select (13 arquivos) com
+   `background: var(--surface)` em shorthand, que reseta background-image/position pro padrão —
+   reescrever os 13 só pra alinhar a seta seria troca alta por ganho baixo; esse é o único ponto
+   do sistema que precisa desse override. */
+select {
+  color: var(--text);
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-color: var(--surface) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23A9A29A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  padding-right: 36px !important;
+}
+
+select option {
+  background: var(--surface);
+  color: var(--text);
 }
 
 *:focus-visible {
