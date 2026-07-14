@@ -19,7 +19,12 @@ WORKDIR /app
 
 RUN addgroup -S sawhub && adduser -S sawhub -G sawhub
 COPY --from=build /app/target/*.jar app.jar
-RUN chown sawhub:sawhub app.jar
+# /app/data é onde AudioStorageService grava os áudios de mentoria (sawhub.audio.storage-dir) —
+# precisa existir e já pertencer ao sawhub antes do USER trocar, senão o boot falha com
+# AccessDeniedException (WORKDIR é criado como root). Pré-criar aqui também garante que, se
+# /app/data virar um volume Docker nomeado em produção, o volume herda o dono certo na primeira
+# montagem (Docker copia o conteúdo/ownership da imagem pro volume vazio nesse momento).
+RUN mkdir -p /app/data/audios && chown -R sawhub:sawhub /app
 USER sawhub
 
 EXPOSE 8080

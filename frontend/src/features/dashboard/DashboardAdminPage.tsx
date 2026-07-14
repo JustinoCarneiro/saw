@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
@@ -50,7 +50,7 @@ const ICONE_PEDIDO = (
   </svg>
 );
 
-const ATIVIDADE_ICONE: Record<string, JSX.Element> = {
+const ATIVIDADE_ICONE: Record<string, ReactElement> = {
   MENTORADO_CADASTRADO: (
     <svg {...ICON_PROPS} width={15} height={15}>
       <circle cx="9" cy="8" r="3" />

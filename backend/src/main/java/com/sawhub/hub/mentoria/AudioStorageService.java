@@ -12,9 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 /** Armazenamento do áudio da mentoria em disco da própria VPS (decisão do ROADMAP.md M06 — object
- * storage dedicado não se justifica na escala do MVP). Em produção o diretório configurado deve
- * ser um volume Docker coberto pelo mesmo backup do Postgres (ver nota de IA no Blueprint) — isso
- * ainda não está no docker-compose.full.yml, é um follow-up de infra antes do deploy real. */
+ * storage dedicado não se justifica na escala do MVP). O diretório é um volume Docker nomeado
+ * (docker-compose.full.yml: backend_audios:/app/data) — sobrevive a rebuild/redeploy do container.
+ * Pendência de infra real (fora do repo): incluir esse volume na rotina de backup da VPS (Coolify),
+ * o mesmo tratamento dado ao Postgres (ver CLAUDE.md § Backup) — hoje só o banco está coberto. */
 @Service
 public class AudioStorageService {
 
