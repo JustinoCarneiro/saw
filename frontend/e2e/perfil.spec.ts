@@ -29,12 +29,54 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
   });
 
   test('H9.2 — conquista desbloqueada depois da primeira visita ao perfil ganha data real, não "Desde sempre"', async ({ page }) => {
-    // Rafael não tem nenhuma meta no seed e nenhum outro spec cria uma pra ele (ao contrário de
-    // Carlos, que metas.spec.ts usa como fixture de "zero metas" — criar uma aqui quebraria
-    // aquele teste numa segunda execução contra o mesmo banco) — META_BATIDA parte de false,
-    // então dá pra observar as duas fases: primeira visita (estabelece o marco de "já
-    // observamos esse mentorado"), depois desbloqueio real.
-    await loginAs(page, 'rafael@bistrogomes.com.br');
+    // META_BATIDA é permanente uma vez desbloqueada (semântica correta de gamificação — não há
+    // "rebloquear"), e o banco de E2E persiste entre execuções (e2e-up.sh só cria o banco se não
+    // existir, nunca recria do zero). Reusar um mentorado fixo (ex.: Rafael) contamina esse teste
+    // pra sempre depois da primeira vez que ele passa: na 2ª execução, META_BATIDA já nasce
+    // desbloqueada e a asserção de precondição abaixo falha. Por isso cria um mentorado
+    // descartável a cada execução, pelo mesmo fluxo público lead -> Fechado -> "criar a partir de
+    // um lead" já usado em mentorados.spec.ts — garante zero histórico sempre.
+    const timestamp = Date.now();
+    const nome = `Perfil H9.2 E2E ${timestamp}`;
+    const email = `h92.${timestamp}@example.com`;
+
+    await page.goto('/solicitar-acesso');
+    await page.getByLabel('Nome').fill(nome);
+    await page.getByLabel('E-mail').fill(email);
+    await page.getByRole('button', { name: 'Enviar solicitação' }).click();
+    await expect(page.getByText('Solicitação enviada.')).toBeVisible();
+
+    await loginAs(page, 'paula@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/comercial/leads');
+    const main = page.getByRole('main');
+    const linhaLead = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linhaLead.getByRole('button', { name: 'Mover p/ Em contato' }).click();
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await linhaLead.getByRole('button', { name: 'Avançar p/ Proposta' }).click();
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await linhaLead.getByRole('button', { name: 'Fechar venda' }).click();
+    await page.getByLabel('Plano fechado').selectOption({ label: 'Básico' });
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
+
+    // LoginPage redireciona pra /admin se já houver sessão ativa — precisa limpar cookies antes
+    // de cada novo login, senão o formulário nunca aparece (mesmo cuidado do mentorados.spec.ts).
+    await page.context().clearCookies();
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/lista');
+    await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
+    await page.getByLabel('Lead').selectOption({ label: `${nome} — ${email}` });
+    await page.getByRole('button', { name: 'Criar mentorado' }).click();
+    await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
+    const senhaTemporariaRaw = await page.locator('code').textContent();
+    if (!senhaTemporariaRaw) throw new Error('Senha temporária não encontrada na tela de mentorado criado.');
+    const senhaTemporaria = senhaTemporariaRaw.trim();
+    await page.getByRole('button', { name: 'Entendi' }).click();
+
+    await page.context().clearCookies();
+    await loginAs(page, email, senhaTemporaria);
     await expect(page).toHaveURL(/\/mentorado/);
 
     await page.getByRole('link', { name: 'Perfil' }).click();
