@@ -66,6 +66,11 @@ public class MentoriaController {
         return mentoriaService.listar(status, de, ate).stream().map(MentoriaResponse::from).toList();
     }
 
+    @GetMapping("/{id}")
+    public MentoriaResponse buscar(@PathVariable UUID id) {
+        return MentoriaResponse.from(mentoriaService.buscar(id));
+    }
+
     @PatchMapping("/{id}/status")
     public MentoriaResponse atualizarStatus(@PathVariable UUID id, @Valid @RequestBody AtualizarStatusMentoriaRequest request) {
         return MentoriaResponse.from(mentoriaService.avancarStatus(id, request.novoStatus()));

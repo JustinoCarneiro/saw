@@ -77,6 +77,40 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(page.getByRole('button', { name: 'Publicar ata' })).toHaveCount(0);
   });
 
+  test('Admin cura materiais recomendados numa ata ainda em rascunho', async ({ page }) => {
+    // Ana/Carlos, mentor Ricardo Costa: mentoria em grupo REALIZADA cuja ata fica
+    // deliberadamente em RASCUNHO no seed (ver DemoDataSeeder + mentorias.spec.ts) — bom fixture
+    // porque continua editável (ao contrário da ata de João, publicada no seed).
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/mentorias');
+
+    const linha = page.locator('[data-testid^="mentoria-row-"]', { hasText: 'Ricardo Costa' });
+    await linha.getByRole('button', { name: 'Ver ata' }).click();
+    await expect(page).toHaveURL(/\/ata$/);
+
+    const card = page.getByTestId('materiais-card');
+    await expect(card.getByText('Materiais recomendados')).toBeVisible();
+    await card.getByPlaceholder('Buscar conteúdo...').fill('DRE');
+    const item = card.getByText('Como calcular seu DRE');
+    await expect(item).toBeVisible();
+    // Idempotente: se uma execução anterior (mesmo banco de E2E persistido entre runs) já deixou
+    // marcado, não desmarca nem tenta salvar de novo (o botão fica disabled sem alteração real,
+    // então clicar travaria esperando uma resposta que nunca vem) — só confere que persiste.
+    const checkbox = card.getByRole('checkbox');
+    if (!(await checkbox.isChecked())) {
+      await item.click();
+      await Promise.all([
+        page.waitForResponse((res) => res.url().includes('/materiais') && res.ok()),
+        card.getByRole('button', { name: 'Salvar materiais' }).click(),
+      ]);
+    }
+
+    await page.reload();
+    await page.getByTestId('materiais-card').getByPlaceholder('Buscar conteúdo...').fill('DRE');
+    await expect(page.getByTestId('materiais-card').getByRole('checkbox')).toBeChecked();
+  });
+
   test('Conteúdos: criar e publicar', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);

@@ -97,7 +97,7 @@ export function MentoriasAgendaPage() {
           const st = STATUS_LABEL[m.status];
           const emProcessamento = processando === m.id;
           return (
-            <DataGridRow key={m.id} columns={COLUMNS}>
+            <DataGridRow key={m.id} columns={COLUMNS} testId={`mentoria-row-${m.id}`}>
               <div className={styles.strong}>{formatarDataHora(m.dataHora)}</div>
               <div className={styles.muted}>{m.tipo === 'INDIVIDUAL' ? 'Individual' : 'Grupo'}</div>
               <div className={styles.muted}>{m.mentor.nome}</div>

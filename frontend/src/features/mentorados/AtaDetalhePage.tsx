@@ -5,7 +5,7 @@ import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
-import type { Ata, StatusProcessamentoAta, SugestaoEncaminhamento } from '../../shared/lib/types';
+import type { Ata, Conteudo, Mentoria, StatusProcessamentoAta, SugestaoEncaminhamento } from '../../shared/lib/types';
 import styles from './AtaDetalhePage.module.css';
 
 const STATUS_PROC_LABEL: Record<StatusProcessamentoAta, { label: string; bg: string; color: string }> = {
@@ -18,6 +18,7 @@ const STATUS_PROC_LABEL: Record<StatusProcessamentoAta, { label: string; bg: str
 export function AtaDetalhePage() {
   const { mentoriaId } = useParams<{ mentoriaId: string }>();
   const [ata, setAta] = useState<Ata | null>(null);
+  const [mentoria, setMentoria] = useState<Mentoria | null>(null);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<number | undefined>(undefined);
 
@@ -26,6 +27,9 @@ export function AtaDetalhePage() {
     apiClient.get<Ata>(`/admin/mentorias/${mentoriaId}/ata`)
       .then((res) => setAta(res.data))
       .catch(() => setError('Não foi possível carregar a ata.'));
+    apiClient.get<Mentoria>(`/admin/mentorias/${mentoriaId}`)
+      .then((res) => setMentoria(res.data))
+      .catch(() => setError('Não foi possível carregar a mentoria.'));
   };
 
   useEffect(carregar, [mentoriaId]);
@@ -43,7 +47,7 @@ export function AtaDetalhePage() {
 
   if (!mentoriaId) return null;
   if (error) return <div className={styles.error}>{error}</div>;
-  if (!ata) return <div className={styles.loading}>Carregando…</div>;
+  if (!ata || !mentoria) return <div className={styles.loading}>Carregando…</div>;
 
   const stProc = STATUS_PROC_LABEL[ata.statusProcessamento];
   const publicada = ata.status === 'PUBLICADA';
@@ -74,6 +78,8 @@ export function AtaDetalhePage() {
       )}
 
       <ResumoCard mentoriaId={mentoriaId} ata={ata} onSalvo={carregar} />
+
+      <MateriaisCard mentoriaId={mentoriaId} mentoria={mentoria} podeEditar={!publicada} onSalvo={carregar} />
 
       {ata.sugestoes.length > 0 && (
         <SugestoesCard mentoriaId={mentoriaId} sugestoes={ata.sugestoes} podeEditar={!publicada} onSalvo={carregar} />
@@ -180,6 +186,102 @@ function ResumoCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: Ata
         <div className={styles.formActions}>
           <button className={styles.actionButton} onClick={salvar} disabled={salvando || resumo === (ata.resumo ?? '')}>
             {salvando ? 'Salvando…' : 'Salvar resumo'}
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function MateriaisCard({ mentoriaId, mentoria, podeEditar, onSalvo }: {
+  mentoriaId: string; mentoria: Mentoria; podeEditar: boolean; onSalvo: () => void;
+}) {
+  const [conteudos, setConteudos] = useState<Conteudo[] | null>(null);
+  const [selecionados, setSelecionados] = useState<Set<string>>(
+    () => new Set(mentoria.materiaisRecomendados.map((m) => m.id)),
+  );
+  const [busca, setBusca] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    apiClient.get<Conteudo[]>('/admin/conteudos').then((res) => setConteudos(res.data));
+  }, []);
+
+  useEffect(() => {
+    setSelecionados(new Set(mentoria.materiaisRecomendados.map((m) => m.id)));
+  }, [mentoria.materiaisRecomendados]);
+
+  function toggle(id: string) {
+    setSelecionados((prev) => {
+      const proximo = new Set(prev);
+      if (proximo.has(id)) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
+  }
+
+  const alterado =
+    selecionados.size !== mentoria.materiaisRecomendados.length ||
+    mentoria.materiaisRecomendados.some((m) => !selecionados.has(m.id));
+
+  async function salvar() {
+    setError(null);
+    setSalvando(true);
+    try {
+      await apiClient.patch(`/admin/mentorias/${mentoriaId}/materiais`, { conteudoIds: Array.from(selecionados) });
+      onSalvo();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível salvar os materiais recomendados.'));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  const conteudosFiltrados = (conteudos ?? []).filter((c) => c.titulo.toLowerCase().includes(busca.trim().toLowerCase()));
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }} testId="materiais-card">
+      <div className={styles.sectionTitle}>Materiais recomendados</div>
+      <p className={styles.muted}>Conteúdos que o mentorado vai ver vinculados a esta mentoria.</p>
+      {podeEditar && (
+        <input
+          className={styles.textInput}
+          placeholder="Buscar conteúdo..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
+      )}
+      {!podeEditar && mentoria.materiaisRecomendados.length === 0 && (
+        <div className={styles.muted}>Nenhum material recomendado.</div>
+      )}
+      {!podeEditar ? (
+        <div className={styles.materiaisLista}>
+          {mentoria.materiaisRecomendados.map((m) => (
+            <a key={m.id} href={m.url} target="_blank" rel="noreferrer" className={styles.materiaLink}>
+              {m.titulo}
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className={styles.checkboxList}>
+          {conteudos === null && <div className={styles.muted}>Carregando…</div>}
+          {conteudos !== null && conteudosFiltrados.length === 0 && (
+            <div className={styles.checkboxEmpty}>Nenhum conteúdo encontrado.</div>
+          )}
+          {conteudosFiltrados.map((c) => (
+            <label key={c.id} className={styles.checkboxItem}>
+              <input type="checkbox" checked={selecionados.has(c.id)} onChange={() => toggle(c.id)} />
+              {c.titulo}
+            </label>
+          ))}
+        </div>
+      )}
+      {error && <div className={styles.error}>{error}</div>}
+      {podeEditar && (
+        <div className={styles.formActions}>
+          <button className={styles.actionButton} onClick={salvar} disabled={salvando || !alterado}>
+            {salvando ? 'Salvando…' : 'Salvar materiais'}
           </button>
         </div>
       )}
