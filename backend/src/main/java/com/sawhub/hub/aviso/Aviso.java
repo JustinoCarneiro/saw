@@ -37,6 +37,13 @@ public class Aviso extends BaseEntity {
         this.planoMinimo = planoMinimo;
     }
 
+    public void atualizar(String titulo, String descricao, CategoriaAviso categoria, Plano planoMinimo) {
+        this.titulo = titulo;
+        this.descricao = descricao;
+        this.categoria = categoria;
+        this.planoMinimo = planoMinimo;
+    }
+
     public String getTitulo() {
         return titulo;
     }

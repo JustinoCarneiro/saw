@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -28,4 +29,10 @@ public interface AvisoMentoradoRepository extends JpaRepository<AvisoMentorado, 
     );
 
     Optional<AvisoMentorado> findByMentoradoIdAndAvisoId(UUID mentoradoId, UUID avisoId);
+
+    // FK aviso_mentorado.aviso_id não tem ON DELETE CASCADE — excluir um aviso lido por algum
+    // mentorado sem isso quebraria com violação de FK.
+    @Modifying
+    @Query("DELETE FROM AvisoMentorado am WHERE am.aviso.id = :avisoId")
+    void deleteAllByAvisoId(@Param("avisoId") UUID avisoId);
 }

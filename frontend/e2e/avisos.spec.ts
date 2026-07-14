@@ -43,6 +43,40 @@ test.describe('M17 — E16 Avisos & Notificações', () => {
     await expect(page.locator('[data-testid^="aviso-row-"]', { hasText: titulo })).toBeVisible();
   });
 
+  test('Admin edita um aviso existente e depois exclui', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin/);
+
+    await page.goto('/admin/conteudos/avisos');
+    const titulo = `Aviso Editar E2E ${Date.now()}`;
+    await page.getByRole('button', { name: '+ Novo aviso' }).click();
+    await page.getByLabel('Título').fill(titulo);
+    await page.getByLabel('Descrição').fill('Original.');
+    await page.getByLabel('Categoria').selectOption('GERAL');
+    await page.getByLabel(/Visível a partir do plano/).selectOption('GRATUITO');
+    await page.getByRole('button', { name: 'Publicar' }).click();
+
+    const linha = page.locator('[data-testid^="aviso-row-"]', { hasText: titulo });
+    await expect(linha).toBeVisible();
+
+    const tituloEditado = `${titulo} (editado)`;
+    await linha.getByRole('button', { name: 'Editar' }).click();
+    await expect(page.getByText('Editar aviso')).toBeVisible();
+    await page.getByLabel('Título').fill(tituloEditado);
+    await page.getByRole('button', { name: 'Salvar' }).click();
+
+    await expect(page.locator('[data-testid^="aviso-row-"]', { hasText: tituloEditado })).toBeVisible();
+    await expect(page.getByText(titulo, { exact: true })).toHaveCount(0);
+
+    const linhaEditada = page.locator('[data-testid^="aviso-row-"]', { hasText: tituloEditado });
+    await linhaEditada.getByRole('button', { name: 'Excluir' }).click();
+    const dialogo = page.getByRole('alertdialog');
+    await expect(dialogo.getByText('Excluir aviso?')).toBeVisible();
+    await dialogo.getByRole('button', { name: 'Excluir', exact: true }).click();
+
+    await expect(page.locator('[data-testid^="aviso-row-"]', { hasText: tituloEditado })).toHaveCount(0);
+  });
+
   test('setup: Admin publica o aviso usado nos testes de leitura/isolamento abaixo', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
