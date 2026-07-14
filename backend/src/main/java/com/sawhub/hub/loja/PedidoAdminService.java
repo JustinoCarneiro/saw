@@ -1,5 +1,6 @@
 package com.sawhub.hub.loja;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -12,9 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class PedidoAdminService {
 
     private final PedidoRepository pedidoRepository;
+    private final AtividadeLogService atividadeLogService;
 
-    public PedidoAdminService(PedidoRepository pedidoRepository) {
+    public PedidoAdminService(PedidoRepository pedidoRepository, AtividadeLogService atividadeLogService) {
         this.pedidoRepository = pedidoRepository;
+        this.atividadeLogService = atividadeLogService;
     }
 
     public List<Pedido> listar(StatusPedido status) {
@@ -25,6 +28,7 @@ public class PedidoAdminService {
     public Pedido reembolsar(UUID id) {
         Pedido pedido = buscar(id);
         pedido.reembolsar();
+        atividadeLogService.registrar("PEDIDO_REEMBOLSADO", "Pedido reembolsado: " + pedido.getMentorado().getNome());
         return pedidoRepository.save(pedido);
     }
 

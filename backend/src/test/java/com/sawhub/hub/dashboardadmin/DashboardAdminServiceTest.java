@@ -3,6 +3,8 @@ package com.sawhub.hub.dashboardadmin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.atividade.AtividadeLog;
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse;
 import com.sawhub.hub.evento.Evento;
@@ -50,10 +52,12 @@ class DashboardAdminServiceTest {
     private ConteudoRepository conteudoRepository;
     @Mock
     private RelatorioFinanceiroService relatorioFinanceiroService;
+    @Mock
+    private AtividadeLogService atividadeLogService;
 
     private DashboardAdminService service() {
         return new DashboardAdminService(mentoradoRepository, mentoriaRepository, eventoRepository,
-                conteudoRepository, relatorioFinanceiroService);
+                conteudoRepository, relatorioFinanceiroService, atividadeLogService);
     }
 
     private static Mentorado mentoradoEm(String nome, Plano plano, Instant criadoEm, boolean ativo) {
@@ -75,6 +79,7 @@ class DashboardAdminServiceTest {
         when(mentoriaRepository.buscarPorStatus(null)).thenReturn(List.of());
         when(eventoRepository.buscarComFiltro(null, null)).thenReturn(List.of());
         when(conteudoRepository.buscarComFiltro(null, null, true)).thenReturn(List.of());
+        when(atividadeLogService.listarRecentes()).thenReturn(List.of());
         var faturamento = new DashboardFaturamentoResponse(BigDecimal.ZERO, BigDecimal.ZERO, 0.0, List.of());
         when(relatorioFinanceiroService.dashboardFaturamento(atual.getYear(), atual.getMonthValue())).thenReturn(faturamento);
         when(relatorioFinanceiroService.dashboardFaturamento(anterior.getYear(), anterior.getMonthValue())).thenReturn(faturamento);
@@ -203,5 +208,26 @@ class DashboardAdminServiceTest {
 
         assertThat(resposta.atividadesRecentes().get(0).descricao()).contains("Recente");
         assertThat(resposta.atividadesRecentes()).hasSizeLessThanOrEqualTo(8);
+    }
+
+    @Test
+    void atividadesRecentesMisturaLogDeTransicaoDeStatusComOsTiposDeCriacao() {
+        // H10 — cancelar/realizar/pagar/reembolsar/fechar/perder não têm criadoEm próprio (não
+        // são criação de entidade), então entram via AtividadeLog, não pelos 3 streams originais.
+        YearMonth atual = YearMonth.of(2026, 7);
+        YearMonth anterior = atual.minusMonths(1);
+        mockarVazio(atual, anterior);
+
+        Mentorado mentorado = mentoradoEm("Ana", Plano.BASICO, emMes(anterior, 1), true);
+        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(List.of(mentorado));
+
+        AtividadeLog logRecente = new AtividadeLog("MENTORIA_CANCELADA", "Mentoria cancelada: Carlos Menezes");
+        ReflectionTestUtils.setField(logRecente, "criadoEm", emMes(atual, 20));
+        when(atividadeLogService.listarRecentes()).thenReturn(List.of(logRecente));
+
+        DashboardAdminResponse resposta = service().resumo(atual.getYear(), atual.getMonthValue());
+
+        assertThat(resposta.atividadesRecentes().get(0).tipo()).isEqualTo("MENTORIA_CANCELADA");
+        assertThat(resposta.atividadesRecentes().get(0).descricao()).isEqualTo("Mentoria cancelada: Carlos Menezes");
     }
 }

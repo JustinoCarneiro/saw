@@ -1,5 +1,6 @@
 package com.sawhub.hub.evento;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.evento.dto.AtualizarEventoRequest;
 import com.sawhub.hub.evento.dto.CriarEventoRequest;
 import java.util.List;
@@ -13,10 +14,13 @@ public class EventoService {
 
     private final EventoRepository eventoRepository;
     private final InscricaoEventoRepository inscricaoEventoRepository;
+    private final AtividadeLogService atividadeLogService;
 
-    public EventoService(EventoRepository eventoRepository, InscricaoEventoRepository inscricaoEventoRepository) {
+    public EventoService(EventoRepository eventoRepository, InscricaoEventoRepository inscricaoEventoRepository,
+                          AtividadeLogService atividadeLogService) {
         this.eventoRepository = eventoRepository;
         this.inscricaoEventoRepository = inscricaoEventoRepository;
+        this.atividadeLogService = atividadeLogService;
     }
 
     @Transactional
@@ -47,7 +51,10 @@ public class EventoService {
                 evento.finalizar();
                 marcarParticipacoes(evento);
             }
-            case CANCELADO -> evento.cancelar();
+            case CANCELADO -> {
+                evento.cancelar();
+                atividadeLogService.registrar("EVENTO_CANCELADO", "Evento cancelado: " + evento.getTitulo());
+            }
             case PROGRAMADO -> throw new IllegalArgumentException("Não é possível mover um evento de volta para Programado.");
         }
         return eventoRepository.save(evento);

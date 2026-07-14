@@ -1,5 +1,6 @@
 package com.sawhub.hub.comercial;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.comercial.dto.AvancarLeadRequest;
 import com.sawhub.hub.comercial.dto.CriarLeadRequest;
 import com.sawhub.hub.team.Colaborador;
@@ -15,10 +16,13 @@ public class LeadService {
 
     private final LeadRepository leadRepository;
     private final ColaboradorRepository colaboradorRepository;
+    private final AtividadeLogService atividadeLogService;
 
-    public LeadService(LeadRepository leadRepository, ColaboradorRepository colaboradorRepository) {
+    public LeadService(LeadRepository leadRepository, ColaboradorRepository colaboradorRepository,
+                        AtividadeLogService atividadeLogService) {
         this.leadRepository = leadRepository;
         this.colaboradorRepository = colaboradorRepository;
+        this.atividadeLogService = atividadeLogService;
     }
 
     @Transactional
@@ -48,12 +52,14 @@ public class LeadService {
                     throw new IllegalArgumentException("Plano fechado é obrigatório para mover o lead para Fechado.");
                 }
                 lead.fechar(request.planoFechado());
+                atividadeLogService.registrar("LEAD_FECHADO", "Lead fechado: " + lead.getNome());
             }
             case PERDIDO -> {
                 if (request.motivoPerdido() == null || request.motivoPerdido().isBlank()) {
                     throw new IllegalArgumentException("Motivo é obrigatório para marcar o lead como Perdido.");
                 }
                 lead.perder(request.motivoPerdido());
+                atividadeLogService.registrar("LEAD_PERDIDO", "Lead perdido: " + lead.getNome());
             }
             case SOLICITACAO -> throw new IllegalArgumentException("Não é possível mover um lead de volta para Solicitação.");
         }

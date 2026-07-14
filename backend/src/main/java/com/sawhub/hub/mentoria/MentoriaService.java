@@ -1,5 +1,6 @@
 package com.sawhub.hub.mentoria;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
@@ -12,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,13 +25,16 @@ public class MentoriaService {
     private final ColaboradorRepository colaboradorRepository;
     private final MentoradoRepository mentoradoRepository;
     private final ConteudoRepository conteudoRepository;
+    private final AtividadeLogService atividadeLogService;
 
     public MentoriaService(MentoriaRepository mentoriaRepository, ColaboradorRepository colaboradorRepository,
-                            MentoradoRepository mentoradoRepository, ConteudoRepository conteudoRepository) {
+                            MentoradoRepository mentoradoRepository, ConteudoRepository conteudoRepository,
+                            AtividadeLogService atividadeLogService) {
         this.mentoriaRepository = mentoriaRepository;
         this.colaboradorRepository = colaboradorRepository;
         this.mentoradoRepository = mentoradoRepository;
         this.conteudoRepository = conteudoRepository;
+        this.atividadeLogService = atividadeLogService;
     }
 
     @Transactional
@@ -64,7 +69,10 @@ public class MentoriaService {
         Mentoria mentoria = buscar(id);
         switch (novoStatus) {
             case CONFIRMADA -> mentoria.confirmar();
-            case CANCELADA -> mentoria.cancelar();
+            case CANCELADA -> {
+                mentoria.cancelar();
+                atividadeLogService.registrar("MENTORIA_CANCELADA", "Mentoria cancelada: " + nomesMentorados(mentoria));
+            }
             // REALIZADA é tratado em AtaService.realizarMentoria — precisa criar a Ata
             // atomicamente com a transição, então não faz sentido aqui sem essa dependência.
             case REALIZADA -> throw new IllegalArgumentException(
@@ -74,9 +82,13 @@ public class MentoriaService {
         return mentoriaRepository.save(mentoria);
     }
 
-    protected Mentoria buscar(UUID id) {
+    public Mentoria buscar(UUID id) {
         return mentoriaRepository.buscarPorIdComDetalhes(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mentoria não encontrada."));
+    }
+
+    static String nomesMentorados(Mentoria mentoria) {
+        return mentoria.getMentorados().stream().map(Mentorado::getNome).collect(Collectors.joining(", "));
     }
 
     // M12 — pré-requisito de H5.2: sem isto, materiaisRecomendados nunca teria o que mostrar pro

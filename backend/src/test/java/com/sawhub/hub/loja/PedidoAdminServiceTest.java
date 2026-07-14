@@ -3,8 +3,10 @@ package com.sawhub.hub.loja;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.Plano;
 import java.math.BigDecimal;
@@ -20,9 +22,11 @@ class PedidoAdminServiceTest {
 
     @Mock
     private PedidoRepository pedidoRepository;
+    @Mock
+    private AtividadeLogService atividadeLogService;
 
     private PedidoAdminService service() {
-        return new PedidoAdminService(pedidoRepository);
+        return new PedidoAdminService(pedidoRepository, atividadeLogService);
     }
 
     private static Pedido pedidoLiberado() {
@@ -47,6 +51,7 @@ class PedidoAdminServiceTest {
         Pedido resultado = service().reembolsar(id);
 
         assertThat(resultado.getStatus()).isEqualTo(StatusPedido.REEMBOLSADO);
+        verify(atividadeLogService).registrar("PEDIDO_REEMBOLSADO", "Pedido reembolsado: Maria");
     }
 
     @Test

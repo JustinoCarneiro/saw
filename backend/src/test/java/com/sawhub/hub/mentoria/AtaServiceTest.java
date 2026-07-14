@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.mentorado.Encaminhamento;
 import com.sawhub.hub.mentorado.EncaminhamentoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
@@ -44,10 +45,12 @@ class AtaServiceTest {
     private AudioStorageService audioStorageService;
     @Mock
     private AtaProcessamentoService ataProcessamentoService;
+    @Mock
+    private AtividadeLogService atividadeLogService;
 
     private AtaService service() {
         return new AtaService(ataRepository, mentoriaRepository, sugeridoRepository, encaminhamentoRepository,
-                audioStorageService, ataProcessamentoService);
+                audioStorageService, ataProcessamentoService, atividadeLogService);
     }
 
     private static Mentorado mentorado(String nome) {
@@ -76,6 +79,7 @@ class AtaServiceTest {
         assertThat(mentoria.getStatus()).isEqualTo(StatusMentoria.REALIZADA);
         assertThat(ata.getStatusProcessamento()).isEqualTo(StatusProcessamentoAta.SEM_AUDIO);
         assertThat(ata.getStatus()).isEqualTo(StatusAta.RASCUNHO);
+        verify(atividadeLogService).registrar("MENTORIA_REALIZADA", "Mentoria realizada: Maria");
     }
 
     @Test

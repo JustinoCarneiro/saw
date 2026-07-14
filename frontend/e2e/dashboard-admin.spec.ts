@@ -39,6 +39,42 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     await expect(page.getByTestId('mentorias-hoje')).toBeVisible();
   });
 
+  test('H10 — cancelar uma mentoria aparece nas atividades recentes (marco de transição, não só criação)', async ({ page }) => {
+    // Achado desta leva: "atividades recentes" só cobria eventos de CRIAÇÃO (nenhuma entidade
+    // rastreava a data de uma transição de status) — cancelar/realizar/pagar/reembolsar/
+    // fechar/perder agora passam pelo AtividadeLog. Cancelar mentoria é o mais fácil de disparar
+    // via UI num teste (não depende de gateway de pagamento nem funil de lead multi-etapa).
+    //
+    // Cria uma mentoria PRÓPRIA em vez de reusar/cancelar uma do seed: a única mentoria Agendada
+    // seedada (Fernanda/Marina) é usada por mentorias.spec.ts pra testar a agenda do mentorado —
+    // cancelá-la quebraria aquele teste (mentoria cancelada some da agenda).
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/mentorias');
+
+    await page.getByRole('button', { name: 'Nova mentoria' }).click();
+    await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
+    await page.getByPlaceholder('Buscar mentorado...').fill('Ana Costa');
+    await page.getByLabel('Ana Costa').check();
+    await page.getByLabel('Data e hora').fill('2026-09-01T10:00');
+    await page.getByRole('button', { name: 'Criar mentoria' }).click();
+
+    // "Ana Costa" sozinho não é único — ela também aparece como integrante da mentoria em grupo
+    // seedada (Ricardo Costa, Realizada). Filtra também por "Agendada" (status da recém-criada,
+    // Realizada não tem botão Cancelar) pra isolar a linha certa.
+    const linha = page.locator('[data-testid^="mentoria-row-"]', { hasText: 'Ana Costa' }).filter({ hasText: 'Agendada' });
+    await expect(linha).toBeVisible();
+    await linha.getByRole('button', { name: 'Cancelar' }).click();
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/mentorias/') && res.url().includes('/status') && res.ok()),
+      page.getByRole('alertdialog').getByRole('button', { name: 'Cancelar mentoria' }).click(),
+    ]);
+
+    await page.goto('/admin/dashboard');
+    const atividades = page.getByTestId('atividades-recentes');
+    await expect(atividades.getByText(/Mentoria cancelada:.*Ana Costa/).first()).toBeVisible();
+  });
+
   test('isolamento por RBAC: área Comercial não vê "Dashboard" na sidebar nem acessa via URL direta', async ({ page }) => {
     await loginAs(page, 'paula@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);

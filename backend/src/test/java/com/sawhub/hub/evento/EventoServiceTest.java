@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.evento.dto.CriarEventoRequest;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.Plano;
@@ -28,9 +29,11 @@ class EventoServiceTest {
     private EventoRepository eventoRepository;
     @Mock
     private InscricaoEventoRepository inscricaoEventoRepository;
+    @Mock
+    private AtividadeLogService atividadeLogService;
 
     private EventoService service() {
-        return new EventoService(eventoRepository, inscricaoEventoRepository);
+        return new EventoService(eventoRepository, inscricaoEventoRepository, atividadeLogService);
     }
 
     private static Evento evento(StatusEvento status) {
@@ -98,6 +101,7 @@ class EventoServiceTest {
         Evento cancelado = service().avancarStatus(id, StatusEvento.CANCELADO);
 
         assertThat(cancelado.getStatus()).isEqualTo(StatusEvento.CANCELADO);
+        verify(atividadeLogService).registrar("EVENTO_CANCELADO", "Evento cancelado: Encontro SAW");
     }
 
     @Test

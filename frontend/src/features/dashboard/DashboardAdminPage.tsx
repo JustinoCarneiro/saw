@@ -26,6 +26,30 @@ const PLANO_COLOR: Record<Plano, string> = {
 // "Linear, traço ~1.6px, cantos arredondados, currentColor") por SVG no mesmo ICON_PROPS da
 // Sidebar, dentro de um selo colorido — réplica do mockup (design/mockups-ref/06-admin.png,
 // Tela 11), que usa um quadrado arredondado colorido por tipo de atividade, não um ícone solto.
+//
+// H10 — os 7 tipos abaixo de MENTORADO_CADASTRADO são marcos de TRANSIÇÃO de status (ver
+// AtividadeLogService no backend), não cobertos pelos 3 tipos de criação originais. Mesmo glifo
+// reaproveitado entre tipos "da mesma categoria de desfecho" (check = desfecho positivo, X =
+// negativo, sacola = pedido) — cor + texto da descrição diferenciam o tipo de entidade, não o
+// ícone; mesmo raciocínio já usado nos badges do Painel Consolidado.
+const ICONE_CHECK = (
+  <svg {...ICON_PROPS} width={15} height={15}>
+    <path d="M4 12l5 5L20 6" />
+  </svg>
+);
+const ICONE_CANCELADO = (
+  <svg {...ICON_PROPS} width={15} height={15}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9 9l6 6M15 9l-6 6" />
+  </svg>
+);
+const ICONE_PEDIDO = (
+  <svg {...ICON_PROPS} width={15} height={15}>
+    <path d="M6 7h12l-1.2 12.5a2 2 0 0 1-2 1.5H9.2a2 2 0 0 1-2-1.5L6 7Z" />
+    <path d="M9 7a3 3 0 0 1 6 0" />
+  </svg>
+);
+
 const ATIVIDADE_ICONE: Record<string, JSX.Element> = {
   MENTORADO_CADASTRADO: (
     <svg {...ICON_PROPS} width={15} height={15}>
@@ -49,12 +73,28 @@ const ATIVIDADE_ICONE: Record<string, JSX.Element> = {
       <path d="M8 9h6M8 13h6" />
     </svg>
   ),
+  MENTORIA_REALIZADA: ICONE_CHECK,
+  LEAD_FECHADO: ICONE_CHECK,
+  MENTORIA_CANCELADA: ICONE_CANCELADO,
+  EVENTO_CANCELADO: ICONE_CANCELADO,
+  LEAD_PERDIDO: ICONE_CANCELADO,
+  PEDIDO_PAGO: ICONE_PEDIDO,
+  PEDIDO_REEMBOLSADO: ICONE_PEDIDO,
 };
 
 const ATIVIDADE_COR: Record<string, { bg: string; color: string }> = {
   MENTORADO_CADASTRADO: { bg: 'var(--success-bg)', color: 'var(--success)' },
   EVENTO_CRIADO: { bg: 'var(--warning-bg)', color: 'var(--warning)' },
   CONTEUDO_PUBLICADO: { bg: 'var(--info-bg)', color: 'var(--info)' },
+  // H10 — mesma cor já usada pro status equivalente em cada tela própria (StatusMentoria,
+  // StatusEvento, StatusPedido, StatusLead), não uma paleta nova.
+  MENTORIA_REALIZADA: { bg: 'var(--success-bg)', color: 'var(--success)' },
+  LEAD_FECHADO: { bg: 'var(--success-bg)', color: 'var(--success)' },
+  PEDIDO_PAGO: { bg: 'var(--success-bg)', color: 'var(--success)' },
+  MENTORIA_CANCELADA: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+  EVENTO_CANCELADO: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+  LEAD_PERDIDO: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+  PEDIDO_REEMBOLSADO: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 function variacaoCor(pct: number): string {

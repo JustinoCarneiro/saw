@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.comercial.dto.AvancarLeadRequest;
 import com.sawhub.hub.comercial.dto.CriarLeadRequest;
 import com.sawhub.hub.mentorado.Plano;
@@ -31,9 +32,11 @@ class LeadServiceTest {
     private LeadRepository leadRepository;
     @Mock
     private ColaboradorRepository colaboradorRepository;
+    @Mock
+    private AtividadeLogService atividadeLogService;
 
     private LeadService service() {
-        return new LeadService(leadRepository, colaboradorRepository);
+        return new LeadService(leadRepository, colaboradorRepository, atividadeLogService);
     }
 
     private static Colaborador colaborador(UUID id, String nome) {
@@ -144,6 +147,7 @@ class LeadServiceTest {
         assertThat(avancado.getStatus()).isEqualTo(StatusLead.FECHADO);
         assertThat(avancado.getPlanoFechado()).isEqualTo(Plano.ESSENCIAL);
         assertThat(avancado.getDataFechamento()).isNotNull();
+        verify(atividadeLogService).registrar("LEAD_FECHADO", "Lead fechado: Maria Souza");
     }
 
     @Test
@@ -158,6 +162,7 @@ class LeadServiceTest {
 
         assertThat(avancado.getStatus()).isEqualTo(StatusLead.PERDIDO);
         assertThat(avancado.getMotivoPerdido()).isEqualTo("Optou por concorrente");
+        verify(atividadeLogService).registrar("LEAD_PERDIDO", "Lead perdido: Maria Souza");
     }
 
     @Test

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
 import com.sawhub.hub.financeiro.GrupoDre;
@@ -42,10 +43,12 @@ class PedidoPagamentoServiceTest {
     private LancamentoFinanceiroRepository lancamentoFinanceiroRepository;
     @Mock
     private MercadoPagoGatewayService gateway;
+    @Mock
+    private AtividadeLogService atividadeLogService;
 
     private PedidoPagamentoService service() {
         return new PedidoPagamentoService(pedidoRepository, produtoRepository, categoriaFinanceiraRepository,
-                lancamentoFinanceiroRepository, gateway);
+                lancamentoFinanceiroRepository, gateway, atividadeLogService);
     }
 
     private static Mentorado mentorado() {
@@ -84,6 +87,7 @@ class PedidoPagamentoServiceTest {
 
         assertThat(pedido.getStatus()).isEqualTo(StatusPedido.LIBERADO);
         assertThat(produto.getVendas()).isEqualTo(2);
+        verify(atividadeLogService).registrar("PEDIDO_PAGO", "Pedido pago: Maria");
 
         ArgumentCaptor<LancamentoFinanceiro> captor = ArgumentCaptor.forClass(LancamentoFinanceiro.class);
         verify(lancamentoFinanceiroRepository).save(captor.capture());
@@ -109,6 +113,7 @@ class PedidoPagamentoServiceTest {
 
         verify(lancamentoFinanceiroRepository, never()).save(any());
         verify(produtoRepository, never()).save(any());
+        verify(atividadeLogService, never()).registrar(any(), any());
     }
 
     @Test

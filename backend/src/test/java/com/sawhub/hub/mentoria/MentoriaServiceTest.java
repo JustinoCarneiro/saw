@@ -3,8 +3,11 @@ package com.sawhub.hub.mentoria;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.conteudo.TipoConteudo;
@@ -39,9 +42,12 @@ class MentoriaServiceTest {
     private MentoradoRepository mentoradoRepository;
     @Mock
     private ConteudoRepository conteudoRepository;
+    @Mock
+    private AtividadeLogService atividadeLogService;
 
     private MentoriaService service() {
-        return new MentoriaService(mentoriaRepository, colaboradorRepository, mentoradoRepository, conteudoRepository);
+        return new MentoriaService(mentoriaRepository, colaboradorRepository, mentoradoRepository, conteudoRepository,
+                atividadeLogService);
     }
 
     private static Conteudo conteudo(UUID id) {
@@ -155,6 +161,8 @@ class MentoriaServiceTest {
         Mentoria confirmada = service().avancarStatus(id, StatusMentoria.CONFIRMADA);
 
         assertThat(confirmada.getStatus()).isEqualTo(StatusMentoria.CONFIRMADA);
+        // Confirmar não é marco do feed de atividades — só cancelar/realizar são.
+        verifyNoInteractions(atividadeLogService);
     }
 
     @Test
@@ -171,7 +179,7 @@ class MentoriaServiceTest {
     }
 
     @Test
-    void cancelarAPartirDeConfirmada() {
+    void cancelarAPartirDeConfirmadaRegistraAtividade() {
         UUID id = UUID.randomUUID();
         Mentoria mentoria = new Mentoria(TipoMentoria.INDIVIDUAL, mentor(UUID.randomUUID()),
                 java.util.Set.of(mentorado(UUID.randomUUID(), "Maria")), Instant.now(), 60, null, null);
@@ -182,6 +190,7 @@ class MentoriaServiceTest {
         Mentoria cancelada = service().avancarStatus(id, StatusMentoria.CANCELADA);
 
         assertThat(cancelada.getStatus()).isEqualTo(StatusMentoria.CANCELADA);
+        verify(atividadeLogService).registrar("MENTORIA_CANCELADA", "Mentoria cancelada: Maria");
     }
 
     @Test

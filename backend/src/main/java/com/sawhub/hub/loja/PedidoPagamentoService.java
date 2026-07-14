@@ -1,5 +1,6 @@
 package com.sawhub.hub.loja;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
 import com.sawhub.hub.financeiro.LancamentoFinanceiro;
@@ -29,16 +30,18 @@ public class PedidoPagamentoService {
     private final CategoriaFinanceiraRepository categoriaFinanceiraRepository;
     private final LancamentoFinanceiroRepository lancamentoFinanceiroRepository;
     private final MercadoPagoGatewayService gateway;
+    private final AtividadeLogService atividadeLogService;
 
     public PedidoPagamentoService(PedidoRepository pedidoRepository, ProdutoRepository produtoRepository,
                                    CategoriaFinanceiraRepository categoriaFinanceiraRepository,
                                    LancamentoFinanceiroRepository lancamentoFinanceiroRepository,
-                                   MercadoPagoGatewayService gateway) {
+                                   MercadoPagoGatewayService gateway, AtividadeLogService atividadeLogService) {
         this.pedidoRepository = pedidoRepository;
         this.produtoRepository = produtoRepository;
         this.categoriaFinanceiraRepository = categoriaFinanceiraRepository;
         this.lancamentoFinanceiroRepository = lancamentoFinanceiroRepository;
         this.gateway = gateway;
+        this.atividadeLogService = atividadeLogService;
     }
 
     @Transactional
@@ -65,6 +68,7 @@ public class PedidoPagamentoService {
 
         pedido.confirmarPagamento();
         pedido.liberar();
+        atividadeLogService.registrar("PEDIDO_PAGO", "Pedido pago: " + pedido.getMentorado().getNome());
         pedidoRepository.save(pedido);
 
         for (ItemPedido item : pedido.getItens()) {

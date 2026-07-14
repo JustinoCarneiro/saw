@@ -1,5 +1,6 @@
 package com.sawhub.hub.mentoria;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.mentorado.Encaminhamento;
 import com.sawhub.hub.mentorado.EncaminhamentoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
@@ -20,17 +21,19 @@ public class AtaService {
     private final EncaminhamentoRepository encaminhamentoRepository;
     private final AudioStorageService audioStorageService;
     private final AtaProcessamentoService ataProcessamentoService;
+    private final AtividadeLogService atividadeLogService;
 
     public AtaService(AtaRepository ataRepository, MentoriaRepository mentoriaRepository,
                        AtaEncaminhamentoSugeridoRepository sugeridoRepository,
                        EncaminhamentoRepository encaminhamentoRepository, AudioStorageService audioStorageService,
-                       AtaProcessamentoService ataProcessamentoService) {
+                       AtaProcessamentoService ataProcessamentoService, AtividadeLogService atividadeLogService) {
         this.ataRepository = ataRepository;
         this.mentoriaRepository = mentoriaRepository;
         this.sugeridoRepository = sugeridoRepository;
         this.encaminhamentoRepository = encaminhamentoRepository;
         this.audioStorageService = audioStorageService;
         this.ataProcessamentoService = ataProcessamentoService;
+        this.atividadeLogService = atividadeLogService;
     }
 
     /** Transição REALIZADA da mentoria + criação da ata (vazia) numa operação só — CLAUDE.md:
@@ -42,6 +45,7 @@ public class AtaService {
                 .orElseThrow(() -> new IllegalArgumentException("Mentoria não encontrada."));
         mentoria.realizar();
         mentoriaRepository.save(mentoria);
+        atividadeLogService.registrar("MENTORIA_REALIZADA", "Mentoria realizada: " + MentoriaService.nomesMentorados(mentoria));
         return ataRepository.save(new Ata(mentoria));
     }
 

@@ -1,5 +1,6 @@
 package com.sawhub.hub.dashboardadmin;
 
+import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.common.VariacaoCalculator;
 import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.ConteudoRepository;
@@ -48,15 +49,18 @@ public class DashboardAdminService {
     private final EventoRepository eventoRepository;
     private final ConteudoRepository conteudoRepository;
     private final RelatorioFinanceiroService relatorioFinanceiroService;
+    private final AtividadeLogService atividadeLogService;
 
     public DashboardAdminService(MentoradoRepository mentoradoRepository, MentoriaRepository mentoriaRepository,
                                   EventoRepository eventoRepository, ConteudoRepository conteudoRepository,
-                                  RelatorioFinanceiroService relatorioFinanceiroService) {
+                                  RelatorioFinanceiroService relatorioFinanceiroService,
+                                  AtividadeLogService atividadeLogService) {
         this.mentoradoRepository = mentoradoRepository;
         this.mentoriaRepository = mentoriaRepository;
         this.eventoRepository = eventoRepository;
         this.conteudoRepository = conteudoRepository;
         this.relatorioFinanceiroService = relatorioFinanceiroService;
+        this.atividadeLogService = atividadeLogService;
     }
 
     public DashboardAdminResponse resumo(int ano, int mes) {
@@ -141,8 +145,11 @@ public class DashboardAdminService {
                 .toList();
     }
 
-    // Suposição 1 (Blueprint M16): só cobre eventos de CRIAÇÃO (tem timestamp real) — não cobre
-    // transições de status ("mentoria concluída"), que não são rastreadas hoje.
+    // H10 — cadastro/evento/conteúdo derivam do criadoEm da própria entidade (têm timestamp real
+    // de sobra); marcos de TRANSIÇÃO de status (mentoria cancelada/realizada, evento cancelado,
+    // pedido pago/reembolsado, lead fechado/perdido) vêm do AtividadeLog, escrito nos pontos de
+    // transição que contam como marco (ver AtividadeLogService e Achado 1 desta leva — antes
+    // dessas transições não tinham NENHUM timestamp pra ordenar/exibir).
     private List<AtividadeRecente> atividadesRecentes(List<Mentorado> mentorados, List<Evento> eventos) {
         List<Conteudo> conteudosPublicados = conteudoRepository.buscarComFiltro(null, null, true);
 
@@ -152,8 +159,10 @@ public class DashboardAdminService {
                 .map(e -> new AtividadeRecente("EVENTO_CRIADO", "Novo evento: " + e.getTitulo(), e.getCriadoEm()));
         Stream<AtividadeRecente> deConteudos = conteudosPublicados.stream()
                 .map(c -> new AtividadeRecente("CONTEUDO_PUBLICADO", "Conteúdo publicado: " + c.getTitulo(), c.getCriadoEm()));
+        Stream<AtividadeRecente> deLog = atividadeLogService.listarRecentes().stream()
+                .map(a -> new AtividadeRecente(a.getTipo(), a.getDescricao(), a.getCriadoEm()));
 
-        return Stream.of(deMentorados, deEventos, deConteudos)
+        return Stream.of(deMentorados, deEventos, deConteudos, deLog)
                 .flatMap(s -> s)
                 .sorted(Comparator.comparing(AtividadeRecente::quando).reversed())
                 .limit(MAX_ATIVIDADES_RECENTES)
