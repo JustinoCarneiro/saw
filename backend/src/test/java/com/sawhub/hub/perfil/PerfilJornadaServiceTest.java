@@ -1,6 +1,7 @@
 package com.sawhub.hub.perfil;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
@@ -21,6 +22,7 @@ import com.sawhub.hub.perfil.dto.JornadaResponse;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,10 +50,12 @@ class PerfilJornadaServiceTest {
     private MetaRepository metaRepository;
     @Mock
     private EncaminhamentoRepository encaminhamentoRepository;
+    @Mock
+    private ConquistaDesbloqueadaRepository conquistaDesbloqueadaRepository;
 
     private PerfilJornadaService service() {
         return new PerfilJornadaService(mentoradoRepository, conteudoMentoradoService, inscricaoEventoRepository,
-                mentoriaRepository, metaRepository, encaminhamentoRepository);
+                mentoriaRepository, metaRepository, encaminhamentoRepository, conquistaDesbloqueadaRepository);
     }
 
     private static Mentorado mentorado(UUID id, BigDecimal crescimento, int ferramentasConcluidas, int ferramentasTotal) {
@@ -69,6 +73,16 @@ class PerfilJornadaServiceTest {
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
         when(metaRepository.buscarPorMentorado(eq(mentorado.getId()), isNull())).thenReturn(List.of());
         when(encaminhamentoRepository.buscarPorMentorado(eq(mentorado.getId()), isNull(), isNull())).thenReturn(List.of());
+        mockarPersistenciaDeConquistas(mentorado);
+    }
+
+    // H9.2 — chamado em toda execução de jornada() (fetch de conquistas já existentes); o save()
+    // do Mentorado só acontece na PRIMEIRA observação (conquistasObservadasEm nulo) — lenient()
+    // porque testes que simulam observações seguintes (marco já setado antes do mockarZerado)
+    // legitimamente não usam esse stub, e o Mockito estrito reclamaria de stub não usado.
+    private void mockarPersistenciaDeConquistas(Mentorado mentorado) {
+        when(conquistaDesbloqueadaRepository.findByMentoradoId(mentorado.getId())).thenReturn(List.of());
+        org.mockito.Mockito.lenient().when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     @Test
@@ -107,6 +121,9 @@ class PerfilJornadaServiceTest {
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
         when(metaRepository.buscarPorMentorado(eq(mentorado.getId()), isNull())).thenReturn(List.of());
         when(encaminhamentoRepository.buscarPorMentorado(eq(mentorado.getId()), isNull(), isNull())).thenReturn(List.of());
+        // PRIMEIRO_EVENTO desbloqueia (eventosParticipados=1) — precisa da persistência mockada.
+        mockarPersistenciaDeConquistas(mentorado);
+        when(conquistaDesbloqueadaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         JornadaResponse resposta = service().jornada(usuarioId);
 
@@ -124,11 +141,72 @@ class PerfilJornadaServiceTest {
         mockarZerado(usuarioId, mentorado);
         var mentoriaRealizada = mentoriaRealizada();
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(mentoriaRealizada));
+        when(conquistaDesbloqueadaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         JornadaResponse resposta = service().jornada(usuarioId);
 
         assertThat(codigosDesbloqueados(resposta)).containsExactlyInAnyOrder(
                 "MENTORIA_REALIZADA", "EM_CRESCIMENTO", "FERRAMENTAS_EM_DIA");
+    }
+
+    @Test
+    void conquistaJaVerdadeiraNaPrimeiraObservacaoMostraDesdeSempreSemDataFabricada() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), BigDecimal.ZERO, 0, 0);
+        assertThat(mentorado.getConquistasObservadasEm()).isNull(); // pré-condição do cenário
+        mockarZerado(usuarioId, mentorado);
+        var mentoriaRealizada = mentoriaRealizada();
+        when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(mentoriaRealizada));
+        when(conquistaDesbloqueadaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        JornadaResponse resposta = service().jornada(usuarioId);
+
+        var mentoriaRealizadaConquista = resposta.conquistas().stream()
+                .filter(c -> c.codigo().equals("MENTORIA_REALIZADA")).findFirst().orElseThrow();
+        assertThat(mentoriaRealizadaConquista.desbloqueada()).isTrue();
+        assertThat(mentoriaRealizadaConquista.desbloqueadaEm()).isNull(); // "Desde sempre", não hoje
+        assertThat(mentorado.getConquistasObservadasEm()).isNotNull(); // marco setado pra próxima vez
+    }
+
+    @Test
+    void conquistaNovaAposPrimeiraObservacaoGanhaDataReal() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), BigDecimal.ZERO, 0, 0);
+        ReflectionTestUtils.setField(mentorado, "conquistasObservadasEm", Instant.parse("2026-01-01T00:00:00Z"));
+        mockarZerado(usuarioId, mentorado);
+        var mentoriaRealizada = mentoriaRealizada();
+        when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(mentoriaRealizada));
+        when(conquistaDesbloqueadaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        JornadaResponse resposta = service().jornada(usuarioId);
+
+        var mentoriaRealizadaConquista = resposta.conquistas().stream()
+                .filter(c -> c.codigo().equals("MENTORIA_REALIZADA")).findFirst().orElseThrow();
+        assertThat(mentoriaRealizadaConquista.desbloqueadaEm()).isNotNull(); // data real, não "desde sempre"
+    }
+
+    @Test
+    void conquistaJaRegistradaAnteriormenteNaoSobrescreveADataExistente() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(UUID.randomUUID(), BigDecimal.ZERO, 0, 0);
+        ReflectionTestUtils.setField(mentorado, "conquistasObservadasEm", Instant.parse("2026-01-01T00:00:00Z"));
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        when(conteudoMentoradoService.buscarCatalogo(eq(usuarioId), isNull(), isNull())).thenReturn(List.of());
+        when(inscricaoEventoRepository.findByMentoradoId(mentorado.getId())).thenReturn(List.of());
+        when(metaRepository.buscarPorMentorado(eq(mentorado.getId()), isNull())).thenReturn(List.of());
+        when(encaminhamentoRepository.buscarPorMentorado(eq(mentorado.getId()), isNull(), isNull())).thenReturn(List.of());
+        var mentoriaRealizada = mentoriaRealizada();
+        when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(mentoriaRealizada));
+
+        Instant dataOriginal = Instant.parse("2026-03-10T12:00:00Z");
+        when(conquistaDesbloqueadaRepository.findByMentoradoId(mentorado.getId()))
+                .thenReturn(List.of(new ConquistaDesbloqueada(mentorado.getId(), "MENTORIA_REALIZADA", dataOriginal)));
+
+        JornadaResponse resposta = service().jornada(usuarioId);
+
+        var mentoriaRealizadaConquista = resposta.conquistas().stream()
+                .filter(c -> c.codigo().equals("MENTORIA_REALIZADA")).findFirst().orElseThrow();
+        assertThat(mentoriaRealizadaConquista.desbloqueadaEm()).isEqualTo(dataOriginal);
     }
 
     @Test
@@ -144,6 +222,9 @@ class PerfilJornadaServiceTest {
         when(inscricaoEventoRepository.findByMentoradoId(mentorado.getId())).thenReturn(List.of());
         when(metaRepository.buscarPorMentorado(eq(mentorado.getId()), isNull())).thenReturn(List.of());
         when(encaminhamentoRepository.buscarPorMentorado(eq(mentorado.getId()), isNull(), isNull())).thenReturn(List.of());
+        // MENTORIA_REALIZADA desbloqueia — precisa da persistência mockada.
+        mockarPersistenciaDeConquistas(mentorado);
+        when(conquistaDesbloqueadaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         JornadaResponse resposta = service().jornada(usuarioId);
 

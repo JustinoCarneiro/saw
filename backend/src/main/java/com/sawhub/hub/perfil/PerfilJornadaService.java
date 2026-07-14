@@ -17,16 +17,19 @@ import com.sawhub.hub.perfil.dto.JornadaResponse;
 import com.sawhub.hub.perfil.dto.JornadaResponse.Conquista;
 import com.sawhub.hub.perfil.dto.JornadaResponse.Stats;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** H9.2 — XP/nível/conquistas 100% derivados por leitura (ver Suposições 2/3 do Blueprint M15
- * no ROADMAP.md): nenhum side-effect é adicionado aos módulos já fechados (M09-M13) que são a
- * fonte desses contadores, e nada aqui é persistido. */
+/** H9.2 — XP/nível 100% derivados por leitura (ver Suposições 2/3 do Blueprint M15 no
+ * ROADMAP.md): nenhum side-effect é adicionado aos módulos já fechados (M09-M13) que são a
+ * fonte desses contadores. Data de desbloqueio de conquista É persistida (ConquistaDesbloqueada,
+ * V18) — ver {@link #sincronizarConquistas} pra como "desde sempre" vs. data real é decidido. */
 @Service
-@Transactional(readOnly = true)
 public class PerfilJornadaService {
 
     private final MentoradoRepository mentoradoRepository;
@@ -35,21 +38,25 @@ public class PerfilJornadaService {
     private final MentoriaRepository mentoriaRepository;
     private final MetaRepository metaRepository;
     private final EncaminhamentoRepository encaminhamentoRepository;
+    private final ConquistaDesbloqueadaRepository conquistaDesbloqueadaRepository;
 
     public PerfilJornadaService(MentoradoRepository mentoradoRepository,
                                  ConteudoMentoradoService conteudoMentoradoService,
                                  InscricaoEventoRepository inscricaoEventoRepository,
                                  MentoriaRepository mentoriaRepository,
                                  MetaRepository metaRepository,
-                                 EncaminhamentoRepository encaminhamentoRepository) {
+                                 EncaminhamentoRepository encaminhamentoRepository,
+                                 ConquistaDesbloqueadaRepository conquistaDesbloqueadaRepository) {
         this.mentoradoRepository = mentoradoRepository;
         this.conteudoMentoradoService = conteudoMentoradoService;
         this.inscricaoEventoRepository = inscricaoEventoRepository;
         this.mentoriaRepository = mentoriaRepository;
         this.metaRepository = metaRepository;
         this.encaminhamentoRepository = encaminhamentoRepository;
+        this.conquistaDesbloqueadaRepository = conquistaDesbloqueadaRepository;
     }
 
+    @Transactional
     public JornadaResponse jornada(UUID usuarioId) {
         Mentorado mentorado = mentoradoRepository.findByUsuarioId(usuarioId)
                 .orElseThrow(() -> new IllegalStateException(
@@ -88,7 +95,7 @@ public class PerfilJornadaService {
         int progressoPct = calcularProgressoPct(xp, nivelAtual, proximo);
 
         Stats stats = new Stats(materiaisAcessados, dicasAssistidas, eventosParticipados, mentoriasRealizadas);
-        List<Conquista> conquistas = calcularConquistas(mentorado, materiaisAcessados, dicasAssistidas,
+        List<Conquista> conquistas = sincronizarConquistas(mentorado, materiaisAcessados, dicasAssistidas,
                 eventosParticipados, mentoriasRealizadas, metasConcluidas, tarefasConcluidas);
 
         return new JornadaResponse(nivelAtual, xp, xpProximoNivel, progressoPct, stats, conquistas);
@@ -112,33 +119,64 @@ public class PerfilJornadaService {
         return Math.max(0, Math.min(100, pct));
     }
 
-    private static List<Conquista> calcularConquistas(Mentorado mentorado, long materiaisAcessados,
-                                                        long dicasAssistidas, long eventosParticipados,
-                                                        long mentoriasRealizadas, long metasConcluidas,
-                                                        long tarefasConcluidas) {
+    // H9.2 — "desde sempre" vs. data real: se essa é a PRIMEIRA VEZ que computamos a jornada
+    // deste mentorado desde a V18 (conquistasObservadasEm nulo), qualquer conquista já verdadeira
+    // agora é backfillada com desbloqueadaEm=null ("já era antes de rastrearmos", sem data
+    // fabricada) — e o marco fica setado, então da PRÓXIMA vez em diante, uma conquista nova
+    // ganha timestamp real. Sem essa marca, a primeira leitura pós-deploy de QUALQUER mentorado
+    // gravaria hoje como data de algo que já era verdade há meses.
+    private List<Conquista> sincronizarConquistas(Mentorado mentorado, long materiaisAcessados,
+                                                    long dicasAssistidas, long eventosParticipados,
+                                                    long mentoriasRealizadas, long metasConcluidas,
+                                                    long tarefasConcluidas) {
         boolean ferramentasEmDia = mentorado.getFerramentasTotal() != null && mentorado.getFerramentasTotal() > 0
                 && mentorado.getFerramentasConcluidas() != null
                 && mentorado.getFerramentasConcluidas().intValue() == mentorado.getFerramentasTotal().intValue();
         boolean emCrescimento = mentorado.getCrescimentoFaturamentoPct() != null
                 && mentorado.getCrescimentoFaturamentoPct().compareTo(BigDecimal.ZERO) > 0;
 
-        return List.of(
-                new Conquista("PRIMEIRO_EVENTO", "Primeiro Evento", "Participou de um evento da SAW.",
+        record Condicao(String codigo, String titulo, String descricao, boolean desbloqueada) {
+        }
+        List<Condicao> condicoes = List.of(
+                new Condicao("PRIMEIRO_EVENTO", "Primeiro Evento", "Participou de um evento da SAW.",
                         eventosParticipados >= 1),
-                new Conquista("MENTORIA_REALIZADA", "Mentoria Realizada", "Participou de uma mentoria.",
+                new Condicao("MENTORIA_REALIZADA", "Mentoria Realizada", "Participou de uma mentoria.",
                         mentoriasRealizadas >= 1),
-                new Conquista("MARATONISTA", "Maratonista", "Acessou 10 ou mais materiais.",
+                new Condicao("MARATONISTA", "Maratonista", "Acessou 10 ou mais materiais.",
                         materiaisAcessados >= 10),
-                new Conquista("SEMPRE_LIGADO", "Sempre Ligado", "Assistiu 5 ou mais dicas do Brayan.",
+                new Condicao("SEMPRE_LIGADO", "Sempre Ligado", "Assistiu 5 ou mais dicas do Brayan.",
                         dicasAssistidas >= 5),
-                new Conquista("META_BATIDA", "Meta Batida", "Concluiu ao menos uma meta estratégica.",
+                new Condicao("META_BATIDA", "Meta Batida", "Concluiu ao menos uma meta estratégica.",
                         metasConcluidas >= 1),
-                new Conquista("PRODUTIVO", "Produtivo", "Concluiu 10 ou mais tarefas.",
+                new Condicao("PRODUTIVO", "Produtivo", "Concluiu 10 ou mais tarefas.",
                         tarefasConcluidas >= 10),
-                new Conquista("EM_CRESCIMENTO", "Em Crescimento", "Faturamento em crescimento no período.",
+                new Condicao("EM_CRESCIMENTO", "Em Crescimento", "Faturamento em crescimento no período.",
                         emCrescimento),
-                new Conquista("FERRAMENTAS_EM_DIA", "Ferramentas em Dia", "Concluiu todas as ferramentas obrigatórias.",
+                new Condicao("FERRAMENTAS_EM_DIA", "Ferramentas em Dia", "Concluiu todas as ferramentas obrigatórias.",
                         ferramentasEmDia)
         );
+
+        boolean primeiraObservacao = mentorado.getConquistasObservadasEm() == null;
+        Map<String, Instant> datasPorCodigo = new HashMap<>();
+        for (ConquistaDesbloqueada existente : conquistaDesbloqueadaRepository.findByMentoradoId(mentorado.getId())) {
+            datasPorCodigo.put(existente.getCodigo(), existente.getDesbloqueadaEm());
+        }
+
+        for (Condicao condicao : condicoes) {
+            if (condicao.desbloqueada() && !datasPorCodigo.containsKey(condicao.codigo())) {
+                Instant data = primeiraObservacao ? null : Instant.now();
+                conquistaDesbloqueadaRepository.save(new ConquistaDesbloqueada(mentorado.getId(), condicao.codigo(), data));
+                datasPorCodigo.put(condicao.codigo(), data);
+            }
+        }
+
+        if (primeiraObservacao) {
+            mentorado.marcarConquistasObservadas();
+            mentoradoRepository.save(mentorado);
+        }
+
+        return condicoes.stream()
+                .map(c -> new Conquista(c.codigo(), c.titulo(), c.descricao(), c.desbloqueada(), datasPorCodigo.get(c.codigo())))
+                .toList();
     }
 }

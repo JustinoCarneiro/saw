@@ -18,11 +18,45 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     await expect(jornada.getByText('Nível atual:')).toBeVisible();
     await expect(jornada.getByTestId('conquista-MENTORIA_REALIZADA')).toHaveClass(/conquistaDesbloqueada/);
     await expect(jornada.getByTestId('conquista-MARATONISTA')).toHaveClass(/conquistaBloqueada/);
+    // H9.2 — já era verdadeira no seed, antes do rastreamento de data existir (V18): a primeira
+    // visita a este perfil tem que mostrar "Desde sempre", nunca a data de hoje fabricada.
+    await expect(jornada.getByTestId('conquista-MENTORIA_REALIZADA').getByText('Desde sempre')).toBeVisible();
 
     const assinatura = page.getByTestId('assinatura-cartao');
     await expect(assinatura.getByText('Essencial')).toBeVisible();
     await expect(assinatura.getByText('20/09/2026')).toBeVisible();
     await expect(assinatura.getByText('Profissional')).toBeVisible(); // única opção acima de Essencial
+  });
+
+  test('H9.2 — conquista desbloqueada depois da primeira visita ao perfil ganha data real, não "Desde sempre"', async ({ page }) => {
+    // Rafael não tem nenhuma meta no seed e nenhum outro spec cria uma pra ele (ao contrário de
+    // Carlos, que metas.spec.ts usa como fixture de "zero metas" — criar uma aqui quebraria
+    // aquele teste numa segunda execução contra o mesmo banco) — META_BATIDA parte de false,
+    // então dá pra observar as duas fases: primeira visita (estabelece o marco de "já
+    // observamos esse mentorado"), depois desbloqueio real.
+    await loginAs(page, 'rafael@bistrogomes.com.br');
+    await expect(page).toHaveURL(/\/mentorado/);
+
+    await page.getByRole('link', { name: 'Perfil' }).click();
+    const metaBatida = page.getByTestId('jornada-cartao').getByTestId('conquista-META_BATIDA');
+    await expect(metaBatida).toHaveClass(/conquistaBloqueada/);
+
+    const titulo = `Meta E2E ${Date.now()}`;
+    await page.getByRole('link', { name: 'Metas' }).click();
+    await page.getByRole('button', { name: 'Nova meta' }).click();
+    await page.getByLabel('Título').fill(titulo);
+    await page.getByLabel('Prazo').fill('2026-12-31');
+    await page.getByRole('button', { name: 'Criar meta' }).click();
+    const linha = page.locator('[data-testid^="meta-row-"]', { hasText: titulo });
+    await expect(linha).toBeVisible();
+    await linha.getByRole('button', { name: 'Concluir' }).click();
+    await expect(page.getByText(titulo)).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Perfil' }).click();
+    await expect(metaBatida).toHaveClass(/conquistaDesbloqueada/);
+    await expect(metaBatida.getByText('Desde sempre')).toHaveCount(0);
+    // Formato dd/mm/aaaa — se apareceu, é uma data real (hoje), não o sentinel "desde sempre".
+    await expect(metaBatida.getByText(/\d{2}\/\d{2}\/\d{4}/)).toBeVisible();
   });
 
   test('mentorado edita telefone/bio/áreas/foto e vê o cartão atualizado', async ({ page }) => {

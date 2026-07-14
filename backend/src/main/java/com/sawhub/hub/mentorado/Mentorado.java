@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity
@@ -57,6 +58,13 @@ public class Mentorado extends BaseEntity {
     @Column(name = "vencimento_plano")
     private LocalDate vencimentoPlano;
 
+    // H9.2 — marca a primeira vez que a jornada (XP/conquistas) deste mentorado foi computada
+    // depois da migração V18. Distingue "essa conquista já era verdadeira antes de rastrearmos"
+    // (backfill, sem data fabricada) de "acabou de acontecer" (data real) — ver
+    // PerfilJornadaService.sincronizarConquistas.
+    @Column(name = "conquistas_observadas_em")
+    private Instant conquistasObservadasEm;
+
     protected Mentorado() {
     }
 
@@ -98,6 +106,12 @@ public class Mentorado extends BaseEntity {
     /** H9.3 — setado pelo Admin junto com o plano (M02/E15); ver Suposição 4 do Blueprint do M15. */
     public void definirVencimentoPlano(LocalDate vencimentoPlano) {
         this.vencimentoPlano = vencimentoPlano;
+    }
+
+    public void marcarConquistasObservadas() {
+        if (this.conquistasObservadasEm == null) {
+            this.conquistasObservadasEm = Instant.now();
+        }
     }
 
     public StatusMentorado getStatus() {
@@ -150,5 +164,9 @@ public class Mentorado extends BaseEntity {
 
     public LocalDate getVencimentoPlano() {
         return vencimentoPlano;
+    }
+
+    public Instant getConquistasObservadasEm() {
+        return conquistasObservadasEm;
     }
 }

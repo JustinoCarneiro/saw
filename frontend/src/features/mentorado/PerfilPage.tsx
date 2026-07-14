@@ -120,6 +120,11 @@ export function PerfilPage() {
                   >
                     <div className={styles.conquistaTitulo}>{c.titulo}</div>
                     <div className={styles.conquistaDesc}>{c.descricao}</div>
+                    {c.desbloqueada && (
+                      <div className={styles.conquistaData}>
+                        {c.desbloqueadaEm ? formatarData(c.desbloqueadaEm) : 'Desde sempre'}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

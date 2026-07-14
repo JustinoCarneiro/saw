@@ -225,6 +225,13 @@
   margin-top: 4px;
 }
 
+.conquistaData {
+  font-size: 11px;
+  color: var(--gold);
+  margin-top: 6px;
+  font-weight: 600;
+}
+
 .sidebarTitulo {
   font-size: 14px;
   font-weight: 600;
