@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
-import type { Conteudo, TipoConteudo } from '../../shared/lib/types';
+import type { Conteudo, IndicadoresConsumo, TipoConteudo } from '../../shared/lib/types';
 import styles from './MateriaisPage.module.css';
 
 const TABS: { label: string; view: 'CATALOGO' | 'DICAS' }[] = [
@@ -36,6 +36,13 @@ export function MateriaisPage() {
   const [dicas, setDicas] = useState<Conteudo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
+  const [indicadores, setIndicadores] = useState<IndicadoresConsumo | null>(null);
+
+  const carregarIndicadores = () => {
+    apiClient.get<IndicadoresConsumo>('/mentorado/conteudos/indicadores').then((res) => setIndicadores(res.data));
+  };
+
+  useEffect(carregarIndicadores, []);
 
   const carregarCatalogo = () => {
     setConteudos(null);
@@ -77,6 +84,7 @@ export function MateriaisPage() {
       
       setConteudos(updateFn);
       setDicas(updateFn);
+      carregarIndicadores();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível atualizar o item.'));
     } finally {
@@ -90,6 +98,23 @@ export function MateriaisPage() {
         <h1 className={styles.title}>Materiais & Dicas</h1>
         <p className={styles.subtitle}>Acesse a base de conhecimento e acelere seus resultados.</p>
       </div>
+
+      {indicadores && (
+        <div className={styles.indicadores} data-testid="indicadores-consumo">
+          <div className={styles.indicadorTile} data-testid="indicador-dias-assistidos">
+            <div className={styles.indicadorValor}>{indicadores.diasAssistidos}</div>
+            <div className={styles.indicadorLabel}>dias assistidos</div>
+          </div>
+          <div className={styles.indicadorTile} data-testid="indicador-favoritas">
+            <div className={styles.indicadorValor}>{indicadores.favoritas}</div>
+            <div className={styles.indicadorLabel}>favoritas</div>
+          </div>
+          <div className={styles.indicadorTile} data-testid="indicador-minutos">
+            <div className={styles.indicadorValor}>{indicadores.minutosAssistidos}</div>
+            <div className={styles.indicadorLabel}>minutos de conteúdo assistido</div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.toolbar}>
         <div className={styles.tabs}>

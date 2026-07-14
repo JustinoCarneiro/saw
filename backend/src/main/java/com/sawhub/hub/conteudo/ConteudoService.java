@@ -21,6 +21,7 @@ public class ConteudoService {
     @Transactional
     public Conteudo criar(CriarConteudoRequest request) {
         Conteudo conteudo = new Conteudo(request.titulo(), request.tipo(), request.url(), request.planoMinimo());
+        conteudo.definirDuracaoMinutos(request.duracaoMinutos());
         return conteudoRepository.save(conteudo);
     }
 
@@ -32,6 +33,7 @@ public class ConteudoService {
     public Conteudo atualizar(UUID id, AtualizarConteudoRequest request) {
         Conteudo conteudo = buscar(id);
         conteudo.atualizar(request.titulo(), request.tipo(), request.url(), request.planoMinimo());
+        conteudo.definirDuracaoMinutos(request.duracaoMinutos());
         return conteudoRepository.save(conteudo);
     }
 

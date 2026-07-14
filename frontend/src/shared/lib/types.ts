@@ -305,6 +305,13 @@ export interface Conteudo {
   criadoEm: string;
   favorito?: boolean;
   assistido?: boolean;
+  duracaoMinutos?: number | null;
+}
+
+export interface IndicadoresConsumo {
+  diasAssistidos: number;
+  favoritas: number;
+  minutosAssistidos: number;
 }
 
 // M08 · E2 (Dashboard do Mentorado)
@@ -551,11 +558,14 @@ export interface StatsJornada {
   mentoriasRealizadas: number;
 }
 
+// H9.2 — desbloqueadaEm nulo com desbloqueada=true significa "desde sempre" (já era verdadeira
+// antes do rastreamento existir), não "sem data". Só interprete quando desbloqueada=true.
 export interface Conquista {
   codigo: string;
   titulo: string;
   descricao: string;
   desbloqueada: boolean;
+  desbloqueadaEm: string | null;
 }
 
 export interface Jornada {

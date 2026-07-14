@@ -410,18 +410,21 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (conteudoRepository.count() > 0) {
             return;
         }
-        criarConteudo("Ficha técnica — modelo", TipoConteudo.PLANILHA, Plano.GRATUITO, true);
-        criarConteudo("Manual da Cultura SAW", TipoConteudo.DOCUMENTO, Plano.GRATUITO, true);
-        criarConteudo("Como calcular seu DRE", TipoConteudo.VIDEO, Plano.BASICO, true);
-        criarConteudo("Apresentação: Precificação estratégica", TipoConteudo.APRESENTACAO, Plano.ESSENCIAL, false);
+        criarConteudo("Ficha técnica — modelo", TipoConteudo.PLANILHA, Plano.GRATUITO, true, null);
+        criarConteudo("Manual da Cultura SAW", TipoConteudo.DOCUMENTO, Plano.GRATUITO, true, null);
+        // H6.3 — duração real (não fictícia por acaso): "Como calcular seu DRE" é o único vídeo
+        // seedado, dá pro indicador "minutos assistidos" mostrar um número plausível em demo.
+        criarConteudo("Como calcular seu DRE", TipoConteudo.VIDEO, Plano.BASICO, true, 12);
+        criarConteudo("Apresentação: Precificação estratégica", TipoConteudo.APRESENTACAO, Plano.ESSENCIAL, false, null);
     }
 
     // Devolve o Conteudo salvo (M12: seedMentoriasEAtas usa o retorno pra associar materiaisRecomendados).
-    private Conteudo criarConteudo(String titulo, TipoConteudo tipo, Plano planoMinimo, boolean publicado) {
+    private Conteudo criarConteudo(String titulo, TipoConteudo tipo, Plano planoMinimo, boolean publicado, Integer duracaoMinutos) {
         Conteudo conteudo = new Conteudo(titulo, tipo, "https://cdn.sawhub.com.br/conteudos/" + tipo.name().toLowerCase(), planoMinimo);
         if (publicado) {
             conteudo.publicar();
         }
+        conteudo.definirDuracaoMinutos(duracaoMinutos);
         return conteudoRepository.save(conteudo);
     }
 

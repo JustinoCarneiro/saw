@@ -25,6 +25,31 @@
   gap: 16px;
 }
 
+.indicadores {
+  display: flex;
+  gap: 16px;
+}
+
+.indicadorTile {
+  padding: 16px 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  min-width: 140px;
+}
+
+.indicadorValor {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.indicadorLabel {
+  font-size: 12.5px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
 .tabs {
   display: flex;
   gap: 8px;

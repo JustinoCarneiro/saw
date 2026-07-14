@@ -2,6 +2,7 @@ package com.sawhub.hub.conteudo;
 
 import com.sawhub.hub.conteudo.dto.AtualizarConteudoMentoradoRequest;
 import com.sawhub.hub.conteudo.dto.ConteudoMentoradoResponse;
+import com.sawhub.hub.conteudo.dto.IndicadoresConsumoResponse;
 import com.sawhub.hub.security.AppUserPrincipal;
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +31,11 @@ public class ConteudoMentoradoController {
             @RequestParam(required = false) TipoConteudo tipo,
             @RequestParam(required = false) Boolean favorito) {
         return conteudoMentoradoService.buscarCatalogo(principal.getUsuarioId(), tipo, favorito);
+    }
+
+    @GetMapping("/indicadores")
+    public IndicadoresConsumoResponse indicadores(@AuthenticationPrincipal AppUserPrincipal principal) {
+        return conteudoMentoradoService.indicadoresConsumo(principal.getUsuarioId());
     }
 
     @GetMapping("/dicas")

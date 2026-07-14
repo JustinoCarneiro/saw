@@ -31,6 +31,13 @@ public class Conteudo extends BaseEntity {
     @Column(nullable = false)
     private boolean publicado = false;
 
+    // H6.3 — duração DECLARADA do material (Admin preenche ao cadastrar), não tempo real de
+    // exibição — não há rastreamento de player. Opcional (nullable): materiais antigos/não-vídeo
+    // não precisam preencher. Setter separado (não no construtor/atualizar()) pra não mexer na
+    // assinatura de nenhum call site já existente (DemoDataSeeder, testes).
+    @Column(name = "duracao_minutos")
+    private Integer duracaoMinutos;
+
     protected Conteudo() {
     }
 
@@ -46,6 +53,10 @@ public class Conteudo extends BaseEntity {
         this.tipo = tipo;
         this.url = url;
         this.planoMinimo = planoMinimo == null ? Plano.GRATUITO : planoMinimo;
+    }
+
+    public void definirDuracaoMinutos(Integer duracaoMinutos) {
+        this.duracaoMinutos = duracaoMinutos;
     }
 
     public void publicar() {
@@ -74,5 +85,9 @@ public class Conteudo extends BaseEntity {
 
     public boolean isPublicado() {
         return publicado;
+    }
+
+    public Integer getDuracaoMinutos() {
+        return duracaoMinutos;
     }
 }

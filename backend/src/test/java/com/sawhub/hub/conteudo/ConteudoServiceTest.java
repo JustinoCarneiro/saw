@@ -33,7 +33,7 @@ class ConteudoServiceTest {
         when(conteudoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarConteudoRequest("Ficha técnica modelo", TipoConteudo.PLANILHA,
-                "https://cdn.sawhub.com.br/ficha.xlsx", Plano.BASICO);
+                "https://cdn.sawhub.com.br/ficha.xlsx", Plano.BASICO, null);
 
         Conteudo conteudo = service().criar(request);
 
@@ -43,11 +43,23 @@ class ConteudoServiceTest {
     }
 
     @Test
+    void criarComDuracaoPersisteODuracaoMinutos() {
+        when(conteudoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new CriarConteudoRequest("Como calcular seu DRE", TipoConteudo.VIDEO,
+                "https://cdn.sawhub.com.br/dre.mp4", Plano.BASICO, 12);
+
+        Conteudo conteudo = service().criar(request);
+
+        assertThat(conteudo.getDuracaoMinutos()).isEqualTo(12);
+    }
+
+    @Test
     void criarSemPlanoUsaGratuitoComoDefault() {
         when(conteudoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarConteudoRequest("Manual da cultura", TipoConteudo.DOCUMENTO,
-                "https://cdn.sawhub.com.br/manual.pdf", null);
+                "https://cdn.sawhub.com.br/manual.pdf", null, null);
 
         Conteudo conteudo = service().criar(request);
 
@@ -80,7 +92,7 @@ class ConteudoServiceTest {
         UUID id = UUID.randomUUID();
         when(conteudoRepository.findById(id)).thenReturn(Optional.empty());
 
-        var request = new AtualizarConteudoRequest("X", TipoConteudo.OUTRO, "https://x", Plano.GRATUITO);
+        var request = new AtualizarConteudoRequest("X", TipoConteudo.OUTRO, "https://x", Plano.GRATUITO, null);
 
         assertThatThrownBy(() -> service().atualizar(id, request))
                 .isInstanceOf(IllegalArgumentException.class)

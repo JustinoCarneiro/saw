@@ -39,4 +39,10 @@ public interface ConteudoMentoradoRepository extends JpaRepository<ConteudoMento
         @Param("planos") List<com.sawhub.hub.mentorado.Plano> planos
     );
 
+    // H6.3 — "dias assistidos" agrega por data de dataConsumo (ver ConteudoMentorado), não conta
+    // linhas: assistir 3 conteúdos no mesmo dia é 1 dia assistido, não 3.
+    List<ConteudoMentorado> findByMentoradoIdAndAssistidoTrue(UUID mentoradoId);
+
+    long countByMentoradoIdAndFavoritoTrue(UUID mentoradoId);
+
 }

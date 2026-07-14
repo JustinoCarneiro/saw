@@ -45,6 +45,58 @@ test.describe('M11 — E6 Materiais & Dicas do Brayan', () => {
     }
   });
 
+  test('H6.3 — indicadores de consumo (dias assistidos, minutos, favoritas) refletem as ações do mentorado', async ({ page }) => {
+    // Rafael não aparece em nenhum outro teste deste arquivo (Carlos/Marina/Ana acima) —
+    // evita qualquer acoplamento com o estado que eles deixam; compara por delta, não valor
+    // absoluto, mesmo raciocínio de tarefas.spec.ts (contagem exata dependeria de ordem/seed).
+    await loginAs(page, 'rafael@bistrogomes.com.br');
+    await expect(page).toHaveURL(/\/mentorado/);
+
+    type Indicadores = { diasAssistidos: number; favoritas: number; minutosAssistidos: number };
+
+    await page.getByRole('link', { name: 'Materiais & Dicas' }).click();
+    await expect(page.getByTestId('indicadores-consumo')).toBeVisible();
+    await page.getByRole('button', { name: 'Dicas do Brayan' }).click();
+
+    // "Como calcular seu DRE": único vídeo seedado, com duração cadastrada de 12min (ver
+    // DemoDataSeeder) — bom fixture pra provar que a soma de minutosAssistidos usa essa duração.
+    const dica = page.locator('[data-testid^="dica-"]', { hasText: 'Como calcular seu DRE' });
+    await expect(dica).toBeVisible();
+
+    // Normaliza pra "não favorito" ANTES de capturar o "antes" — se já estivesse favorito de uma
+    // execução anterior, capturar o baseline só depois evita o delta dar 0 em vez de +1.
+    const favoritarBtn = dica.getByRole('button', { name: /^[☆★]$/ });
+    if ((await favoritarBtn.textContent())?.trim() === '★') {
+      await favoritarBtn.click();
+      await expect(favoritarBtn).toHaveText('☆');
+    }
+
+    const assistidoBtn = dica.getByRole('button', { name: /Assistido|Marcar assistido/ });
+    const jaEstavaAssistido = (await assistidoBtn.textContent())?.includes('✓');
+
+    const antes: Indicadores = await (await page.request.get('/api/v1/mentorado/conteudos/indicadores')).json();
+
+    await favoritarBtn.click();
+    await expect(favoritarBtn).toHaveText('★');
+    if (!jaEstavaAssistido) {
+      await assistidoBtn.click();
+      await expect(dica.getByRole('button', { name: '✓ Assistido' })).toBeVisible();
+    }
+
+    await expect(page.getByTestId('indicador-favoritas')).toContainText(String(antes.favoritas + 1));
+
+    const depois: Indicadores = await (await page.request.get('/api/v1/mentorado/conteudos/indicadores')).json();
+    expect(depois.favoritas).toBe(antes.favoritas + 1);
+    expect(depois.diasAssistidos).toBeGreaterThanOrEqual(antes.diasAssistidos);
+    // Se já estava assistido antes (execução anterior), o minuto já contava — só garante que
+    // não caiu; se acabou de marcar agora, tem que ter subido exatamente os 12min do vídeo.
+    if (jaEstavaAssistido) {
+      expect(depois.minutosAssistidos).toBeGreaterThanOrEqual(antes.minutosAssistidos);
+    } else {
+      expect(depois.minutosAssistidos).toBe(antes.minutosAssistidos + 12);
+    }
+  });
+
   test('mentorado com plano insuficiente não vê nem consegue favoritar conteúdo acima do próprio plano', async ({ page }) => {
     // Marina (BASICO) não deve ver "Apresentação: Precificação estratégica" (ESSENCIAL).
     await loginAs(page, 'marina@sabordamarina.com.br');

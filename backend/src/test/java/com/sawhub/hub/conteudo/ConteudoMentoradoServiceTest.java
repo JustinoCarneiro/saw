@@ -9,9 +9,11 @@ import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.conteudo.dto.AtualizarConteudoMentoradoRequest;
 import com.sawhub.hub.conteudo.dto.ConteudoMentoradoResponse;
+import com.sawhub.hub.conteudo.dto.IndicadoresConsumoResponse;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentorado.Plano;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -131,5 +133,80 @@ class ConteudoMentoradoServiceTest {
         assertThatThrownBy(() -> service().atualizarStatus(usuarioId, naoPublicado.getId(),
                 new AtualizarConteudoMentoradoRequest(true, null)))
                 .isInstanceOf(java.util.NoSuchElementException.class);
+    }
+
+    @Test
+    void indicadoresConsumoContaDiasDistintosNaoLinhas() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.PROFISSIONAL, null, null, null);
+        ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+
+        // 3 conteúdos assistidos, mas só 2 dias-calendário distintos em America/Sao_Paulo (-03:00)
+        // — cm1 e cm2 caem no mesmo dia 10 em Brasil mesmo com timestamps UTC de dias diferentes
+        // (02h UTC de 11/07 ainda é 23h de 10/07 em -03:00), então "dias assistidos" tem que dar
+        // 2, não 3 — prova que a conversão de fuso é aplicada, não uma comparação ingênua em UTC.
+        ConteudoMentorado cm1 = criarAssistido(mentorado, Instant.parse("2026-07-10T14:00:00Z"));
+        ConteudoMentorado cm2 = criarAssistido(mentorado, Instant.parse("2026-07-11T02:00:00Z"));
+        ConteudoMentorado cm3 = criarAssistido(mentorado, Instant.parse("2026-07-11T18:00:00Z"));
+        when(conteudoMentoradoRepository.findByMentoradoIdAndAssistidoTrue(mentorado.getId()))
+                .thenReturn(List.of(cm1, cm2, cm3));
+        when(conteudoMentoradoRepository.countByMentoradoIdAndFavoritoTrue(mentorado.getId())).thenReturn(4L);
+
+        IndicadoresConsumoResponse resp = service().indicadoresConsumo(usuarioId);
+
+        assertThat(resp.diasAssistidos()).isEqualTo(2);
+        assertThat(resp.favoritas()).isEqualTo(4L);
+    }
+
+    @Test
+    void indicadoresConsumoSomaSoConteudosComDuracaoCadastrada() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.PROFISSIONAL, null, null, null);
+        ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+
+        // Um vídeo com duração cadastrada (12min) + um documento sem duração (opcional, não
+        // preenchido) — soma tem que dar 12, não quebrar/contar o segundo como 0 explícito vs
+        // ausente faz diferença nenhuma no resultado, mas prova que null não derruba o stream.
+        ConteudoMentorado comDuracao = criarAssistido(mentorado, Instant.parse("2026-07-10T14:00:00Z"), 12);
+        ConteudoMentorado semDuracao = criarAssistido(mentorado, Instant.parse("2026-07-10T15:00:00Z"), null);
+        when(conteudoMentoradoRepository.findByMentoradoIdAndAssistidoTrue(mentorado.getId()))
+                .thenReturn(List.of(comDuracao, semDuracao));
+        when(conteudoMentoradoRepository.countByMentoradoIdAndFavoritoTrue(mentorado.getId())).thenReturn(0L);
+
+        IndicadoresConsumoResponse resp = service().indicadoresConsumo(usuarioId);
+
+        assertThat(resp.minutosAssistidos()).isEqualTo(12);
+    }
+
+    @Test
+    void indicadoresConsumoSemNenhumConsumoDevolveZerado() {
+        UUID usuarioId = UUID.randomUUID();
+        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.GRATUITO, null, null, null);
+        ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
+        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
+        when(conteudoMentoradoRepository.findByMentoradoIdAndAssistidoTrue(mentorado.getId())).thenReturn(List.of());
+        when(conteudoMentoradoRepository.countByMentoradoIdAndFavoritoTrue(mentorado.getId())).thenReturn(0L);
+
+        IndicadoresConsumoResponse resp = service().indicadoresConsumo(usuarioId);
+
+        assertThat(resp.diasAssistidos()).isZero();
+        assertThat(resp.favoritas()).isZero();
+        assertThat(resp.minutosAssistidos()).isZero();
+    }
+
+    private ConteudoMentorado criarAssistido(Mentorado mentorado, Instant quando) {
+        return criarAssistido(mentorado, quando, null);
+    }
+
+    private ConteudoMentorado criarAssistido(Mentorado mentorado, Instant quando, Integer duracaoMinutos) {
+        Conteudo conteudo = new Conteudo("Doc", TipoConteudo.DOCUMENTO, "url", Plano.GRATUITO);
+        ReflectionTestUtils.setField(conteudo, "id", UUID.randomUUID());
+        conteudo.definirDuracaoMinutos(duracaoMinutos);
+        ConteudoMentorado cm = new ConteudoMentorado(mentorado, conteudo);
+        cm.setAssistido(true);
+        ReflectionTestUtils.setField(cm, "dataConsumo", quando);
+        return cm;
     }
 }

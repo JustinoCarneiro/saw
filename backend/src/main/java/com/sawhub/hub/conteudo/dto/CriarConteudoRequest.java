@@ -15,6 +15,10 @@ public record CriarConteudoRequest(
         // um Admin comprometido podia gravar "javascript:..." e obter execução no contexto
         // autenticado do mentorado que clicasse.
         @NotBlank @Size(max = 500) @Pattern(regexp = "^https?://.+") String url,
-        Plano planoMinimo
+        Plano planoMinimo,
+        // H6.3 — opcional: duração declarada do material, usada só pro indicador "minutos
+        // assistidos" do mentorado. Sem validação de mínimo/máximo — 0 ou negativo não faz
+        // sentido, mas travar isso aqui é rigor desproporcional pra um campo informativo opcional.
+        Integer duracaoMinutos
 ) {
 }

@@ -12,6 +12,7 @@ public record AtualizarConteudoRequest(
         @NotNull TipoConteudo tipo,
         // Mesmo achado/motivo do CriarConteudoRequest — ver comentário lá.
         @NotBlank @Size(max = 500) @Pattern(regexp = "^https?://.+") String url,
-        Plano planoMinimo
+        Plano planoMinimo,
+        Integer duracaoMinutos
 ) {
 }

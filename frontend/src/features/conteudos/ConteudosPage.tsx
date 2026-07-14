@@ -86,6 +86,7 @@ function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar
   const [tipo, setTipo] = useState<TipoConteudo>('DOCUMENTO');
   const [url, setUrl] = useState('');
   const [planoMinimo, setPlanoMinimo] = useState<Plano>('GRATUITO');
+  const [duracaoMinutos, setDuracaoMinutos] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -94,7 +95,10 @@ function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar
     setError(null);
     setSubmitting(true);
     try {
-      await apiClient.post('/admin/conteudos', { titulo, tipo, url, planoMinimo });
+      await apiClient.post('/admin/conteudos', {
+        titulo, tipo, url, planoMinimo,
+        duracaoMinutos: duracaoMinutos ? Number(duracaoMinutos) : null,
+      });
       onSalvo();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível salvar o conteúdo.'));
@@ -129,10 +133,25 @@ function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar
             </select>
           </label>
         </div>
-        <label className={styles.formField}>
-          URL
-          <input className={styles.textInput} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." required />
-        </label>
+        <div className={styles.formRow}>
+          <label className={styles.formField} style={{ flex: 2 }}>
+            URL
+            <input className={styles.textInput} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." required />
+          </label>
+          {tipo === 'VIDEO' && (
+            <label className={styles.formField}>
+              Duração (min, opcional)
+              <input
+                className={styles.textInput}
+                type="number"
+                min="1"
+                value={duracaoMinutos}
+                onChange={(e) => setDuracaoMinutos(e.target.value)}
+                placeholder="Ex.: 12"
+              />
+            </label>
+          )}
+        </div>
         {error && <div className={styles.error}>{error}</div>}
         <div className={styles.formActions}>
           <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>

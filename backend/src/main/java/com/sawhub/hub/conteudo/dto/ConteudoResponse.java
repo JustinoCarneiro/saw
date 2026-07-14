@@ -13,10 +13,11 @@ public record ConteudoResponse(
         String url,
         Plano planoMinimo,
         boolean publicado,
-        Instant criadoEm
+        Instant criadoEm,
+        Integer duracaoMinutos
 ) {
     public static ConteudoResponse from(Conteudo c) {
         return new ConteudoResponse(c.getId(), c.getTitulo(), c.getTipo(), c.getUrl(), c.getPlanoMinimo(),
-                c.isPublicado(), c.getCriadoEm());
+                c.isPublicado(), c.getCriadoEm(), c.getDuracaoMinutos());
     }
 }
