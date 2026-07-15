@@ -30,7 +30,13 @@ services:
       # nunca pra produção real — em produção (Coolify) o valor real fica só nas envs do painel.
       SEED_DEMO_DATA: "true"
       BOOTSTRAP_FUNDADOR_SENHA: trocar-no-primeiro-login
-      PGCRYPTO_KEY: chave-de-desenvolvimento-nunca-usar-em-producao
+      # Precisa ser IDÊNTICA à de application-test.yml/dev-up.sh: os serviços db/redis daqui vêm
+      # do docker-compose.yml base (container_name sawhub_db/sawhub_redis), o MESMO container
+      # reaproveitado por dev-up.sh e por mvn test — a migração V19 só roda uma vez por banco;
+      # uma chave diferente aqui não decripta o que outro processo já gravou. Achado ao vivo
+      # (Fase 5): dev-up.sh e este arquivo tinham chaves diferentes, login quebrava com "Wrong
+      # key or corrupt data" assim que qualquer um rodasse depois do outro.
+      PGCRYPTO_KEY: chave-de-teste-nunca-usar-em-producao
       EMAIL_PERMITIR_FALLBACK_LOG: "true"
     ports:
       - "8080:8080"

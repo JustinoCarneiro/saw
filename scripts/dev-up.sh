@@ -74,8 +74,14 @@ else
   # SEED_DEMO_DATA, BOOTSTRAP_FUNDADOR_SENHA e PGCRYPTO_KEY não têm default no application.yml
   # (achado H1 da revisão de segurança / pass transversal de pgcrypto da Fase 5 — fail-closed em
   # produção). Pro dev/demo local continuar funcionando sem fricção, exportamos explicitamente aqui.
+  # PGCRYPTO_KEY precisa ser IDÊNTICA à de application-test.yml (mvn test), não uma inventada à
+  # parte: dev-up.sh e o mvn test do backend apontam pro MESMO banco físico (sawhub_db, sem
+  # override de POSTGRES_DB aqui) — a migração V19 só roda uma vez por banco, então quem rodar
+  # primeiro "vence" e crava essa chave nos dados já existentes pra sempre. Usar uma chave
+  # diferente aqui não decripta nada que o mvn test já tenha gravado — "Wrong key or corrupt
+  # data" no boot (achado ao vivo na Fase 5).
   SEED_DEMO_DATA=true BOOTSTRAP_FUNDADOR_SENHA=trocar-no-primeiro-login \
-    PGCRYPTO_KEY=chave-de-desenvolvimento-nunca-usar-em-producao \
+    PGCRYPTO_KEY=chave-de-teste-nunca-usar-em-producao \
     EMAIL_PERMITIR_FALLBACK_LOG=true \
     nohup ./mvnw -q spring-boot:run > "$BACKEND_LOG" 2>&1 &
   echo $! > "$BACKEND_PID_FILE"
