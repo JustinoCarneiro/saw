@@ -14,7 +14,7 @@
 .subtitle {
   font-size: 16px;
   color: var(--text-soft);
-  margin-top: -16px;
+  margin-top: 4px;
 }
 
 .tabs {
@@ -150,7 +150,11 @@
 
 .buyButton {
   width: 100%;
-  margin-top: 16px;
+  /* Card do produto agora é flex-column (ver LojaPage.tsx) — margin-top: auto empurra o botão
+     pro rodapé mesmo quando descrição/avaliação/desconto variam de card pra card na mesma
+     grade, em vez de ficar "flutuando" em alturas diferentes. */
+  margin-top: auto;
+  padding-top: 16px;
   background: var(--gold);
   color: var(--on-gold);
   border: none;

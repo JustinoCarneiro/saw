@@ -160,7 +160,7 @@ export function LojaPage() {
           {produtos?.length === 0 && <div className={styles.emptyState}>Nenhum produto encontrado.</div>}
           <div className={styles.grid}>
             {produtos?.map((p) => (
-              <Card key={p.id} testId={`produto-${p.id}`} style={{ padding: 20 }}>
+              <Card key={p.id} testId={`produto-${p.id}`} style={{ padding: 20, display: 'flex', flexDirection: 'column', height: '100%' }}>
                 {p.destaque && <div className={styles.destaqueTag}>DESTAQUE</div>}
                 <div className={styles.categoriaLabel}>{CATEGORIA_LABEL[p.categoria]}</div>
                 <div className={styles.produtoTitulo}>{p.titulo}</div>
@@ -201,7 +201,13 @@ export function LojaPage() {
                       <div className={styles.quantidadeControl}>
                         <button onClick={() => atualizarQuantidade(item.id, item.quantidade - 1)} disabled={processando === item.id}>−</button>
                         <span>{item.quantidade}</span>
-                        <button onClick={() => atualizarQuantidade(item.id, item.quantidade + 1)} disabled={processando === item.id}>+</button>
+                        <button
+                          onClick={() => atualizarQuantidade(item.id, item.quantidade + 1)}
+                          disabled={processando === item.id || !item.vendaEmAtacado}
+                          title={item.vendaEmAtacado ? undefined : 'Este produto só pode ser comprado em unidade única.'}
+                        >
+                          +
+                        </button>
                       </div>
                       <div className={styles.subtotal}>{formatarPreco(item.subtotal)}</div>
                       <button className={styles.removeButton} onClick={() => removerItem(item.id)} disabled={processando === item.id}>
