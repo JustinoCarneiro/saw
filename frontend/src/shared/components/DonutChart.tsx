@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 interface DonutSegmento {
   chave: string;
   valor: number;
@@ -8,6 +10,10 @@ interface DonutChartProps {
   segmentos: DonutSegmento[];
   tamanho?: number;
   titulo?: string;
+  // Conteúdo sobreposto ao centro do anel (ex.: "82%") — dashboard mentorado/E2 usa isto pro
+  // indicador de "Evolução geral". Ausente por padrão pra não afetar quem já usa o componente
+  // sem centro (Painel Consolidado/E17).
+  centroConteudo?: ReactNode;
 }
 
 function pontoNoAnel(centro: number, raio: number, anguloDeg: number): { x: number; y: number } {
@@ -32,7 +38,7 @@ function arco(centro: number, raio: number, anguloInicioDeg: number, anguloFimDe
 // Réplica do donut do mockup (design/mockups-ref/06-admin.png, Tela 11 — "Distribuição por
 // plano"): anel de arcos SVG, sem lib de gráfico. Legenda é renderizada à parte por quem usa o
 // componente (mesma divisão de responsabilidade do restante do sistema).
-export function DonutChart({ segmentos, tamanho = 140, titulo = 'Distribuição por plano' }: DonutChartProps) {
+export function DonutChart({ segmentos, tamanho = 140, titulo = 'Distribuição por plano', centroConteudo }: DonutChartProps) {
   const total = segmentos.reduce((soma, s) => soma + s.valor, 0);
   // Proporcional a `tamanho` (não fixo): com valores fixos (raio=46, espessura=20) calibrados
   // pro tamanho=140 do Dashboard, um tamanho menor (ex.: 104 no Painel Consolidado) deixava
@@ -47,30 +53,37 @@ export function DonutChart({ segmentos, tamanho = 140, titulo = 'Distribuição 
   const visiveis = segmentos.filter((s) => s.valor > 0);
 
   return (
-    <svg viewBox={`0 0 ${tamanho} ${tamanho}`} width={tamanho} height={tamanho} role="img" aria-label={titulo}>
-      {total === 0 ? (
-        <circle cx={centro} cy={centro} r={raio} fill="none" stroke="var(--line)" strokeWidth={espessura} />
-      ) : (
-        visiveis.map((s) => {
-          // Segmento único cobrindo 100%: o comando de arco degenera quando início e fim
-          // coincidem, então desenha como anel fechado normal em vez de path.
-          if (visiveis.length === 1) {
-            return <circle key={s.chave} cx={centro} cy={centro} r={raio} fill="none" stroke={s.cor} strokeWidth={espessura} />;
-          }
-          const anguloInicio = anguloAcumulado;
-          const anguloFim = anguloAcumulado + (s.valor / total) * 360;
-          anguloAcumulado = anguloFim;
-          return (
-            <path
-              key={s.chave}
-              d={arco(centro, raio, anguloInicio, anguloFim)}
-              fill="none"
-              stroke={s.cor}
-              strokeWidth={espessura}
-            />
-          );
-        })
+    <div style={{ position: 'relative', width: tamanho, height: tamanho }}>
+      <svg viewBox={`0 0 ${tamanho} ${tamanho}`} width={tamanho} height={tamanho} role="img" aria-label={titulo}>
+        {total === 0 ? (
+          <circle cx={centro} cy={centro} r={raio} fill="none" stroke="var(--line)" strokeWidth={espessura} />
+        ) : (
+          visiveis.map((s) => {
+            // Segmento único cobrindo 100%: o comando de arco degenera quando início e fim
+            // coincidem, então desenha como anel fechado normal em vez de path.
+            if (visiveis.length === 1) {
+              return <circle key={s.chave} cx={centro} cy={centro} r={raio} fill="none" stroke={s.cor} strokeWidth={espessura} />;
+            }
+            const anguloInicio = anguloAcumulado;
+            const anguloFim = anguloAcumulado + (s.valor / total) * 360;
+            anguloAcumulado = anguloFim;
+            return (
+              <path
+                key={s.chave}
+                d={arco(centro, raio, anguloInicio, anguloFim)}
+                fill="none"
+                stroke={s.cor}
+                strokeWidth={espessura}
+              />
+            );
+          })
+        )}
+      </svg>
+      {centroConteudo && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {centroConteudo}
+        </div>
       )}
-    </svg>
+    </div>
   );
 }

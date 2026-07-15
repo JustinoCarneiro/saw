@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { DonutChart } from '../../shared/components/DonutChart';
 import { Pill } from '../../shared/components/Pill';
+import { ProgressBar } from '../../shared/components/ProgressBar';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { CATEGORIA_COR, CATEGORIA_ICONE } from '../../shared/lib/avisoDisplay';
+import { formatarQuando } from '../../shared/lib/format';
 import type { CompromissoMentorado, DashboardMentoradoResponse } from '../../shared/lib/types';
 import styles from './DashboardMentoradoPage.module.css';
 
@@ -40,10 +44,6 @@ export function DashboardMentoradoPage() {
       <p className={styles.subtitle}>Aqui está o resumo da sua jornada.</p>
 
       <div className={styles.kpis}>
-        <Card style={{ padding: 18 }}>
-          <div className={styles.kpiLabel}>Evolução geral</div>
-          <div className={styles.kpiValue}>{dashboard.evolucaoGeralPct}%</div>
-        </Card>
         <Card style={{ padding: 18 }} testId="kpi-tarefas-abertas">
           <div className={styles.kpiLabel}>Tarefas abertas</div>
           <div className={styles.kpiValue}>{dashboard.tarefasAbertas}</div>
@@ -53,8 +53,23 @@ export function DashboardMentoradoPage() {
           {dashboard.metaSemanalPct === null ? (
             <div className={styles.kpiHint}>Ainda não disponível</div>
           ) : (
-            <div className={styles.kpiValue}>{dashboard.metaSemanalPct}%</div>
+            <>
+              <div className={styles.kpiValue}>{dashboard.metaSemanalPct}%</div>
+              <ProgressBar pct={dashboard.metaSemanalPct} />
+            </>
           )}
+        </Card>
+        <Card style={{ padding: 18, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <DonutChart
+            titulo="Evolução geral"
+            tamanho={64}
+            segmentos={[
+              { chave: 'evolucao', valor: dashboard.evolucaoGeralPct, cor: 'var(--gold)' },
+              { chave: 'resto', valor: 100 - dashboard.evolucaoGeralPct, cor: 'var(--elevated)' },
+            ]}
+            centroConteudo={<span className={styles.evolucaoRingLabel}>{dashboard.evolucaoGeralPct}%</span>}
+          />
+          <div className={styles.kpiLabel}>Evolução geral</div>
         </Card>
       </div>
 
@@ -113,7 +128,14 @@ export function DashboardMentoradoPage() {
           <ul className={styles.avisosList}>
             {dashboard.avisos.map((aviso) => (
               <li key={aviso.id} className={styles.avisoItem}>
-                <span className={styles.avisoTitulo}>{aviso.titulo}</span>
+                <span className={styles.avisoIcone} style={{ background: CATEGORIA_COR[aviso.categoria].bg }}>
+                  {CATEGORIA_ICONE[aviso.categoria]}
+                </span>
+                <div className={styles.avisoTexto}>
+                  <div className={styles.avisoTitulo}>{aviso.titulo}</div>
+                  <div className={styles.avisoDescricao}>{aviso.descricao}</div>
+                </div>
+                <span className={styles.avisoQuando}>{formatarQuando(aviso.quando)}</span>
                 {!aviso.lido && <span className={styles.avisoDot} />}
               </li>
             ))}
