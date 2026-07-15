@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { CATEGORIA_COR, CATEGORIA_ICONE, CATEGORIA_LABEL } from '../../shared/lib/avisoDisplay';
+import { formatarQuando } from '../../shared/lib/format';
 import type { AvisoMentorado, CategoriaAviso } from '../../shared/lib/types';
 import styles from './AvisosPage.module.css';
 
@@ -12,22 +15,6 @@ const FILTROS: { label: string; categoria: CategoriaAviso | ''; apenasNaoLidos?:
   { label: 'Materiais', categoria: 'MATERIAIS' },
   { label: 'Eventos', categoria: 'EVENTOS' },
 ];
-
-const CATEGORIA_LABEL: Record<CategoriaAviso, string> = {
-  GERAL: 'Geral', MENTORIAS: 'Mentorias', MATERIAIS: 'Materiais', EVENTOS: 'Eventos',
-};
-
-const CATEGORIA_ICONE: Record<CategoriaAviso, string> = {
-  GERAL: '📢', MENTORIAS: '🎓', MATERIAIS: '📄', EVENTOS: '📅',
-};
-
-function formatarQuando(iso: string): string {
-  const diffMin = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (diffMin < 60) return `há ${diffMin} min`;
-  const diffH = Math.round(diffMin / 60);
-  if (diffH < 24) return `há ${diffH}h`;
-  return `há ${Math.round(diffH / 24)}d`;
-}
 
 export function AvisosPage() {
   const [filtroIndex, setFiltroIndex] = useState(0);
@@ -109,11 +96,15 @@ export function AvisosPage() {
             style={{ padding: '16px 18px', cursor: a.lido ? 'default' : 'pointer' }}
           >
             <div className={styles.linha} onClick={() => !a.lido && marcarLido(a.id)}>
-              <span className={styles.icone}>{CATEGORIA_ICONE[a.categoria]}</span>
+              <span className={styles.icone} style={{ background: CATEGORIA_COR[a.categoria].bg }}>
+                {CATEGORIA_ICONE[a.categoria]}
+              </span>
               <div className={styles.conteudo}>
                 <div className={styles.tituloLinha}>
                   <span className={styles.avisoTitulo}>{a.titulo}</span>
-                  <span className={styles.tag}>{CATEGORIA_LABEL[a.categoria]}</span>
+                  <Pill bg={CATEGORIA_COR[a.categoria].bg} color={CATEGORIA_COR[a.categoria].color}>
+                    {CATEGORIA_LABEL[a.categoria]}
+                  </Pill>
                 </div>
                 <div className={styles.desc}>{a.descricao}</div>
                 <div className={styles.quando}>{formatarQuando(a.quando)}</div>
