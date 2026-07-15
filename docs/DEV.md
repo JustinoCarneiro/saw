@@ -47,6 +47,14 @@ cd frontend && E2E_BASE_URL=http://localhost:5183 npm run test:e2e
   backend E2E envia (ex.: "esqueci minha senha") — UI em `http://localhost:8025` pra inspecionar
   visualmente, e é o que o teste de caminho feliz de `esqueci-senha.spec.ts` usa pra ler o token
   real em vez de confiar só no fallback de log.
+- **Stubs locais** (`scripts/e2e-*-stub-server.mjs`, processos Node subidos pelo próprio
+  `e2e-up.sh`, sem dependências): Whisper+Claude (porta 8091, diferencial de IA do M06),
+  IdP do Google (porta 8092, authorization code flow completo do M07) e Mercado Pago
+  (porta 8093, Preferences + Payments do M14). Só ficam ativos com `SPRING_PROFILES_ACTIVE=e2e`
+  (`application-e2e.yml`) — as URIs de override desses serviços não têm bridge nenhuma no
+  `application.yml` de produção de propósito (achado Alto do revisor-seguranca: uma env mal
+  configurada em produção redirecionando esses endpoints seria um vetor de account takeover ou
+  vazamento de credencial real).
 
 ## 3. Sanity-check pré-deploy — `scripts/full-up.sh`
 
