@@ -48,6 +48,7 @@ import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Set;
@@ -366,15 +367,20 @@ public class DemoDataSeeder implements ApplicationRunner {
         ataEncaminhamentoSugeridoRepository.save(new AtaEncaminhamentoSugerido(ata2, "Revisar precificação do buffet", 2, true));
         ataEncaminhamentoSugeridoRepository.save(new AtaEncaminhamentoSugerido(ata2, "Digitalizar cardápio (QR code)", 1, true));
 
-        // 3) Próxima mentoria confirmada (futura) — aparece na agenda, sem ata ainda.
+        // 3) Próxima mentoria confirmada (futura) — aparece na agenda, sem ata ainda. Relativa a
+        // Instant.now() de propósito (achado ao vivo na Fase 5: era uma data fixa —
+        // 2026-07-15T15:00 — que "andou pra trás" conforme o tempo real passou, até coincidir
+        // com o próprio dia do teste e virar "dentro da janela de 10min" quando devia estar
+        // "vários dias no futuro", quebrando mentorias.spec.ts de forma intermitente).
         Mentoria m3 = new Mentoria(TipoMentoria.INDIVIDUAL, lucas, Set.of(rafael),
-                Instant.parse("2026-07-15T15:00:00Z"), 60, "https://meet.google.com/rafael-lucas", null);
+                Instant.now().plus(Duration.ofDays(10)), 60, "https://meet.google.com/rafael-lucas", null);
         m3.confirmar();
         mentoriaRepository.save(m3);
 
-        // 4) Mentoria agendada (ainda não confirmada), em grupo.
+        // 4) Mentoria agendada (ainda não confirmada), em grupo. Mesmo raciocínio relativo do m3
+        // acima — sempre depois de m3 na linha do tempo, como o número de ordem já sugeria.
         Mentoria m4 = new Mentoria(TipoMentoria.GRUPO, ricardo, Set.of(fernanda, marina),
-                Instant.parse("2026-07-20T10:00:00Z"), 90, null, "SAW HUB — Sala de reuniões");
+                Instant.now().plus(Duration.ofDays(15)), 90, null, "SAW HUB — Sala de reuniões");
         mentoriaRepository.save(m4);
     }
 
