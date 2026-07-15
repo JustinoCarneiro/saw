@@ -41,7 +41,12 @@ cd frontend && E2E_BASE_URL=http://localhost:5183 npm run test:e2e
 - Se rodar a suíte várias vezes seguidas sem reiniciar o backend E2E, o rate-limiter (Redis)
   pode barrar os testes que criam lead/reset de senha — limpe antes de repetir:
   `redis-cli -a sawhub_redis_pass -n 1 --scan --pattern "leadrate:*" | xargs -r redis-cli -a sawhub_redis_pass -n 1 DEL`
-  (troque `-n 1` por `-n 0` se estiver limpando o Redis do dev-up.sh, não do E2E).
+  (troque `leadrate:*` por `pwresetrate:*` pro rate-limit de "esqueci minha senha", e `-n 1` por
+  `-n 0` se estiver limpando o Redis do dev-up.sh, não do E2E).
+- **Mailpit** (captura SMTP local, ver `docker-compose.yml`) intercepta os e-mails reais que o
+  backend E2E envia (ex.: "esqueci minha senha") — UI em `http://localhost:8025` pra inspecionar
+  visualmente, e é o que o teste de caminho feliz de `esqueci-senha.spec.ts` usa pra ler o token
+  real em vez de confiar só no fallback de log.
 
 ## 3. Sanity-check pré-deploy — `scripts/full-up.sh`
 

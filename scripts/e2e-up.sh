@@ -42,9 +42,9 @@ is_pid_alive() {
 # ---------------------------------------------------------------------------
 # 1. Infra Docker (mesma do dev-up.sh — idempotente, sobe se ainda não estiver no ar)
 # ---------------------------------------------------------------------------
-info "Garantindo infra Docker (Postgres, Redis) no ar..."
+info "Garantindo infra Docker (Postgres, Redis, Mailpit) no ar..."
 cd "$ROOT_DIR"
-if ! docker compose up -d db redis 2>&1 | tee -a "$LOG_DIR/docker-compose.log"; then
+if ! docker compose up -d db redis mailpit 2>&1 | tee -a "$LOG_DIR/docker-compose.log"; then
   fail "docker compose up falhou. Veja $LOG_DIR/docker-compose.log (o Docker está rodando?)"
 fi
 until docker compose exec -T db pg_isready -U "${POSTGRES_USER:-sawhub_user}" >/dev/null 2>&1; do sleep 1; done
@@ -79,11 +79,15 @@ else
   # de "solicitar acesso" (comercial.spec.ts + mentorados.spec.ts + import-export), todas do
   # mesmo IP — no ambiente isolado de E2E o limite não faz sentido, quem preserva a proteção
   # real (dev/produção) é o default do application.yml, intocado.
+  # MAIL_HOST aponta pro Mailpit (SMTP fake, porta 1025) em vez do fallback de log: exercita o
+  # caminho real de envio (MailConfig/JavaMailSenderImpl) nos testes, não só o atalho de dev.
   SEED_DEMO_DATA=true BOOTSTRAP_FUNDADOR_SENHA=trocar-no-primeiro-login \
     PGCRYPTO_KEY=chave-de-desenvolvimento-nunca-usar-em-producao \
-    EMAIL_PERMITIR_FALLBACK_LOG=true \
+    MAIL_HOST=localhost MAIL_PORT=1025 MAIL_USERNAME=e2e MAIL_PASSWORD=e2e \
     POSTGRES_DB="$DB_NAME" SERVER_PORT="$BACKEND_PORT" REDIS_DATABASE=1 \
     CORS_ALLOWED_ORIGINS="http://localhost:$FRONTEND_PORT" APP_RATE_LIMIT_LEAD=1000 \
+    APP_RATE_LIMIT_PASSWORD_RESET=1000 \
+    EMAIL_FRONTEND_BASE_URL="http://localhost:$FRONTEND_PORT" \
     nohup ./mvnw -q spring-boot:run > "$BACKEND_LOG" 2>&1 &
   echo $! > "$BACKEND_PID_FILE"
 

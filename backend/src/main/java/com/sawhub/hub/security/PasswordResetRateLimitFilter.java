@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -15,19 +16,23 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * /api/v1/auth/esqueci-senha} é um endpoint de escrita sem autenticação — sem limite, um script
  * pode disparar e-mails em massa (custo/spam, quando SMTP real estiver configurado) ou inflar a
  * tabela {@code password_reset_token} indefinidamente. Janela fixa por IP via Redis, mesmos
- * números do LeadRateLimitFilter (5 solicitações a cada 10 minutos).
+ * números do LeadRateLimitFilter (5 solicitações a cada 10 minutos). Limite configurável (mesmo
+ * motivo do {@code app.rate-limit.lead}): o E2E real (M18, teste de caminho feliz via Mailpit)
+ * soma mais de 5 chamadas a este endpoint pela mesma origem numa única rodada da suíte.
  */
 @Component
 public class PasswordResetRateLimitFilter extends OncePerRequestFilter {
 
-    private static final int LIMITE = 5;
     private static final Duration JANELA = Duration.ofMinutes(10);
     private static final String PATH = "/api/v1/auth/esqueci-senha";
 
     private final StringRedisTemplate redisTemplate;
+    private final int limite;
 
-    public PasswordResetRateLimitFilter(StringRedisTemplate redisTemplate) {
+    public PasswordResetRateLimitFilter(StringRedisTemplate redisTemplate,
+                                         @Value("${app.rate-limit.password-reset:5}") int limite) {
         this.redisTemplate = redisTemplate;
+        this.limite = limite;
     }
 
     @Override
@@ -44,7 +49,7 @@ public class PasswordResetRateLimitFilter extends OncePerRequestFilter {
             redisTemplate.expire(chave, JANELA);
         }
 
-        if (contagem != null && contagem > LIMITE) {
+        if (contagem != null && contagem > limite) {
             response.setStatus(429);
             response.setContentType("application/json");
             response.getWriter().write("{\"message\":\"Muitas solicitações. Tente novamente mais tarde.\"}");

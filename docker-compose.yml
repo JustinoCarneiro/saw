@@ -30,6 +30,18 @@ services:
       timeout: 5s
       retries: 10
 
+  # Captura SMTP local pra testar de verdade o fluxo de e-mail (esqueci minha senha etc.) sem
+  # depender de uma conta real nem de internet — Playwright lê o e-mail recebido via API HTTP
+  # (porta 8025) em vez do fallback de log (EMAIL_PERMITIR_FALLBACK_LOG), o que exercita o
+  # caminho real de envio (MailConfig/JavaMailSenderImpl), não só o log de conveniência.
+  mailpit:
+    image: axllent/mailpit
+    container_name: ${PROJECT_NAME:-sawhub}_mailpit
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # UI/API HTTP
+    restart: unless-stopped
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: ${PROJECT_NAME:-sawhub}_pgadmin
