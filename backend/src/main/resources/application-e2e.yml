@@ -1,0 +1,17 @@
+# Só carrega com SPRING_PROFILES_ACTIVE=e2e (ver scripts/e2e-up.sh) — nunca ativo em produção.
+# Aqui, e só aqui, os endpoints externos (Google, OpenAI, Anthropic, Mercado Pago) podem ser
+# redirecionados pra stubs locais (ver scripts/e2e-*-stub-server.mjs). Achado Alto do
+# revisor-seguranca: essas propriedades não têm bridge de env var no application.yml base de
+# propósito — sem esse isolamento por profile, uma env mal configurada em produção (ex.: copiar
+# este bloco por engano) abriria um vetor de account takeover (IdP OAuth malicioso) ou vazamento
+# de credencial real (API key enviada pro host de destino errado).
+sawhub:
+  oauth2:
+    google-authorization-uri: ${GOOGLE_AUTHORIZATION_URI}
+    google-token-uri: ${GOOGLE_TOKEN_URI}
+    google-user-info-uri: ${GOOGLE_USER_INFO_URI}
+  ia:
+    openai-base-url: ${OPENAI_API_BASE_URL}
+    anthropic-base-url: ${ANTHROPIC_API_BASE_URL}
+  pagamento:
+    mercadopago-base-url: ${MERCADOPAGO_API_BASE_URL}

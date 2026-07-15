@@ -86,9 +86,27 @@ sawhub:
     # Sem fallback de propósito (achado H1): a app falha no boot se a env não existir, em vez
     # de silenciosamente criar o Fundador com uma senha conhecida/versionada.
     fundador-senha: ${BOOTSTRAP_FUNDADOR_SENHA}
+  # M07 — login com Google. Achado (E2E de Google OAuth com stub de IdP): faltava este elo —
+  # GOOGLE_CLIENT_ID/SECRET (nomes documentados no ROADMAP.md M07) nunca chegavam até
+  # GoogleOAuthProperties sem esta ponte, então configurá-las em produção não tinha efeito
+  # nenhum (OAuth ficava sempre "desabilitado").
+  # As URIs de authorization/token/userinfo (e as baseUrl de IA/Mercado Pago logo abaixo) NÃO
+  # têm bridge de env var aqui de propósito (achado Alto do revisor-seguranca): se existisse um
+  # nome de env var que as sobrescrevesse em qualquer ambiente, uma env mal configurada em
+  # produção (ex.: copiar o bloco do e2e-up.sh por engano) redirecionaria o authorization code
+  # flow inteiro pra um IdP malicioso — a checagem de email_verified em GoogleOAuth2UserService
+  # não protege nada nesse cenário, porque quem responde o /userinfo forjado é o próprio
+  # atacante. Os defaults (endpoint real do Google) ficam só no @Value de GoogleOAuthProperties;
+  # o override pro stub local do E2E mora em application-e2e.yml, que só carrega com
+  # SPRING_PROFILES_ACTIVE=e2e (nunca ativo em produção, ver scripts/e2e-up.sh).
+  oauth2:
+    google-client-id: ${GOOGLE_CLIENT_ID:}
+    google-client-secret: ${GOOGLE_CLIENT_SECRET:}
   # Diferencial de IA (M06 — ata automática). Default vazio de propósito: ao contrário de
   # BOOTSTRAP_FUNDADOR_SENHA, IA é uma feature opcional — sem a chave, o upload de áudio falha
   # com uma mensagem clara (IaIndisponivelException) em vez de derrubar o boot da aplicação.
+  # baseUrl não tem bridge aqui pelo mesmo motivo do oauth2 acima — uma baseUrl apontada pra
+  # fora vazaria a própria API key real (enviada como Authorization Bearer) pro host de destino.
   ia:
     openai-api-key: ${OPENAI_API_KEY:}
     anthropic-api-key: ${ANTHROPIC_API_KEY:}
@@ -101,6 +119,8 @@ sawhub:
   # em vez de tentar uma chamada fadada a 401. frontend-base-url/backend-base-url alimentam os
   # back_urls/notification_url da preferência do Mercado Pago — em dev local o webhook nunca é
   # alcançável de fora (localhost), verificado só até a borda (mesmo padrão do pipeline de IA).
+  # mercadopago-base-url sem bridge aqui pelo mesmo motivo do oauth2/ia acima (vazamento do
+  # access token real pro host de destino se apontada errado).
   pagamento:
     mercadopago-access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
     mercadopago-webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}

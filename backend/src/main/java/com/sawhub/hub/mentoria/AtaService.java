@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 /** H5.2 + diferencial de IA — ata nasce vazia quando a mentoria é realizada, opcionalmente
@@ -59,13 +61,26 @@ public class AtaService {
         return sugeridoRepository.findByAtaIdOrderByTituloAsc(ata.getId());
     }
 
+    // Achado (E2E de M06 c/ stub de IA rápido o bastante pra expor a corrida): disparar o
+    // @Async de dentro do @Transactional lançava a outra thread ANTES do commit desta transação
+    // terminar — a thread do processamento podia tentar salvar a Ata (concluir/falhar) enquanto
+    // o commit de iniciarProcessamento() ainda estava em voo, dando
+    // ObjectOptimisticLockingFailureException. Com Whisper/Claude reais isso quase nunca
+    // aparecia (latência de rede real cobria o commit), mas era uma corrida de verdade, não uma
+    // coincidência do teste. registerSynchronization(afterCommit) garante a ordem certa sempre.
     @Transactional
     public Ata iniciarUpload(UUID mentoriaId, MultipartFile audio) {
         Ata ata = buscarPorMentoria(mentoriaId);
         String url = audioStorageService.salvar(ata.getId(), audio);
         ata.iniciarProcessamento(url);
         Ata salva = ataRepository.save(ata);
-        ataProcessamentoService.processar(salva.getId(), url);
+        UUID ataId = salva.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                ataProcessamentoService.processar(ataId, url);
+            }
+        });
         return salva;
     }
 

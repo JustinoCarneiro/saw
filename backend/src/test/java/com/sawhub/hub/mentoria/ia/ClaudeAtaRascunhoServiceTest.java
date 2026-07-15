@@ -11,7 +11,7 @@ class ClaudeAtaRascunhoServiceTest {
 
     @Test
     void semApiKeyLancaIaIndisponivelSemTentarChamadaHttp() {
-        var service = new ClaudeAtaRascunhoService("", RestClient.builder());
+        var service = new ClaudeAtaRascunhoService("", "https://api.anthropic.com", RestClient.builder());
 
         assertThatThrownBy(() -> service.gerarRascunho("transcrição qualquer"))
                 .isInstanceOf(IaIndisponivelException.class)

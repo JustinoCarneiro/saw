@@ -20,7 +20,7 @@ class MercadoPagoGatewayServiceTest {
     private static final String SECRET = "webhook-secret-de-teste";
 
     private static MercadoPagoGatewayService gateway(String accessToken, String webhookSecret) {
-        MercadoPagoProperties properties = new MercadoPagoProperties(accessToken, webhookSecret);
+        MercadoPagoProperties properties = new MercadoPagoProperties(accessToken, webhookSecret, "https://api.mercadopago.com");
         return new MercadoPagoGatewayService(properties, RestClient.builder());
     }
 

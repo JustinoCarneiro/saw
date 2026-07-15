@@ -338,6 +338,7 @@ function SugestaoRow({ mentoriaId, sugestao, podeEditar, onSalvo }: {
       />
       <input
         className={styles.sugestaoTitulo}
+        data-testid={`sugestao-titulo-${sugestao.id}`}
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
         disabled={!podeEditar}

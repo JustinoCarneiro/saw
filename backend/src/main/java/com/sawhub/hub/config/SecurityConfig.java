@@ -22,7 +22,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.config.oauth2.client.CommonOAuth2Provider;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
@@ -189,10 +190,27 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // Construído na mão (não CommonOAuth2Provider.GOOGLE.getBuilder) porque as URIs precisam ser
+    // configuráveis pro E2E apontar pra um stub de IdP local, ver GoogleOAuthProperties. Scope
+    // sem "openid" de propósito: com openid, o Spring Security trata o login como OIDC e passa a
+    // exigir um id_token assinado validável via JWKS — complexidade real de infra de teste
+    // (chave de assinatura, jwks endpoint) sem ganho de segurança aqui, já que
+    // GoogleOAuth2UserService só lê email/email_verified do userinfo endpoint (não do id_token).
+    // O userinfo endpoint do Google devolve esses campos com escopo email+profile mesmo sem
+    // openid, então o comportamento de produção não muda.
     private ClientRegistrationRepository googleClientRegistrationRepository() {
-        ClientRegistration google = CommonOAuth2Provider.GOOGLE.getBuilder("google")
+        ClientRegistration google = ClientRegistration.withRegistrationId("google")
                 .clientId(googleOAuthProperties.getClientId())
                 .clientSecret(googleOAuthProperties.getClientSecret())
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/{action}/oauth2/code/{registrationId}")
+                .scope("email", "profile")
+                .authorizationUri(googleOAuthProperties.getAuthorizationUri())
+                .tokenUri(googleOAuthProperties.getTokenUri())
+                .userInfoUri(googleOAuthProperties.getUserInfoUri())
+                .userNameAttributeName("email")
+                .clientName("Google")
                 .build();
         return new InMemoryClientRegistrationRepository(google);
     }

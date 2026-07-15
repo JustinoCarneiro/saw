@@ -17,16 +17,20 @@ import org.springframework.web.client.RestClient;
 @Service
 public class ClaudeAtaRascunhoService implements AtaRascunhoService {
 
-    private static final String ENDPOINT = "https://api.anthropic.com/v1/messages";
     private static final String MODELO = "claude-sonnet-5";
     private static final String NOME_FERRAMENTA = "registrar_rascunho_ata";
 
+    private final String endpoint;
     private final String apiKey;
     private final RestClient restClient;
 
+    // baseUrl configurável (E2E aponta pra um stub local, ver scripts/e2e-up.sh) — mesmo
+    // raciocínio do WhisperTranscricaoService.
     public ClaudeAtaRascunhoService(@Value("${sawhub.ia.anthropic-api-key:}") String apiKey,
+                                     @Value("${sawhub.ia.anthropic-base-url:https://api.anthropic.com}") String baseUrl,
                                      RestClient.Builder restClientBuilder) {
         this.apiKey = apiKey;
+        this.endpoint = baseUrl + "/v1/messages";
         // Achado (alto) da revisão de segurança do M06 — mesmo raciocínio do WhisperTranscricaoService:
         // sem timeout, uma Claude API lenta trava a thread do ataProcessamentoExecutor indefinidamente.
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
@@ -51,7 +55,7 @@ public class ClaudeAtaRascunhoService implements AtaRascunhoService {
 
         try {
             ClaudeResponse resposta = restClient.post()
-                    .uri(ENDPOINT)
+                    .uri(endpoint)
                     .header("x-api-key", apiKey)
                     .header("anthropic-version", "2023-06-01")
                     .contentType(MediaType.APPLICATION_JSON)

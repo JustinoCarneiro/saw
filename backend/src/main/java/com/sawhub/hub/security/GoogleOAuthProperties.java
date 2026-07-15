@@ -12,11 +12,23 @@ public class GoogleOAuthProperties {
 
     private final String clientId;
     private final String clientSecret;
+    private final String authorizationUri;
+    private final String tokenUri;
+    private final String userInfoUri;
 
+    // URIs configuráveis (default = endpoints reais do Google): E2E aponta pra um stub de IdP
+    // local (ver scripts/e2e-oauth-stub-server.mjs) — mesmo raciocínio de MAIL_HOST/OPENAI_API_BASE_URL
+    // apontando pros stubs de SMTP/IA, sem tocar no comportamento de produção (default preserva).
     public GoogleOAuthProperties(@Value("${sawhub.oauth2.google-client-id:}") String clientId,
-                                  @Value("${sawhub.oauth2.google-client-secret:}") String clientSecret) {
+                                  @Value("${sawhub.oauth2.google-client-secret:}") String clientSecret,
+                                  @Value("${sawhub.oauth2.google-authorization-uri:https://accounts.google.com/o/oauth2/v2/auth}") String authorizationUri,
+                                  @Value("${sawhub.oauth2.google-token-uri:https://www.googleapis.com/oauth2/v4/token}") String tokenUri,
+                                  @Value("${sawhub.oauth2.google-user-info-uri:https://www.googleapis.com/oauth2/v3/userinfo}") String userInfoUri) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.authorizationUri = authorizationUri;
+        this.tokenUri = tokenUri;
+        this.userInfoUri = userInfoUri;
     }
 
     public boolean isEnabled() {
@@ -29,5 +41,17 @@ public class GoogleOAuthProperties {
 
     public String getClientSecret() {
         return clientSecret;
+    }
+
+    public String getAuthorizationUri() {
+        return authorizationUri;
+    }
+
+    public String getTokenUri() {
+        return tokenUri;
+    }
+
+    public String getUserInfoUri() {
+        return userInfoUri;
     }
 }

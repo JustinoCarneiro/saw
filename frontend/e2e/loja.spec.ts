@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { loginAs } from './helpers';
+import { csrfHeaders, loginAs } from './helpers';
+import { assinaturaWebhook, registrarPagamentoNoStub } from './mercadopago';
 
 test.describe('M14 — E8 Loja SAW (catálogo, carrinho, checkout)', () => {
   test('mentorado navega o catálogo, filtra por categoria e vê destaque/desconto', async ({ page }) => {
@@ -77,33 +78,79 @@ test.describe('M14 — E8 Loja SAW (catálogo, carrinho, checkout)', () => {
     await expect(page.getByText('Seu carrinho está vazio.')).toBeVisible();
   });
 
-  test('checkout sem credencial do gateway falha limpo, sem quebrar a tela', async ({ page }) => {
+  // Antes do stub do Mercado Pago, este teste só provava o caminho "gateway não configurado"
+  // (503) — coberto à parte no unitário (MercadoPagoGatewayServiceTest,
+  // semAccessTokenConfiguradoCriarPreferenciaLancaPagamentoIndisponivel), então essa cobertura
+  // não se perde. Com o gateway configurado no E2E (stub, ver scripts/e2e-mercadopago-stub-server.mjs),
+  // vale mais testar o que ninguém testava: um pagamento recusado NÃO libera o pedido, e uma
+  // nova notificação aprovada (retry, comum no gateway real) libera de verdade — H8.3.
+  test('checkout com gateway configurado cria preferência; pagamento recusado não libera, aprovado depois libera', async ({ page, request }) => {
     await loginAs(page, 'rafael@bistrogomes.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
 
-    // Mesma limpeza defensiva do teste acima — garante carrinho vazio antes de começar.
     const carrinhoInicial = await page.request.get('/api/v1/mentorado/loja/carrinho');
     const { itens: itensIniciais }: { itens: { id: string }[] } = await carrinhoInicial.json();
     for (const item of itensIniciais) {
-      await page.request.delete(`/api/v1/mentorado/loja/carrinho/itens/${item.id}`);
+      await page.request.delete(`/api/v1/mentorado/loja/carrinho/itens/${item.id}`, { headers: await csrfHeaders(page) });
     }
 
     await page.getByRole('link', { name: 'Loja SAW' }).click();
-
     const template = page.locator('[data-testid^="produto-"]', { hasText: 'Template de Cardápio Digital' });
     await template.getByRole('button', { name: 'Adicionar ao carrinho' }).click();
+
+    // Espera o item aparecer no carrinho antes de seguir: o clique só garante que o handler
+    // disparou, não que o POST assíncrono terminou — sem isso, o checkout (chamado direto via
+    // API logo abaixo) corre e acha carrinho vazio (409) por pura corrida.
     await page.getByTestId('loja-tab-CARRINHO').click();
+    await expect(page.locator('[data-testid^="item-carrinho-"]', { hasText: 'Template de Cardápio Digital' })).toBeVisible();
 
-    await page.getByTestId('finalizar-compra').click();
-    // Ambiente de dev não tem MERCADOPAGO_ACCESS_TOKEN — erro claro (503, ver
-    // GlobalExceptionHandler.handlePagamentoIndisponivel), não uma tela quebrada, e o carrinho
-    // continua visível (não navega pra lugar nenhum, ver LojaMentoradoService.checkout).
-    await expect(page.getByTestId('loja-erro')).toBeVisible();
-    await expect(page).toHaveURL(/\/mentorado\/loja/);
+    // Checkout via API direto (não clica no botão da UI): o clique real navegaria o browser pro
+    // checkoutUrl devolvido pelo stub — uma URL falsa, sem página de verdade por trás. A chamada
+    // HTTP com o Mercado Pago (criarPreferencia) já roda de verdade aqui dentro do backend, mesmo
+    // sem passar pelo clique. page.request não tem o interceptor de CSRF do apiClient (axios) —
+    // header manual via csrfHeaders (ver helpers.ts), senão 403.
+    const checkoutRes = await page.request.post('/api/v1/mentorado/loja/checkout', { headers: await csrfHeaders(page) });
+    expect(checkoutRes.ok()).toBe(true);
+    expect((await checkoutRes.json()).checkoutUrl).toContain('stub-checkout.invalid');
 
-    // Limpa o item adicionado nesta execução.
-    const item = page.locator('[data-testid^="item-carrinho-"]', { hasText: 'Template de Cardápio Digital' });
-    await item.getByRole('button', { name: 'Remover' }).click();
+    const pedidosRes = await page.request.get('/api/v1/mentorado/loja/pedidos');
+    const pedidos: { id: string; status: string }[] = await pedidosRes.json();
+    const pedido = pedidos.find((p) => p.status === 'AGUARDANDO_PAGAMENTO');
+    expect(pedido).toBeTruthy();
+
+    // O SAW HUB nunca confia no corpo da notificação do webhook (só no id) — sempre re-consulta
+    // aqui no stub, mesmo padrão de "verdade" que consultaria a API real do Mercado Pago.
+    async function notificar(status: string) {
+      const paymentId = `stub-payment-${pedido!.id}`;
+      await registrarPagamentoNoStub(request, paymentId, status, pedido!.id);
+      const xRequestId = `stub-request-${Date.now()}-${status}`;
+      const { xSignature } = assinaturaWebhook(paymentId, xRequestId);
+      const res = await page.request.post(
+        `/api/v1/webhooks/mercadopago?data.id=${paymentId}&type=payment`,
+        { headers: { 'x-signature': xSignature, 'x-request-id': xRequestId } },
+      );
+      expect(res.ok()).toBe(true);
+    }
+
+    // 1) Recusado: pedido continua aguardando, carrinho não se perde (H8.3).
+    await notificar('rejected');
+    const aposRecusa: { id: string; status: string }[] = await (await page.request.get('/api/v1/mentorado/loja/pedidos')).json();
+    expect(aposRecusa.find((p) => p.id === pedido!.id)?.status).toBe('AGUARDANDO_PAGAMENTO');
+
+    // 2) Nova tentativa aprovada (mesmo pedido, gateway real notifica de novo em retries) — libera.
+    await notificar('approved');
+    await page.getByTestId('loja-tab-PEDIDOS').click();
+    const linhaPedido = page.getByTestId(`pedido-${pedido!.id}`);
+    await expect(linhaPedido.getByText('Liberado')).toBeVisible();
+  });
+
+  test('webhook com assinatura inválida é rejeitado (403), pedido não é liberado', async ({ page }) => {
+    await loginAs(page, 'rafael@bistrogomes.com.br');
+    const res = await page.request.post(
+      '/api/v1/webhooks/mercadopago?data.id=qualquer&type=payment',
+      { headers: { 'x-signature': 'ts=123,v1=assinatura-forjada', 'x-request-id': 'req-forjado' } },
+    );
+    expect(res.status()).toBe(403);
   });
 
   test('mentorado vê "Meus Pedidos" com o pedido liberado (seed) e o link de download', async ({ page }) => {

@@ -12,11 +12,16 @@ public class MercadoPagoProperties {
 
     private final String accessToken;
     private final String webhookSecret;
+    private final String baseUrl;
 
+    // baseUrl configurável (default = API real do Mercado Pago) — E2E aponta pro stub local
+    // (ver scripts/e2e-mercadopago-stub-server.mjs), mesmo raciocínio de OPENAI_API_BASE_URL.
     public MercadoPagoProperties(@Value("${sawhub.pagamento.mercadopago-access-token:}") String accessToken,
-                                  @Value("${sawhub.pagamento.mercadopago-webhook-secret:}") String webhookSecret) {
+                                  @Value("${sawhub.pagamento.mercadopago-webhook-secret:}") String webhookSecret,
+                                  @Value("${sawhub.pagamento.mercadopago-base-url:https://api.mercadopago.com}") String baseUrl) {
         this.accessToken = accessToken;
         this.webhookSecret = webhookSecret;
+        this.baseUrl = baseUrl;
     }
 
     public boolean isEnabled() {
@@ -29,5 +34,9 @@ public class MercadoPagoProperties {
 
     public String getWebhookSecret() {
         return webhookSecret;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
     }
 }

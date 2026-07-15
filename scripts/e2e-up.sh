@@ -19,11 +19,20 @@ mkdir -p "$LOG_DIR" "$PID_DIR"
 
 BACKEND_PORT=8090
 FRONTEND_PORT=5183
+IA_STUB_PORT=8091
+OAUTH_STUB_PORT=8092
+MP_STUB_PORT=8093
 DB_NAME=sawhub_db_e2e
 BACKEND_LOG="$LOG_DIR/backend-e2e.log"
 FRONTEND_LOG="$LOG_DIR/frontend-e2e.log"
+IA_STUB_LOG="$LOG_DIR/ia-stub-e2e.log"
+OAUTH_STUB_LOG="$LOG_DIR/oauth-stub-e2e.log"
+MP_STUB_LOG="$LOG_DIR/mp-stub-e2e.log"
 BACKEND_PID_FILE="$PID_DIR/backend-e2e.pid"
 FRONTEND_PID_FILE="$PID_DIR/frontend-e2e.pid"
+IA_STUB_PID_FILE="$PID_DIR/ia-stub-e2e.pid"
+OAUTH_STUB_PID_FILE="$PID_DIR/oauth-stub-e2e.pid"
+MP_STUB_PID_FILE="$PID_DIR/mp-stub-e2e.pid"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 info()  { echo -e "${BLUE}==>${NC} $1"; }
@@ -65,7 +74,73 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Backend isolado (porta 8090, banco sawhub_db_e2e, Redis índice 1)
+# 3. Stub local da Whisper API + Messages API (diferencial de IA, ver M06) — sem custo/chave
+#    real, mesmo espírito do Mailpit pro SMTP.
+# ---------------------------------------------------------------------------
+if is_pid_alive "$IA_STUB_PID_FILE" || port_open "$IA_STUB_PORT"; then
+  warn "Stub de IA já parece estar rodando na porta $IA_STUB_PORT — pulando."
+else
+  info "Subindo stub de IA (Whisper + Claude, porta $IA_STUB_PORT)..."
+  nohup node "$ROOT_DIR/scripts/e2e-ia-stub-server.mjs" "$IA_STUB_PORT" > "$IA_STUB_LOG" 2>&1 &
+  echo $! > "$IA_STUB_PID_FILE"
+  waited=0
+  until curl -s -o /dev/null "http://localhost:$IA_STUB_PORT/"; do
+    if [ "$waited" -ge 10 ]; then
+      warn "Stub de IA não respondeu em 10s. Log: $IA_STUB_LOG"
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  ok "Stub de IA no ar (PID $(cat "$IA_STUB_PID_FILE"))."
+fi
+
+# ---------------------------------------------------------------------------
+# 4. Stub local de IdP OAuth2 (papel do Google, ver M07) — completa o authorization code flow
+#    de ponta a ponta sem depender de credencial real nem de internet.
+# ---------------------------------------------------------------------------
+if is_pid_alive "$OAUTH_STUB_PID_FILE" || port_open "$OAUTH_STUB_PORT"; then
+  warn "Stub de OAuth2 já parece estar rodando na porta $OAUTH_STUB_PORT — pulando."
+else
+  info "Subindo stub de OAuth2 (IdP Google, porta $OAUTH_STUB_PORT)..."
+  nohup node "$ROOT_DIR/scripts/e2e-oauth-stub-server.mjs" "$OAUTH_STUB_PORT" > "$OAUTH_STUB_LOG" 2>&1 &
+  echo $! > "$OAUTH_STUB_PID_FILE"
+  waited=0
+  until curl -s -o /dev/null "http://localhost:$OAUTH_STUB_PORT/"; do
+    if [ "$waited" -ge 10 ]; then
+      warn "Stub de OAuth2 não respondeu em 10s. Log: $OAUTH_STUB_LOG"
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  ok "Stub de OAuth2 no ar (PID $(cat "$OAUTH_STUB_PID_FILE"))."
+fi
+
+# ---------------------------------------------------------------------------
+# 5. Stub local do Mercado Pago (Preferences + Payments, ver E8/M14) — o webhook em si é o
+#    próprio SAW HUB recebendo (não precisa de stub), só o lado "SAW HUB chama o gateway".
+# ---------------------------------------------------------------------------
+if is_pid_alive "$MP_STUB_PID_FILE" || port_open "$MP_STUB_PORT"; then
+  warn "Stub do Mercado Pago já parece estar rodando na porta $MP_STUB_PORT — pulando."
+else
+  info "Subindo stub do Mercado Pago (porta $MP_STUB_PORT)..."
+  nohup node "$ROOT_DIR/scripts/e2e-mercadopago-stub-server.mjs" "$MP_STUB_PORT" > "$MP_STUB_LOG" 2>&1 &
+  echo $! > "$MP_STUB_PID_FILE"
+  waited=0
+  until curl -s -o /dev/null "http://localhost:$MP_STUB_PORT/"; do
+    if [ "$waited" -ge 10 ]; then
+      warn "Stub do Mercado Pago não respondeu em 10s. Log: $MP_STUB_LOG"
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  ok "Stub do Mercado Pago no ar (PID $(cat "$MP_STUB_PID_FILE"))."
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Backend isolado (porta 8090, banco sawhub_db_e2e, Redis índice 1)
 # ---------------------------------------------------------------------------
 if is_pid_alive "$BACKEND_PID_FILE" || port_open "$BACKEND_PORT"; then
   warn "Backend E2E já parece estar rodando na porta $BACKEND_PORT — pulando."
@@ -81,9 +156,28 @@ else
   # real (dev/produção) é o default do application.yml, intocado.
   # MAIL_HOST aponta pro Mailpit (SMTP fake, porta 1025) em vez do fallback de log: exercita o
   # caminho real de envio (MailConfig/JavaMailSenderImpl) nos testes, não só o atalho de dev.
-  SEED_DEMO_DATA=true BOOTSTRAP_FUNDADOR_SENHA=trocar-no-primeiro-login \
+  # OPENAI/ANTHROPIC_API_BASE_URL apontam pro stub de IA (item 3 acima) — chave fake (o stub não
+  # valida), exercita o caminho real de chamada HTTP em vez de só o fail-fast sem credencial.
+  # GOOGLE_* apontam pro stub de IdP (item 4 acima) — client-id/secret fake (o stub não valida),
+  # exercita o authorization code flow real (SecurityConfig/GoogleOAuth2UserService) em vez de
+  # só o caminho "não configurado".
+  # SPRING_PROFILES_ACTIVE=e2e carrega application-e2e.yml — achado Alto do revisor-seguranca:
+  # sem isolar por profile, as envs *_URI/*_BASE_URL acima seriam um vetor de account takeover
+  # (IdP malicioso) ou vazamento de credencial real se um dia vazassem pro ambiente de produção.
+  SPRING_PROFILES_ACTIVE=e2e \
+    SEED_DEMO_DATA=true BOOTSTRAP_FUNDADOR_SENHA=trocar-no-primeiro-login \
     PGCRYPTO_KEY=chave-de-desenvolvimento-nunca-usar-em-producao \
     MAIL_HOST=localhost MAIL_PORT=1025 MAIL_USERNAME=e2e MAIL_PASSWORD=e2e \
+    OPENAI_API_KEY=e2e-stub-key OPENAI_API_BASE_URL="http://localhost:$IA_STUB_PORT" \
+    ANTHROPIC_API_KEY=e2e-stub-key ANTHROPIC_API_BASE_URL="http://localhost:$IA_STUB_PORT" \
+    APP_RATE_LIMIT_ATA_AUDIO=1000 \
+    GOOGLE_CLIENT_ID=e2e-stub-client-id GOOGLE_CLIENT_SECRET=e2e-stub-client-secret \
+    GOOGLE_AUTHORIZATION_URI="http://localhost:$OAUTH_STUB_PORT/authorize" \
+    GOOGLE_TOKEN_URI="http://localhost:$OAUTH_STUB_PORT/token" \
+    GOOGLE_USER_INFO_URI="http://localhost:$OAUTH_STUB_PORT/userinfo" \
+    MERCADOPAGO_ACCESS_TOKEN=e2e-stub-token MERCADOPAGO_WEBHOOK_SECRET=e2e-stub-webhook-secret \
+    MERCADOPAGO_API_BASE_URL="http://localhost:$MP_STUB_PORT" \
+    LOJA_FRONTEND_BASE_URL="http://localhost:$FRONTEND_PORT" LOJA_BACKEND_BASE_URL="http://localhost:$BACKEND_PORT" \
     POSTGRES_DB="$DB_NAME" SERVER_PORT="$BACKEND_PORT" REDIS_DATABASE=1 \
     CORS_ALLOWED_ORIGINS="http://localhost:$FRONTEND_PORT" APP_RATE_LIMIT_LEAD=1000 \
     APP_RATE_LIMIT_PASSWORD_RESET=1000 \
@@ -111,7 +205,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Frontend isolado (porta 5183, proxy pro backend E2E)
+# 7. Frontend isolado (porta 5183, proxy pro backend E2E)
 # ---------------------------------------------------------------------------
 if is_pid_alive "$FRONTEND_PID_FILE" || port_open "$FRONTEND_PORT"; then
   warn "Frontend E2E já parece estar rodando na porta $FRONTEND_PORT — pulando."

@@ -22,13 +22,17 @@ import org.springframework.web.client.RestClient;
 @Service
 public class WhisperTranscricaoService implements TranscricaoService {
 
-    private static final String ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
-
+    private final String endpoint;
     private final String apiKey;
     private final RestClient restClient;
 
-    public WhisperTranscricaoService(@Value("${sawhub.ia.openai-api-key:}") String apiKey, RestClient.Builder restClientBuilder) {
+    // baseUrl configurável (E2E aponta pra um stub local, ver scripts/e2e-up.sh) — mesmo
+    // raciocínio de MAIL_HOST apontando pro Mailpit em vez do SMTP real.
+    public WhisperTranscricaoService(@Value("${sawhub.ia.openai-api-key:}") String apiKey,
+                                      @Value("${sawhub.ia.openai-base-url:https://api.openai.com}") String baseUrl,
+                                      RestClient.Builder restClientBuilder) {
         this.apiKey = apiKey;
+        this.endpoint = baseUrl + "/v1/audio/transcriptions";
         // Achado (alto) da revisão de segurança do M06: sem timeout, uma Whisper API lenta/instável
         // trava a thread do ataProcessamentoExecutor (pool de só 2-4 threads) indefinidamente — a
         // ata fica presa em PROCESSANDO pra sempre (iniciarProcessamento()/publicar() bloqueiam
@@ -56,7 +60,7 @@ public class WhisperTranscricaoService implements TranscricaoService {
 
         try {
             WhisperResponse resposta = restClient.post()
-                    .uri(ENDPOINT)
+                    .uri(endpoint)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(body)

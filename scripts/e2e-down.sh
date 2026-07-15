@@ -10,6 +10,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PID_DIR="$ROOT_DIR/.dev/pids"
 BACKEND_PORT=8090
 FRONTEND_PORT=5183
+IA_STUB_PORT=8091
+OAUTH_STUB_PORT=8092
+MP_STUB_PORT=8093
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 info()  { echo -e "${BLUE}==>${NC} $1"; }
@@ -45,4 +48,8 @@ stop_port() {
 
 stop_port "Frontend E2E" "$FRONTEND_PORT"
 stop_port "Backend E2E" "$BACKEND_PORT"
-rm -f "$PID_DIR/frontend-e2e.pid" "$PID_DIR/backend-e2e.pid"
+stop_port "Stub de IA E2E" "$IA_STUB_PORT"
+stop_port "Stub de OAuth2 E2E" "$OAUTH_STUB_PORT"
+stop_port "Stub do Mercado Pago E2E" "$MP_STUB_PORT"
+rm -f "$PID_DIR/frontend-e2e.pid" "$PID_DIR/backend-e2e.pid" "$PID_DIR/ia-stub-e2e.pid" \
+      "$PID_DIR/oauth-stub-e2e.pid" "$PID_DIR/mp-stub-e2e.pid"

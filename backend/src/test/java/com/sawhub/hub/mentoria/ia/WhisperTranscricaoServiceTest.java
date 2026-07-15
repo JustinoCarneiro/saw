@@ -13,7 +13,7 @@ class WhisperTranscricaoServiceTest {
 
     @Test
     void semApiKeyLancaIaIndisponivelSemTentarChamadaHttp() {
-        var service = new WhisperTranscricaoService("", RestClient.builder());
+        var service = new WhisperTranscricaoService("", "https://api.openai.com", RestClient.builder());
 
         assertThatThrownBy(() -> service.transcrever(Path.of("qualquer.mp3")))
                 .isInstanceOf(IaIndisponivelException.class)

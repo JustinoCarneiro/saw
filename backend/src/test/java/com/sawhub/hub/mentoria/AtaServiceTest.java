@@ -28,6 +28,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** H5.2 + diferencial de IA — RED primeiro: AtaService ainda não existe neste ponto do ciclo. */
 @ExtendWith(MockitoExtension.class)
@@ -82,8 +84,14 @@ class AtaServiceTest {
         verify(atividadeLogService).registrar("MENTORIA_REALIZADA", "Mentoria realizada: Maria");
     }
 
+    // Achado do E2E de M06 (upload de áudio com stub de IA rápido o bastante pra expor a corrida):
+    // disparar o @Async de dentro do @Transactional lançava a outra thread ANTES do commit desta
+    // transação terminar, dando ObjectOptimisticLockingFailureException quando o processamento
+    // tentava salvar a Ata de volta enquanto o commit de iniciarProcessamento() ainda estava em
+    // voo. O teste simula o ciclo de vida real da transação (init/afterCommit/clear) pra provar
+    // a ordem certa: nada dispara antes do commit.
     @Test
-    void iniciarUploadSalvaArquivoEDisparaProcessamentoAssincrono() {
+    void iniciarUploadSalvaArquivoERegistraProcessamentoParaDepoisDoCommit() {
         UUID mentoriaId = UUID.randomUUID();
         Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
         mentoria.realizar();
@@ -94,9 +102,18 @@ class AtaServiceTest {
         when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var arquivo = new MockMultipartFile("arquivo", "gravacao.mp3", "audio/mpeg", "conteudo".getBytes());
-        Ata salva = service().iniciarUpload(mentoriaId, arquivo);
 
-        assertThat(salva.getStatusProcessamento()).isEqualTo(StatusProcessamentoAta.PROCESSANDO);
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            Ata salva = service().iniciarUpload(mentoriaId, arquivo);
+            assertThat(salva.getStatusProcessamento()).isEqualTo(StatusProcessamentoAta.PROCESSANDO);
+            verify(ataProcessamentoService, never()).processar(any(), any());
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+
         verify(ataProcessamentoService).processar(ata.getId(), "audio.mp3");
     }
 

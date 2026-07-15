@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,15 +25,17 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class AtaAudioRateLimitFilter extends OncePerRequestFilter {
 
-    private static final int LIMITE = 10;
     private static final Duration JANELA = Duration.ofHours(1);
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     private static final String PATTERN = "/api/v1/admin/mentorias/*/ata/audio";
 
     private final StringRedisTemplate redisTemplate;
+    private final int limite;
 
-    public AtaAudioRateLimitFilter(StringRedisTemplate redisTemplate) {
+    public AtaAudioRateLimitFilter(StringRedisTemplate redisTemplate,
+                                    @Value("${app.rate-limit.ata-audio:10}") int limite) {
         this.redisTemplate = redisTemplate;
+        this.limite = limite;
     }
 
     @Override
@@ -51,7 +54,7 @@ public class AtaAudioRateLimitFilter extends OncePerRequestFilter {
             redisTemplate.expire(chave, JANELA);
         }
 
-        if (contagem != null && contagem > LIMITE) {
+        if (contagem != null && contagem > limite) {
             response.setStatus(429);
             response.setContentType("application/json");
             response.getWriter().write("{\"message\":\"Muitos envios de áudio. Tente novamente mais tarde.\"}");

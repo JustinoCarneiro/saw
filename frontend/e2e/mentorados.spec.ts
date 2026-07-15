@@ -77,6 +77,99 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(page.getByRole('button', { name: 'Publicar ata' })).toHaveCount(0);
   });
 
+  // O teste acima escreve o resumo manualmente porque, até aqui, ninguém tinha como testar o
+  // pipeline de IA de ponta a ponta sem gastar chamada real na Whisper/Claude — diferente de
+  // Google OAuth e Mercado Pago (que ao menos têm o caminho "não configurado" coberto), este
+  // endpoint (POST .../ata/audio) não tinha NENHUM teste E2E. Fecha isso com um stub HTTP local
+  // (scripts/e2e-ia-stub-server.mjs, ver e2e-up.sh) que devolve texto/rascunho fixos — não prova
+  // que a Whisper/Claude reais respondem nesse formato (isso é responsabilidade de quem mantém o
+  // contrato de API deles), só prova que o pipeline do SAW HUB consome a resposta corretamente.
+  test('upload de áudio aciona o pipeline de IA (Whisper + Claude via stub) e o rascunho vira ata publicada', async ({ page }) => {
+    const timestamp = Date.now();
+    const nome = `Lead IA E2E ${timestamp}`;
+    const email = `ia.${timestamp}@example.com`;
+    const main = page.getByRole('main');
+
+    // 1-4) Mesmo caminho do teste "Fluxo completo" acima até ter uma mentoria CONFIRMADA própria
+    // (evita depender/competir por uma ata seedada compartilhada com outros testes).
+    await page.goto('/solicitar-acesso');
+    await page.getByLabel('Nome').fill(nome);
+    await page.getByLabel('E-mail').fill(email);
+    await page.getByRole('button', { name: 'Enviar solicitação' }).click();
+    await expect(page.getByText('Solicitação enviada.')).toBeVisible();
+
+    await loginAs(page, 'paula@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/comercial/leads');
+    const linhaLead = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linhaLead.getByRole('button', { name: 'Mover p/ Em contato' }).click();
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await linhaLead.getByRole('button', { name: 'Avançar p/ Proposta' }).click();
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await linhaLead.getByRole('button', { name: 'Fechar venda' }).click();
+    await page.getByLabel('Plano fechado').selectOption({ label: 'Básico' });
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
+
+    await page.context().clearCookies();
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/lista');
+    await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
+    await page.getByLabel('Lead').selectOption({ label: `${nome} — ${email}` });
+    await page.getByRole('button', { name: 'Criar mentorado' }).click();
+    await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
+    await page.getByRole('button', { name: 'Entendi' }).click();
+
+    await page.goto('/admin/mentorados/mentorias');
+    await main.getByRole('button', { name: 'Nova mentoria' }).click();
+    await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
+    await page.getByLabel(nome).check();
+    await page.getByLabel('Data e hora').fill('2026-08-16T10:00');
+    await page.getByLabel('Duração (min)').fill('45');
+    await main.getByRole('button', { name: 'Criar mentoria' }).click();
+
+    const linhaMentoria = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linhaMentoria.getByRole('button', { name: 'Confirmar' }).click();
+    await expect(linhaMentoria.getByText('Confirmada', { exact: true })).toBeVisible();
+    await linhaMentoria.getByRole('button', { name: 'Realizar' }).click();
+    await expect(page).toHaveURL(/\/ata$/);
+
+    // 5) Sobe um "áudio" (conteúdo não importa — o stub nem valida, mesmo raciocínio de qualquer
+    // fake de integração externa; extensão/content-type precisam passar pela validação real do
+    // AudioStorageService, essa parte não é stubada).
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'mentoria.mp3',
+      mimeType: 'audio/mpeg',
+      buffer: Buffer.from('conteudo-fake-e2e'),
+    });
+    await page.getByRole('button', { name: 'Enviar áudio' }).click();
+
+    // 6) Pipeline assíncrono (AtaProcessamentoService, thread separada da request) — a própria
+    // tela já faz polling a cada 3s (ver AtaDetalhePage). Não afirma o estado "Processando…" no
+    // meio do caminho: contra um stub local (rápido), o processamento pode concluir antes do
+    // próximo poll do teste conseguir flagrar esse estado transiente — só o resultado final
+    // importa aqui.
+    await expect(page.getByText('IA concluída')).toBeVisible({ timeout: 15_000 });
+
+    // 7) Transcrição, resumo (pré-preenchido pelo rascunho) e sugestões batem com o stub.
+    // Título da sugestão é um <input> (SugestaoRow) — o valor não é "texto" pro DOM, lê via
+    // evaluateAll em vez de getByText (que só casa com nós de texto renderizado).
+    await expect(page.getByText(/Transcrição de teste E2E/)).toBeVisible();
+    await expect(page.getByPlaceholder(/Escreva o resumo da mentoria/)).toHaveValue(/Resumo gerado pela IA \(stub E2E\)/);
+    const titulosSugestoes = await page
+      .locator('[data-testid^="sugestao-titulo-"]')
+      .evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value));
+    expect(titulosSugestoes).toContain('Atualizar ficha técnica com os novos preços');
+    expect(titulosSugestoes).toContain('Revisar cardápio até a próxima mentoria');
+
+    // 8) Publica com as sugestões da IA aceitas por padrão (ver Ata.java) — fecha o pipeline
+    // completo, do upload até virar ata publicada de verdade.
+    await page.getByRole('button', { name: 'Publicar ata' }).click();
+    await page.getByRole('button', { name: 'Sim, publicar' }).click();
+    await expect(page.getByText('Publicada', { exact: true })).toBeVisible();
+  });
+
   test('Admin cura materiais recomendados numa ata ainda em rascunho', async ({ page }) => {
     // Ana/Carlos, mentor Ricardo Costa: mentoria em grupo REALIZADA cuja ata fica
     // deliberadamente em RASCUNHO no seed (ver DemoDataSeeder + mentorias.spec.ts) — bom fixture

@@ -27,14 +27,15 @@ import org.springframework.web.client.RestClient;
 @Service
 public class MercadoPagoGatewayService {
 
-    private static final String PREFERENCES_ENDPOINT = "https://api.mercadopago.com/checkout/preferences";
-    private static final String PAYMENTS_ENDPOINT = "https://api.mercadopago.com/v1/payments/";
-
+    private final String preferencesEndpoint;
+    private final String paymentsEndpoint;
     private final MercadoPagoProperties properties;
     private final RestClient restClient;
 
     public MercadoPagoGatewayService(MercadoPagoProperties properties, RestClient.Builder restClientBuilder) {
         this.properties = properties;
+        this.preferencesEndpoint = properties.getBaseUrl() + "/checkout/preferences";
+        this.paymentsEndpoint = properties.getBaseUrl() + "/v1/payments/";
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout((int) Duration.ofSeconds(10).toMillis());
         requestFactory.setReadTimeout((int) Duration.ofSeconds(30).toMillis());
@@ -55,7 +56,7 @@ public class MercadoPagoGatewayService {
 
         try {
             PreferenceResponse resposta = restClient.post()
-                    .uri(PREFERENCES_ENDPOINT)
+                    .uri(preferencesEndpoint)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getAccessToken())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
@@ -79,7 +80,7 @@ public class MercadoPagoGatewayService {
         exigirConfigurado();
         try {
             PaymentResponse resposta = restClient.get()
-                    .uri(PAYMENTS_ENDPOINT + paymentId)
+                    .uri(paymentsEndpoint + paymentId)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getAccessToken())
                     .retrieve()
                     .body(PaymentResponse.class);
