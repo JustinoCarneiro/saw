@@ -4,6 +4,7 @@ import { Avatar } from '../../shared/components/Avatar';
 import { Card } from '../../shared/components/Card';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { DonutChart } from '../../shared/components/DonutChart';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { StatusPill } from '../../shared/components/Pill';
 import type { ConsolidatedSummary, MentoradoConsolidado, RankingFaturamento } from '../../shared/lib/types';
 import styles from './ConsolidatedPage.module.css';
@@ -12,26 +13,29 @@ const COLUMNS = '1.8fr .8fr 1fr 1fr .9fr .9fr';
 
 // M23 — ícones + abas de filtro por status existiam no protótipo estático congelado
 // (design/prototipo/index.html, bloco "ADMIN PAINEL CONSOLIDADO") e não sobreviveram à
-// portagem pra React — restaurados aqui fielmente ao HTML original (mesmos ícones, mesmas cores).
+// portagem pra React — restaurados aqui fielmente ao HTML original (mesmos ícones, mesmas cores),
+// agora com ICON_PROPS (achado de UX: divergia do traço padrão — "atencao" nem tinha
+// strokeLinecap/strokeLinejoin dos outros 3 do próprio grupo). stroke por ícone continua fixo por
+// semântica de status (verde/âmbar/vermelho/azul), não currentColor herdado de um selo pai.
 const KPI_ICON = {
   emDia: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...ICON_PROPS} width={15} height={15} stroke="var(--success)">
       <path d="M4 12l5 5L20 6" />
     </svg>
   ),
   atencao: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="1.6">
+    <svg {...ICON_PROPS} width={15} height={15} stroke="var(--warning)">
       <circle cx="12" cy="12" r="8" />
     </svg>
   ),
   atrasado: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...ICON_PROPS} width={15} height={15} stroke="var(--danger)">
       <path d="M12 9v4M12 17h.01" />
       <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
     </svg>
   ),
   progresso: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--info)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...ICON_PROPS} width={15} height={15} stroke="var(--info)">
       <path d="M3 3v18h18" />
       <path d="M18 17V9M13 17v-5M8 17v-3" />
     </svg>

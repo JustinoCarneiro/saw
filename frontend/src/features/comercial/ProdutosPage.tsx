@@ -2,10 +2,25 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { CategoriaProduto, Produto } from '../../shared/lib/types';
 import styles from './ProdutosPage.module.css';
+
+// Achado de UX: '★' Unicode destoava do traço linear (ICON_PROPS) usado no resto do app.
+const ICONE_DESTAQUE = (
+  <svg
+    {...ICON_PROPS}
+    width={12}
+    height={12}
+    fill="currentColor"
+    stroke="none"
+    style={{ color: 'var(--gold)', verticalAlign: -1, marginLeft: 4 }}
+  >
+    <path d="M12 3.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6L12 3.5Z" />
+  </svg>
+);
 
 const COLUMNS = '2fr 1fr 1fr 1fr 1fr 1.6fr';
 
@@ -62,7 +77,10 @@ export function ProdutosPage() {
         {produtos?.length === 0 && <div className={styles.loading}>Nenhum produto encontrado.</div>}
         {produtos?.map((p) => (
           <DataGridRow key={p.id} columns={COLUMNS} testId={`produto-row-${p.id}`}>
-            <div className={styles.strong}>{p.titulo}{p.destaque && ' ★'}</div>
+            <div className={styles.strong}>
+              {p.titulo}
+              {p.destaque && ICONE_DESTAQUE}
+            </div>
             <div className={styles.muted}>{CATEGORIA_LABEL[p.categoria]}</div>
             <div className={styles.muted}>{formatarPreco(p.preco)}</div>
             <div className={styles.muted}>{p.vendas}</div>

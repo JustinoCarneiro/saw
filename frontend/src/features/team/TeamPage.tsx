@@ -4,6 +4,7 @@ import { apiClient } from '../../shared/lib/apiClient';
 import { Avatar } from '../../shared/components/Avatar';
 import { Card } from '../../shared/components/Card';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
 import { AreaPill, areaLabel, areaDotColor } from '../../shared/components/Pill';
 import { Topbar } from '../../shared/components/Topbar';
@@ -15,6 +16,16 @@ const TEAM_COLUMNS = '1.6fr 1.5fr 1fr';
 const DESEMPENHO_COLUMNS = '1.6fr 1.5fr 1.2fr 1fr 1fr 1.4fr';
 const MATRIX_COLUMNS = '1.6fr .8fr .8fr .8fr .9fr .9fr .8fr 1.1fr';
 const MATRIX_MODULOS: Modulo[] = ['DASHBOARD', 'COMERCIAL', 'FINANCEIRO', 'MENTORADOS', 'CONTEUDOS', 'TIME', 'PAINEL_CONSOLIDADO'];
+
+// Achado de UX: '✓' Unicode como indicador de permissão concedida destoava do traço linear
+// (ICON_PROPS) usado no resto do app. '—' continua texto de propósito: já é a convenção deste
+// arquivo pra "sem valor" (linhas de métrica logo abaixo), então "não permitido" reaproveita o
+// mesmo sinal em vez de inventar um segundo símbolo pra a mesma ideia.
+const ICONE_PERMITIDO = (
+  <svg {...ICON_PROPS} width={14} height={14}>
+    <path d="M4 12l5 5L20 6" />
+  </svg>
+);
 
 const AREA_LABEL: Record<Area, string> = {
   COMERCIAL: 'Comercial',
@@ -118,7 +129,7 @@ export function TeamPage() {
                 const has = user.modulosPermitidos.includes(m);
                 return (
                   <div key={m} className={styles.permRow} style={{ opacity: has ? 1 : 0.4 }}>
-                    <span style={{ color: has ? 'var(--success)' : 'var(--text-faint)' }}>{has ? '✓' : '—'}</span>
+                    <span style={{ color: has ? 'var(--success)' : 'var(--text-faint)' }}>{has ? ICONE_PERMITIDO : '—'}</span>
                     {MODULO_LABEL[m]}
                   </div>
                 );
@@ -190,7 +201,7 @@ export function TeamPage() {
                     className={styles.matrixMark}
                     style={{ color: row.modulosPermitidos.includes(m) ? 'var(--success)' : 'var(--text-faint)' }}
                   >
-                    {row.modulosPermitidos.includes(m) ? '✓' : '—'}
+                    {row.modulosPermitidos.includes(m) ? ICONE_PERMITIDO : '—'}
                   </div>
                 ))}
               </div>

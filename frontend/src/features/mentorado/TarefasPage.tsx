@@ -1,7 +1,8 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, type ReactElement, useEffect, useRef, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { Meta, Prioridade, ResumoTarefas, StatusTarefa, Tarefa } from '../../shared/lib/types';
@@ -16,10 +17,20 @@ const FILTROS: { label: string; status: StatusTarefa | '' }[] = [
   { label: 'Concluídas', status: 'CONCLUIDA' },
 ];
 
-const PRIORIDADE_INFO: Record<Prioridade, { label: string; color: string; arrow: string }> = {
-  ALTA: { label: 'Alta', color: 'var(--danger)', arrow: '↑' },
-  MEDIA: { label: 'Média', color: 'var(--gold)', arrow: '→' },
-  BAIXA: { label: 'Baixa', color: 'var(--text-faint)', arrow: '↓' },
+// Achado de UX: setas Unicode (↑→↓) como indicador de prioridade destoavam do traço linear
+// (ICON_PROPS) usado no resto do app.
+function seta(d: string): ReactElement {
+  return (
+    <svg {...ICON_PROPS} width={13} height={13}>
+      <path d={d} />
+    </svg>
+  );
+}
+
+const PRIORIDADE_INFO: Record<Prioridade, { label: string; color: string; arrow: ReactElement }> = {
+  ALTA: { label: 'Alta', color: 'var(--danger)', arrow: seta('M12 19V5M6 11l6-6 6 6') },
+  MEDIA: { label: 'Média', color: 'var(--gold)', arrow: seta('M5 12h14M13 6l6 6-6 6') },
+  BAIXA: { label: 'Baixa', color: 'var(--text-faint)', arrow: seta('M12 5v14M18 13l-6 6-6-6') },
 };
 
 function statusPill(t: Tarefa): { label: string; bg: string; color: string } {

@@ -1,9 +1,41 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { TIPO_ICONE } from '../../shared/lib/materialDisplay';
 import type { Conteudo, IndicadoresConsumo, TipoConteudo } from '../../shared/lib/types';
 import styles from './MateriaisPage.module.css';
+
+// Ícones de ação (favoritar/assistido/baixar) — SVG (ICON_PROPS), mesmo raciocínio de
+// materialDisplay.tsx: emoji (★☆✓▶↓) destoava do traço linear usado no resto do app.
+const ICONE_ESTRELA_CHEIA = (
+  <svg {...ICON_PROPS} width={14} height={14} fill="currentColor" stroke="none">
+    <path d="M12 3.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6L12 3.5Z" />
+  </svg>
+);
+const ICONE_ESTRELA_VAZIA = (
+  <svg {...ICON_PROPS} width={14} height={14}>
+    <path d="M12 3.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6L12 3.5Z" />
+  </svg>
+);
+const ICONE_CHECK_MATERIAL = (
+  <svg {...ICON_PROPS} width={14} height={14}>
+    <path d="M4 12l5 5L20 6" />
+  </svg>
+);
+const ICONE_DOWNLOAD = (
+  <svg {...ICON_PROPS} width={14} height={14}>
+    <path d="M12 3v12M7 10l5 5 5-5" />
+    <path d="M5 21h14" />
+  </svg>
+);
+const ICONE_PLAY_PEQUENO = (
+  <svg {...ICON_PROPS} width={14} height={14}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M10 8.5v7l6-3.5-6-3.5Z" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 const TABS: { label: string; view: 'CATALOGO' | 'DICAS' }[] = [
   { label: 'Biblioteca', view: 'CATALOGO' },
@@ -17,16 +49,6 @@ const TIPOS: { label: string; valor: TipoConteudo | '' }[] = [
   { label: 'Apresentações', valor: 'APRESENTACAO' },
   { label: 'Vídeos', valor: 'VIDEO' },
 ];
-
-function getIconForTipo(tipo: TipoConteudo) {
-  switch (tipo) {
-    case 'DOCUMENTO': return '📄';
-    case 'PLANILHA': return '📊';
-    case 'APRESENTACAO': return '📽️';
-    case 'VIDEO': return '▶️';
-    default: return '📎';
-  }
-}
 
 export function MateriaisPage() {
   const [view, setView] = useState<'CATALOGO' | 'DICAS'>('CATALOGO');
@@ -177,20 +199,26 @@ export function MateriaisPage() {
                 <div className={styles.dicaFooter}>
                   <span className={styles.dicaDate}>{new Date(dica.criadoEm).toLocaleDateString('pt-BR')}</span>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button 
+                    <button
                       className={`${styles.actionButton} ${dica.assistido ? styles.assistido : ''}`}
                       disabled={processando === dica.id}
                       onClick={() => toggleStatus(dica.id, 'assistido', !!dica.assistido)}
                       title={dica.assistido ? "Marcar como não assistido" : "Marcar como assistido"}
+                      aria-pressed={!!dica.assistido}
+                      data-testid={`assistido-dica-${dica.id}`}
                     >
-                      {dica.assistido ? '✓ Assistido' : 'Marcar assistido'}
+                      {dica.assistido ? <>{ICONE_CHECK_MATERIAL} Assistido</> : 'Marcar assistido'}
                     </button>
-                    <button 
+                    <button
                       className={`${styles.actionButton} ${dica.favorito ? styles.favorito : ''}`}
                       disabled={processando === dica.id}
                       onClick={() => toggleStatus(dica.id, 'favorito', !!dica.favorito)}
+                      title={dica.favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                      aria-label={dica.favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                      aria-pressed={!!dica.favorito}
+                      data-testid={`favoritar-dica-${dica.id}`}
                     >
-                      {dica.favorito ? '★' : '☆'}
+                      {dica.favorito ? ICONE_ESTRELA_CHEIA : ICONE_ESTRELA_VAZIA}
                     </button>
                   </div>
                 </div>
@@ -207,7 +235,7 @@ export function MateriaisPage() {
           {conteudos?.map((c) => (
             <Card key={c.id} className={styles.materialCard} testId={`material-${c.id}`}>
               <div className={styles.materialInfo}>
-                <div className={styles.materialIcon}>{getIconForTipo(c.tipo)}</div>
+                <div className={styles.materialIcon}>{TIPO_ICONE[c.tipo]}</div>
                 <div className={styles.materialDetails}>
                   <a href={c.url} target="_blank" rel="noreferrer" className={styles.materialTitle}>
                     {c.titulo}
@@ -220,16 +248,18 @@ export function MateriaisPage() {
                 </div>
               </div>
               <div className={styles.materialActions}>
-                <button 
+                <button
                   className={`${styles.actionButton} ${c.favorito ? styles.favorito : ''}`}
                   disabled={processando === c.id}
                   onClick={() => toggleStatus(c.id, 'favorito', !!c.favorito)}
                   title={c.favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                  aria-pressed={!!c.favorito}
+                  data-testid={`favoritar-material-${c.id}`}
                 >
-                  {c.favorito ? '★ Favorito' : '☆ Favoritar'}
+                  {c.favorito ? <>{ICONE_ESTRELA_CHEIA} Favorito</> : <>{ICONE_ESTRELA_VAZIA} Favoritar</>}
                 </button>
                 <a href={c.url} target="_blank" rel="noreferrer" className={styles.downloadLink}>
-                  Acessar {c.tipo === 'VIDEO' ? '▶' : '↓'}
+                  Acessar {c.tipo === 'VIDEO' ? ICONE_PLAY_PEQUENO : ICONE_DOWNLOAD}
                 </a>
               </div>
             </Card>

@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { MentoriaMentorado } from '../../shared/lib/types';
 import styles from './MentoriasPage.module.css';
+
+// Achado de UX: '▲'/'▼' Unicode destoava do traço linear (ICON_PROPS) usado no resto do app —
+// um único chevron pra baixo que gira via CSS (.expandIcon.aberta) em vez de trocar de glifo.
+const ICONE_CHEVRON = (
+  <svg {...ICON_PROPS} width={14} height={14}>
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
 
 function formatarDataHora(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -159,7 +168,9 @@ export function MentoriasPage() {
                       </div>
                       <div className={styles.historicoRight}>
                         <Pill bg={pill.bg} color={pill.color}>{pill.label}</Pill>
-                        {m.status === 'REALIZADA' && <span className={styles.expandIcon}>{aberta ? '▲' : '▼'}</span>}
+                        {m.status === 'REALIZADA' && (
+                          <span className={`${styles.expandIcon} ${aberta ? styles.expandIconAberta : ''}`}>{ICONE_CHEVRON}</span>
+                        )}
                       </div>
                     </button>
                     {aberta && m.status === 'REALIZADA' && (

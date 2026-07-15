@@ -127,6 +127,9 @@
   font-size: 13px;
   color: var(--gold);
   margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .precoLine {

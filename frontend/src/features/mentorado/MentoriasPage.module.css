@@ -177,7 +177,13 @@
 
 .expandIcon {
   color: var(--text-faint);
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  transition: transform 0.15s ease;
+}
+
+.expandIconAberta {
+  transform: rotate(180deg);
 }
 
 .ataBody {

@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { Carrinho, CategoriaProduto, CheckoutResponse, PedidoMentorado, ProdutoCatalogo, StatusPedido } from '../../shared/lib/types';
 import styles from './LojaPage.module.css';
+
+// Achado de UX: '★' Unicode destoava do traço linear (ICON_PROPS) usado no resto do app.
+const ICONE_AVALIACAO = (
+  <svg {...ICON_PROPS} width={13} height={13} fill="currentColor" stroke="none">
+    <path d="M12 3.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6L12 3.5Z" />
+  </svg>
+);
 
 const TABS = [
   { label: 'Catálogo', view: 'CATALOGO' as const },
@@ -165,7 +173,7 @@ export function LojaPage() {
                 <div className={styles.categoriaLabel}>{CATEGORIA_LABEL[p.categoria]}</div>
                 <div className={styles.produtoTitulo}>{p.titulo}</div>
                 <div className={styles.produtoDesc}>{p.descricao}</div>
-                {p.avaliacaoMedia && <div className={styles.avaliacao}>★ {p.avaliacaoMedia.toFixed(1)}</div>}
+                {p.avaliacaoMedia && <div className={styles.avaliacao}>{ICONE_AVALIACAO} {p.avaliacaoMedia.toFixed(1)}</div>}
                 <div className={styles.precoLine}>
                   {p.precoOriginal && <span className={styles.precoOriginal}>{formatarPreco(p.precoOriginal)}</span>}
                   <span className={styles.preco}>{formatarPreco(p.preco)}</span>

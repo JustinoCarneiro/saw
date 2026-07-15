@@ -2,10 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { EventoMentorado, TipoEvento } from '../../shared/lib/types';
 import styles from './EventosMentoradoPage.module.css';
+
+// Achado de UX: '✓' Unicode destoava do traço linear (ICON_PROPS) usado no resto do app.
+const ICONE_INSCRITO = (
+  <svg {...ICON_PROPS} width={14} height={14}>
+    <path d="M4 12l5 5L20 6" />
+  </svg>
+);
 
 function formatarDataHora(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -114,7 +122,7 @@ export function EventosMentoradoPage() {
         <div className={styles.cardActions}>
           {e.inscrito ? (
             <button className={styles.cancelButton} disabled={processando === e.id} onClick={() => setCancelando(e)} data-testid={`cancelar-${e.id}`}>
-              ✓ Inscrito — cancelar
+              {ICONE_INSCRITO} Inscrito — cancelar
             </button>
           ) : (
             <button

@@ -49,6 +49,14 @@ const ICONE_PEDIDO = (
     <path d="M9 7a3 3 0 0 1 6 0" />
   </svg>
 );
+// Fallback pra tipo de atividade sem ícone mapeado (achado de UX: '•' de texto destoava do
+// SVG dos demais — improvável de disparar com os tipos atuais do backend, mas se um tipo novo
+// chegar sem entrada em ATIVIDADE_ICONE, mantém o selo consistente em vez de misturar texto).
+const ICONE_GENERICO = (
+  <svg {...ICON_PROPS} width={15} height={15}>
+    <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 const ATIVIDADE_ICONE: Record<string, ReactElement> = {
   MENTORADO_CADASTRADO: (
@@ -226,7 +234,7 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
               return (
                 <div key={i} className={styles.atividadeRow}>
                   <span className={styles.atividadeIcone} style={{ background: cor.bg, color: cor.color }}>
-                    {ATIVIDADE_ICONE[a.tipo] ?? '•'}
+                    {ATIVIDADE_ICONE[a.tipo] ?? ICONE_GENERICO}
                   </span>
                   <span className={styles.atividadeDescricao}>{a.descricao}</span>
                   <span className={styles.atividadeQuando}>{formatarQuando(a.quando)}</span>

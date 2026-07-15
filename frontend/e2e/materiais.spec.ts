@@ -17,24 +17,25 @@ test.describe('M11 — E6 Materiais & Dicas do Brayan', () => {
 
     // Favoritar/assistido são toggles sobre um item de catálogo SEEDADO (não criado neste teste,
     // ao contrário de Meta/Tarefa) — o estado persiste entre execuções, então o teste não pode
-    // assumir um estado inicial fixo (☆ vs ★). Lê o estado atual e alterna a partir dele.
-    const favoritarBtn = dica.getByRole('button', { name: /^[☆★]$/ });
-    const jaEraFavorito = (await favoritarBtn.textContent())?.trim() === '★';
+    // assumir um estado inicial fixo. Lê o estado atual via aria-pressed (ícone é só visual, ver
+    // MateriaisPage.tsx) e alterna a partir dele.
+    const favoritarBtn = dica.getByTestId(/^favoritar-dica-/);
+    const jaEraFavorito = (await favoritarBtn.getAttribute('aria-pressed')) === 'true';
     await favoritarBtn.click();
-    await expect(favoritarBtn).toHaveText(jaEraFavorito ? '☆' : '★');
+    await expect(favoritarBtn).toHaveAttribute('aria-pressed', String(!jaEraFavorito));
 
-    const assistidoBtn = dica.getByRole('button', { name: /Assistido|Marcar assistido/ });
-    const jaEstavaAssistido = (await assistidoBtn.textContent())?.includes('✓');
+    const assistidoBtn = dica.getByTestId(/^assistido-dica-/);
+    const jaEstavaAssistido = (await assistidoBtn.getAttribute('aria-pressed')) === 'true';
     if (!jaEstavaAssistido) {
       await assistidoBtn.click();
-      await expect(dica.getByRole('button', { name: '✓ Assistido' })).toBeVisible();
+      await expect(assistidoBtn).toHaveAttribute('aria-pressed', 'true');
     }
 
     // Biblioteca (catálogo) reflete o mesmo estado de favorito pro mesmo item
     await page.getByRole('button', { name: 'Biblioteca' }).click();
     const material = page.locator('[data-testid^="material-"]', { hasText: 'Como calcular seu DRE' });
     const favoritoAgora = !jaEraFavorito;
-    await expect(material.getByRole('button', { name: favoritoAgora ? /★ Favorito/ : /☆ Favoritar/ })).toBeVisible();
+    await expect(material.getByTestId(/^favoritar-material-/)).toHaveAttribute('aria-pressed', String(favoritoAgora));
 
     // Filtro "Apenas favoritos" reflete o estado atual
     await page.getByLabel('Apenas favoritos').check();
@@ -64,23 +65,24 @@ test.describe('M11 — E6 Materiais & Dicas do Brayan', () => {
     await expect(dica).toBeVisible();
 
     // Normaliza pra "não favorito" ANTES de capturar o "antes" — se já estivesse favorito de uma
-    // execução anterior, capturar o baseline só depois evita o delta dar 0 em vez de +1.
-    const favoritarBtn = dica.getByRole('button', { name: /^[☆★]$/ });
-    if ((await favoritarBtn.textContent())?.trim() === '★') {
+    // execução anterior, capturar o baseline só depois evita o delta dar 0 em vez de +1. Estado
+    // lido via aria-pressed (ícone é só visual, ver MateriaisPage.tsx).
+    const favoritarBtn = dica.getByTestId(/^favoritar-dica-/);
+    if ((await favoritarBtn.getAttribute('aria-pressed')) === 'true') {
       await favoritarBtn.click();
-      await expect(favoritarBtn).toHaveText('☆');
+      await expect(favoritarBtn).toHaveAttribute('aria-pressed', 'false');
     }
 
-    const assistidoBtn = dica.getByRole('button', { name: /Assistido|Marcar assistido/ });
-    const jaEstavaAssistido = (await assistidoBtn.textContent())?.includes('✓');
+    const assistidoBtn = dica.getByTestId(/^assistido-dica-/);
+    const jaEstavaAssistido = (await assistidoBtn.getAttribute('aria-pressed')) === 'true';
 
     const antes: Indicadores = await (await page.request.get('/api/v1/mentorado/conteudos/indicadores')).json();
 
     await favoritarBtn.click();
-    await expect(favoritarBtn).toHaveText('★');
+    await expect(favoritarBtn).toHaveAttribute('aria-pressed', 'true');
     if (!jaEstavaAssistido) {
       await assistidoBtn.click();
-      await expect(dica.getByRole('button', { name: '✓ Assistido' })).toBeVisible();
+      await expect(assistidoBtn).toHaveAttribute('aria-pressed', 'true');
     }
 
     await expect(page.getByTestId('indicador-favoritas')).toContainText(String(antes.favoritas + 1));

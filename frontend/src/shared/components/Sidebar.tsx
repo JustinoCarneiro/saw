@@ -117,7 +117,7 @@ export function Sidebar({ modulosPermitidos, onLogout }: SidebarProps) {
 
       <div className={styles.spacer} />
       <button className={styles.logoutBtn} onClick={onLogout}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <svg {...ICON_PROPS}>
           <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
           <path d="M10 12H3m0 0 3.5-3.5M3 12l3.5 3.5" />
         </svg>

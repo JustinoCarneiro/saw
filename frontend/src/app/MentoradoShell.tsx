@@ -3,6 +3,7 @@ import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import logoSawIcon from '../assets/logo-saw-icon.png';
 import { useAuth } from '../features/auth/AuthContext';
 import { Avatar } from '../shared/components/Avatar';
+import { ICON_PROPS } from '../shared/components/iconProps';
 import { apiClient } from '../shared/lib/apiClient';
 import type { ResumoAvisos } from '../shared/lib/types';
 import styles from './MentoradoShell.module.css';
@@ -57,7 +58,7 @@ export function MentoradoShell() {
         </div>
         <div className={styles.right}>
           <NavLink to="/mentorado/avisos" className={styles.bellButton} aria-label="Notificações" data-testid="sino-avisos">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <svg {...ICON_PROPS}>
               <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>

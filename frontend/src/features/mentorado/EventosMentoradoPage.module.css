@@ -233,6 +233,9 @@
   padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .cancelButton:disabled {
