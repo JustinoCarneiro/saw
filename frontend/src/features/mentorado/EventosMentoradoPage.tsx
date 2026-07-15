@@ -202,7 +202,15 @@ export function EventosMentoradoPage() {
           )}
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>{diaSelecionado ? 'Eventos neste dia' : 'Eventos disponíveis'}</h2>
-            {disponiveis.length === 0 && <div className={styles.emptyState}>Nenhum evento encontrado.</div>}
+            {disponiveis.length === 0 && (
+              <div className={styles.emptyState}>
+                {/* Dia selecionado cujo único evento já está listado em "Próximos eventos" acima —
+                    "Nenhum evento encontrado" seria enganoso (o evento existe, só já tem inscrição). */}
+                {diaSelecionado && meusEventos.length > 0
+                  ? 'Todos os eventos deste dia já têm sua inscrição.'
+                  : 'Nenhum evento encontrado.'}
+              </div>
+            )}
             <div className={styles.grid}>{disponiveis.map(renderCard)}</div>
           </section>
         </>
