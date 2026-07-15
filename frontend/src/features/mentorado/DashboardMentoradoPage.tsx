@@ -62,7 +62,7 @@ export function DashboardMentoradoPage() {
         <Card style={{ padding: 18, display: 'flex', alignItems: 'center', gap: 14 }}>
           <DonutChart
             titulo="Evolução geral"
-            tamanho={64}
+            tamanho={88}
             segmentos={[
               { chave: 'evolucao', valor: dashboard.evolucaoGeralPct, cor: 'var(--gold)' },
               { chave: 'resto', valor: 100 - dashboard.evolucaoGeralPct, cor: 'var(--elevated)' },
