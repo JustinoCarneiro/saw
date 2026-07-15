@@ -117,6 +117,11 @@ public class MercadoPagoGatewayService {
         }
         String manifest = "id:" + dataId.toLowerCase() + ";request-id:" + xRequestId + ";ts:" + ts + ";";
         String v1Calculado = hmacSha256Hex(manifest, properties.getWebhookSecret());
+        // DEBUG TEMPORÁRIO — achado ao vivo (M14, demo real): webhook real do Mercado Pago
+        // rejeitado com a assinatura correta configurada. Remover depois de diagnosticar.
+        org.slf4j.LoggerFactory.getLogger(MercadoPagoGatewayService.class).warn(
+                "DEBUG webhook MP — xSignature='{}' manifest='{}' v1Recebido='{}' v1Calculado='{}' bate={}",
+                xSignature, manifest, v1Recebido, v1Calculado, v1Calculado.equals(v1Recebido));
         return MessageDigest.isEqual(
                 v1Calculado.getBytes(StandardCharsets.UTF_8),
                 v1Recebido.getBytes(StandardCharsets.UTF_8));
