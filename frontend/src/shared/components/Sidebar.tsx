@@ -63,17 +63,6 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    modulo: 'PAINEL_CONSOLIDADO',
-    to: '/admin/consolidado',
-    label: 'Painel Consolidado',
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="M3 3v18h18" />
-        <path d="M18 17V9M13 17v-5M8 17v-3" />
-      </svg>
-    ),
-  },
-  {
     modulo: 'TIME',
     to: '/admin/time',
     label: 'Time',

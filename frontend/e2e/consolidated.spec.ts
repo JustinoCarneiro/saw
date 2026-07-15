@@ -3,8 +3,10 @@ import { loginAs } from './helpers';
 
 test('Fundador sees the real seeded mentee progress and ranking', async ({ page }) => {
   await loginAs(page, 'matheus@sawhub.com.br');
-  await page.getByRole('link', { name: 'Painel Consolidado' }).click();
-  await expect(page).toHaveURL(/\/admin\/consolidado$/);
+  // Painel Consolidado não é mais item próprio da sidebar — virou a 1ª aba (index) dentro de
+  // Mentorados, ver App.tsx/MentoradosShell.
+  await page.getByRole('link', { name: 'Mentorados' }).click();
+  await expect(page).toHaveURL(/\/admin\/mentorados\/consolidado$/);
 
   const main = page.getByRole('main');
   await expect(main.getByText('Painel Consolidado')).toBeVisible();
@@ -33,8 +35,8 @@ test('Fundador sees the real seeded mentee progress and ranking', async ({ page 
 
 test('M23 — abas filtram a grade de mentorados por status', async ({ page }) => {
   await loginAs(page, 'matheus@sawhub.com.br');
-  await page.getByRole('link', { name: 'Painel Consolidado' }).click();
-  await expect(page).toHaveURL(/\/admin\/consolidado$/);
+  await page.getByRole('link', { name: 'Mentorados' }).click();
+  await expect(page).toHaveURL(/\/admin\/mentorados\/consolidado$/);
 
   const main = page.getByRole('main');
   await expect(main.getByTestId('mentorado-row').first()).toBeVisible();

@@ -25,8 +25,9 @@ test.describe('Login', () => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
-    // Fundador tem acesso irrestrito (E15) — os 7 módulos devem aparecer na sidebar.
-    for (const modulo of ['Dashboard', 'Comercial', 'Financeiro', 'Mentorados', 'Painel Consolidado', 'Time', 'Conteúdos']) {
+    // Fundador tem acesso irrestrito (E15) — os 6 itens de navegação devem aparecer na sidebar.
+    // Painel Consolidado não é mais um item próprio: virou a 1ª aba dentro de Mentorados.
+    for (const modulo of ['Dashboard', 'Comercial', 'Financeiro', 'Mentorados', 'Time', 'Conteúdos']) {
       await expect(page.getByRole('link', { name: modulo })).toBeVisible();
     }
 

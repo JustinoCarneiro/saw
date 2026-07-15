@@ -7,7 +7,9 @@ export const MODULO_ROUTE_ORDER: { modulo: Modulo; path: string }[] = [
   { modulo: 'COMERCIAL', path: '/admin/comercial' },
   { modulo: 'FINANCEIRO', path: '/admin/financeiro' },
   { modulo: 'MENTORADOS', path: '/admin/mentorados' },
-  { modulo: 'PAINEL_CONSOLIDADO', path: '/admin/consolidado' },
+  // PAINEL_CONSOLIDADO não tem rota própria — virou a 1ª aba dentro de /admin/mentorados (todo
+  // Area com PAINEL_CONSOLIDADO também tem MENTORADOS, ver AreaModuloMatrix no backend), então a
+  // entrada MENTORADOS acima já cobre o redirecionamento pra quem só tinha PAINEL_CONSOLIDADO.
   { modulo: 'TIME', path: '/admin/time' },
   { modulo: 'CONTEUDOS', path: '/admin/conteudos' },
 ];

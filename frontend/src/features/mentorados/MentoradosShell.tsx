@@ -5,6 +5,7 @@ import { areaLabel } from '../../shared/components/Pill';
 import styles from './MentoradosShell.module.css';
 
 const TABS = [
+  { to: '/admin/mentorados/consolidado', label: 'Painel Consolidado' },
   { to: '/admin/mentorados/lista', label: 'Mentorados' },
   { to: '/admin/mentorados/mentorias', label: 'Mentorias' },
 ];

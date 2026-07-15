@@ -94,19 +94,12 @@ export default function App() {
             </RequireModulo>
           }
         >
-          <Route index element={<Navigate to="lista" replace />} />
+          <Route index element={<Navigate to="consolidado" replace />} />
+          <Route path="consolidado" element={<ConsolidatedPage />} />
           <Route path="lista" element={<MentoradosListaPage />} />
           <Route path="mentorias" element={<MentoriasAgendaPage />} />
           <Route path="mentorias/:mentoriaId/ata" element={<AtaDetalhePage />} />
         </Route>
-        <Route
-          path="consolidado"
-          element={
-            <RequireModulo modulo="PAINEL_CONSOLIDADO">
-              <ConsolidatedPage />
-            </RequireModulo>
-          }
-        />
         <Route
           path="time"
           element={
