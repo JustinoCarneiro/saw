@@ -12,6 +12,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -47,7 +48,8 @@ public class DesempenhoTimeService {
                 .buscarComVendedorPorPeriodo(ano, mes).stream()
                 .collect(Collectors.toMap(m -> m.getVendedor().getId(), Function.identity()));
 
-        return colaboradorRepository.findAllByOrderByNomeAsc().stream()
+        return colaboradorRepository.findAll().stream()
+                .sorted(Comparator.comparing(Colaborador::getNome))
                 .map(colaborador -> {
                     long mentoriasRealizadas = mentoriaRepository.buscarPorMentor(colaborador).stream()
                             .filter(m -> m.getStatus() == StatusMentoria.REALIZADA)

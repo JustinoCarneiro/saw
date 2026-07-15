@@ -24,11 +24,13 @@ services:
       # Origin em todo POST (mesmo sendo "mesma origem" do ponto de vista do Nginx),
       # e o CorsFilter do Spring rejeita com 403 se não reconhecer a origem.
       CORS_ALLOWED_ORIGINS: http://localhost:8081
-      # SEED_DEMO_DATA e BOOTSTRAP_FUNDADOR_SENHA não têm default no application.yml
-      # (fail-closed em produção — achado H1 da revisão de segurança). Setados aqui
-      # explicitamente só porque esta stack é pra teste/demo, nunca pra produção real.
+      # SEED_DEMO_DATA, BOOTSTRAP_FUNDADOR_SENHA e PGCRYPTO_KEY não têm default no application.yml
+      # (fail-closed em produção — achado H1 da revisão de segurança / pass transversal de
+      # pgcrypto da Fase 5). Setados aqui explicitamente só porque esta stack é pra teste/demo,
+      # nunca pra produção real — em produção (Coolify) o valor real fica só nas envs do painel.
       SEED_DEMO_DATA: "true"
       BOOTSTRAP_FUNDADOR_SENHA: trocar-no-primeiro-login
+      PGCRYPTO_KEY: chave-de-desenvolvimento-nunca-usar-em-producao
     ports:
       - "8080:8080"
     volumes:

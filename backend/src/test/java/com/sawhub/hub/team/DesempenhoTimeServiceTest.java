@@ -69,7 +69,7 @@ class DesempenhoTimeServiceTest {
     void contaSoMentoriasRealizadasDentroDoPeriodo() {
         UUID mentorId = UUID.randomUUID();
         Colaborador mentor = colaborador(mentorId, "Lucas", Area.GESTAO_PERFORMANCE);
-        when(colaboradorRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(mentor));
+        when(colaboradorRepository.findAll()).thenReturn(List.of(mentor));
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of());
 
         Instant dentroDoPeriodo = Instant.parse("2026-07-15T12:00:00Z");
@@ -93,7 +93,7 @@ class DesempenhoTimeServiceTest {
     void colaboradorComMetaComercialTrazMetaXRealizado() {
         UUID vendedorId = UUID.randomUUID();
         Colaborador vendedor = colaborador(vendedorId, "Paula", Area.COMERCIAL);
-        when(colaboradorRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(vendedor));
+        when(colaboradorRepository.findAll()).thenReturn(List.of(vendedor));
         when(mentoriaRepository.buscarPorMentor(vendedor)).thenReturn(List.of());
 
         MetaComercial meta = new MetaComercial(vendedor, 2026, 7, 6);
@@ -115,7 +115,7 @@ class DesempenhoTimeServiceTest {
     void limiteSuperiorDoPeriodoEExclusivo() {
         UUID mentorId = UUID.randomUUID();
         Colaborador mentor = colaborador(mentorId, "Lucas", Area.GESTAO_PERFORMANCE);
-        when(colaboradorRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(mentor));
+        when(colaboradorRepository.findAll()).thenReturn(List.of(mentor));
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of());
 
         Instant inicioAgosto = Instant.parse("2026-08-01T00:00:00Z");

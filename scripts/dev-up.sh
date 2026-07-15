@@ -71,10 +71,11 @@ if is_pid_alive "$BACKEND_PID_FILE" || port_open "$BACKEND_PORT"; then
 else
   info "Subindo backend (Spring Boot, porta $BACKEND_PORT)..."
   cd "$ROOT_DIR/backend"
-  # SEED_DEMO_DATA e BOOTSTRAP_FUNDADOR_SENHA não têm mais default no application.yml
-  # (achado H1 da revisão de segurança — fail-closed em produção). Pro dev/demo local
-  # continuar funcionando sem fricção, exportamos explicitamente aqui.
+  # SEED_DEMO_DATA, BOOTSTRAP_FUNDADOR_SENHA e PGCRYPTO_KEY não têm default no application.yml
+  # (achado H1 da revisão de segurança / pass transversal de pgcrypto da Fase 5 — fail-closed em
+  # produção). Pro dev/demo local continuar funcionando sem fricção, exportamos explicitamente aqui.
   SEED_DEMO_DATA=true BOOTSTRAP_FUNDADOR_SENHA=trocar-no-primeiro-login \
+    PGCRYPTO_KEY=chave-de-desenvolvimento-nunca-usar-em-producao \
     nohup ./mvnw -q spring-boot:run > "$BACKEND_LOG" 2>&1 &
   echo $! > "$BACKEND_PID_FILE"
 

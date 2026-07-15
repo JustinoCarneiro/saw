@@ -6,3 +6,11 @@ sawhub:
   bootstrap:
     fundador-senha: senha-de-teste-nunca-usar-em-producao
   seed-demo-data: false
+
+spring:
+  datasource:
+    hikari:
+      connection-init-sql: "SET app.encryption_key = 'chave-de-teste-nunca-usar-em-producao'"
+  flyway:
+    placeholders:
+      pgcryptoKey: chave-de-teste-nunca-usar-em-producao

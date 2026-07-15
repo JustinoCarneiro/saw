@@ -8,10 +8,12 @@ import com.sawhub.hub.mentoria.dto.MentoriaResponse;
 import com.sawhub.hub.mentoria.dto.MentorResumoResponse;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Area;
+import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
 import com.sawhub.hub.team.Modulo;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -48,7 +50,8 @@ public class MentoriaController {
      * uma Gestão de Performance não-Fundador não conseguiria listar colaboradores por ali. */
     @GetMapping("/mentores")
     public List<MentorResumoResponse> mentores() {
-        return colaboradorRepository.findAllByAreaOrderByNomeAsc(Area.GESTAO_PERFORMANCE).stream()
+        return colaboradorRepository.findAllByArea(Area.GESTAO_PERFORMANCE).stream()
+                .sorted(Comparator.comparing(Colaborador::getNome))
                 .map(MentorResumoResponse::from)
                 .toList();
     }

@@ -241,7 +241,7 @@ class DemoDataSeederTest {
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(metaComercialRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         Colaborador paula = new Colaborador(null, "Paula Mendes", Area.COMERCIAL);
-        when(colaboradorRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(paula));
+        when(colaboradorRepository.findAll()).thenReturn(List.of(paula));
 
         seeder().run(null);
 
@@ -287,7 +287,7 @@ class DemoDataSeederTest {
 
         Colaborador lucas = colaborador("Lucas Alves", Area.GESTAO_PERFORMANCE);
         Colaborador ricardo = colaborador("Ricardo Costa", Area.GESTAO_PERFORMANCE);
-        when(colaboradorRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(lucas, ricardo));
+        when(colaboradorRepository.findAll()).thenReturn(List.of(lucas, ricardo));
 
         List<Mentorado> mentorados = List.of(mentorado("João Silva"), mentorado("Ana Costa"), mentorado("Carlos Menezes"),
                 mentorado("Rafael Gomes"), mentorado("Fernanda Lima"), mentorado("Marina Souza"));

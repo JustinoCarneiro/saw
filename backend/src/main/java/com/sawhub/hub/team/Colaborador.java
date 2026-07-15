@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnTransformer;
 
 // H15.6/H15.7 (M20): carteira e conversaoPct eram colunas armazenadas nunca calculadas (só o
 // valor que o seeder escrevia) — removidas. Carteira agora é sempre computada por leitura em
@@ -22,7 +23,13 @@ public class Colaborador extends BaseEntity {
     @JoinColumn(name = "usuario_id", nullable = false, unique = true)
     private Usuario usuario;
 
-    @Column(nullable = false)
+    // Pass transversal de pgcrypto (Fase 5): dado pessoal do time interno da SAW, nunca buscado
+    // por nome (só listado/exportado — ver TeamController/TeamService), então criptografar não
+    // quebra nenhuma query.
+    @Column(nullable = false, columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(nome, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String nome;
 
     @Enumerated(EnumType.STRING)

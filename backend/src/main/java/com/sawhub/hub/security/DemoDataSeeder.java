@@ -272,7 +272,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (leadRepository.count() > 0) {
             return;
         }
-        Colaborador paula = colaboradorRepository.findAllByOrderByNomeAsc().stream()
+        Colaborador paula = colaboradorRepository.findAll().stream()
                 .filter(c -> c.getArea() == Area.COMERCIAL)
                 .findFirst()
                 .orElse(null);
@@ -379,7 +379,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private Colaborador buscarColaboradorPorNome(String nome) {
-        return colaboradorRepository.findAllByOrderByNomeAsc().stream()
+        return colaboradorRepository.findAll().stream()
                 .filter(c -> c.getNome().equals(nome))
                 .findFirst()
                 .orElse(null);

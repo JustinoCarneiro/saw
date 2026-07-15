@@ -6,6 +6,7 @@ import com.sawhub.hub.security.Usuario;
 import com.sawhub.hub.security.UsuarioRepository;
 import com.sawhub.hub.team.dto.ColaboradorResponse;
 import com.sawhub.hub.team.dto.CriarColaboradorRequest;
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,8 @@ public class TeamService {
     // H15.6 (M20) — carteira computada por leitura (contagem de Mentorado distintos entre as
     // Mentorias em que o colaborador é mentor), nunca armazenada.
     public List<ColaboradorResponse> listar() {
-        return colaboradorRepository.findAllByOrderByNomeAsc().stream()
+        return colaboradorRepository.findAll().stream()
+                .sorted(Comparator.comparing(Colaborador::getNome))
                 .map(c -> ColaboradorResponse.from(c, carteiraDe(c)))
                 .toList();
     }

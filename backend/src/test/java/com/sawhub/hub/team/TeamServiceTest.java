@@ -46,7 +46,7 @@ class TeamServiceTest {
     @Test
     void listarDelegaParaRepositorioOrdenadoPorNome() {
         teamService.listar();
-        verify(colaboradorRepository).findAllByOrderByNomeAsc();
+        verify(colaboradorRepository).findAll();
     }
 
     // H15.6 — carteira computada por leitura, nunca armazenada (achado do M20: as colunas antigas
@@ -56,7 +56,7 @@ class TeamServiceTest {
         Usuario usuario = new Usuario("lucas@sawhub.com.br", "hash", Perfil.ADMIN);
         Colaborador mentor = new Colaborador(usuario, "Lucas", Area.GESTAO_PERFORMANCE);
         ReflectionTestUtils.setField(mentor, "id", java.util.UUID.randomUUID());
-        when(colaboradorRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(mentor));
+        when(colaboradorRepository.findAll()).thenReturn(List.of(mentor));
 
         Mentorado a = mentorado();
         Mentorado b = mentorado();

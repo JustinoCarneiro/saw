@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.hibernate.annotations.ColumnTransformer;
 
 /** H1.3 + H13.2 — nasce da solicitação pública de acesso (status inicial {@link StatusLead#SOLICITACAO})
  * e progride pelo funil comercial. Máquina de estado (CLAUDE.md): Solicitação -&gt; Em contato -&gt;
@@ -23,14 +24,33 @@ import java.time.Instant;
 @Table(name = "lead")
 public class Lead extends BaseEntity {
 
-    @Column(nullable = false)
+    // Pass transversal de pgcrypto (Fase 5, achado L3 do revisor-seguranca): nome/email/telefone/
+    // mensagem/motivoPerdido são PII de LGPD nunca usados em WHERE/LIKE/ORDER BY (ver
+    // LeadRepository/LeadController — filtro é só por status/vendedorId), então criptografar não
+    // quebra busca nenhuma. A chave vem de uma GUC de sessão (SET app.encryption_key, ver
+    // application.yml), nunca de um literal aqui — ver V19__pgcrypto_dados_sensiveis.sql.
+    @Column(nullable = false, columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(nome, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String nome;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(email, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String email;
 
+    @Column(columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(telefone, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String telefone;
 
+    @Column(columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(mensagem, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String mensagem;
 
     @Enumerated(EnumType.STRING)
@@ -49,7 +69,10 @@ public class Lead extends BaseEntity {
     @Column(name = "plano_fechado")
     private Plano planoFechado;
 
-    @Column(name = "motivo_perdido")
+    @Column(name = "motivo_perdido", columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(motivo_perdido, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String motivoPerdido;
 
     @Column(name = "data_fechamento")

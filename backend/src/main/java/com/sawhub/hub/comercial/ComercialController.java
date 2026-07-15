@@ -8,12 +8,14 @@ import com.sawhub.hub.comercial.dto.VendedorResumo;
 import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Area;
+import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
 import com.sawhub.hub.team.Modulo;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -60,7 +62,8 @@ public class ComercialController {
      * área Comercial. */
     @GetMapping("/vendedores")
     public List<VendedorResumo> vendedores() {
-        return colaboradorRepository.findAllByAreaOrderByNomeAsc(Area.COMERCIAL).stream()
+        return colaboradorRepository.findAllByArea(Area.COMERCIAL).stream()
+                .sorted(Comparator.comparing(Colaborador::getNome))
                 .map(VendedorResumo::from)
                 .toList();
     }

@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "mentorado")
@@ -30,7 +31,17 @@ public class Mentorado extends BaseEntity {
     @Column(nullable = false)
     private Plano plano = Plano.GRATUITO;
 
-    @Column(name = "crescimento_faturamento_pct", nullable = false)
+    // Pass transversal de pgcrypto (Fase 5): é literalmente "financeiro do mentorado" (CLAUDE.md
+    // § Criptografia), ao contrário do DRE interno da SAW (M04, deliberadamente fora de escopo).
+    // Nunca aparece em SUM()/ORDER BY do Postgres — o ranking do E17 (ConsolidatedService) ordena
+    // em memória Java depois do fetch, então criptografar não quebra a agregação. nome/telefone/
+    // busca continuam de fora (ver justificativa em V19__pgcrypto_dados_sensiveis.sql): nome é
+    // usado em LOWER(m.nome) LIKE (MentoradoRepository.buscarComFiltro), criptografar quebraria a
+    // busca do Admin.
+    @Column(name = "crescimento_faturamento_pct", nullable = false, columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(crescimento_faturamento_pct, current_setting('app.encryption_key'))::numeric",
+            write = "pgp_sym_encrypt(?::text, current_setting('app.encryption_key'))")
     private BigDecimal crescimentoFaturamentoPct = BigDecimal.ZERO;
 
     @Column(name = "ferramentas_concluidas", nullable = false)
@@ -43,13 +54,22 @@ public class Mentorado extends BaseEntity {
     @Column(nullable = false)
     private StatusMentorado status = StatusMentorado.ATIVO;
 
-    @Column(length = 30)
+    @Column(columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(telefone, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String telefone;
 
-    @Column(length = 500)
+    @Column(columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(bio, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String bio;
 
-    @Column(name = "areas_interesse", length = 300)
+    @Column(name = "areas_interesse", columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(areas_interesse, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String areasInteresse;
 
     @Column(name = "foto_url", length = 500)
