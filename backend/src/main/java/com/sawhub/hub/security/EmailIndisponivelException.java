@@ -7,4 +7,8 @@ public class EmailIndisponivelException extends RuntimeException {
     public EmailIndisponivelException(String message) {
         super(message);
     }
+
+    public EmailIndisponivelException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

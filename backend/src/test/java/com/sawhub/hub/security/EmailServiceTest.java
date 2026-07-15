@@ -5,12 +5,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /** H1.4 (M18) — mesmo tratamento do M06/M14: sem credencial, o e-mail não é enviado de verdade.
@@ -30,7 +32,7 @@ class EmailServiceTest {
 
         assertThatThrownBy(() -> service.enviarLinkRedefinicaoSenha("ana@x.com", "token-bruto"))
                 .isInstanceOf(EmailIndisponivelException.class);
-        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+        verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
     @Test
@@ -40,7 +42,7 @@ class EmailServiceTest {
 
         service.enviarLinkRedefinicaoSenha("ana@x.com", "token-bruto");
 
-        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+        verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
     @Test
@@ -55,10 +57,11 @@ class EmailServiceTest {
     @Test
     void comCredencialConfiguradaEnviaEmailReal() {
         EmailProperties propriedadesHabilitadas = new EmailProperties("smtp.x.com", 587, "user", "pass", "no-reply@x.com", false);
+        when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
         EmailService service = new EmailService(propriedadesHabilitadas, "http://localhost:5173", mailSender);
 
         service.enviarLinkRedefinicaoSenha("ana@x.com", "token-bruto");
 
-        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
 }
