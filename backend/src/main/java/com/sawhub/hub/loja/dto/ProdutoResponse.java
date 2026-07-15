@@ -19,11 +19,12 @@ public record ProdutoResponse(
         String arquivoUrl,
         String imagemUrl,
         boolean publicado,
+        boolean vendaEmAtacado,
         Instant criadoEm
 ) {
     public static ProdutoResponse from(Produto p) {
         return new ProdutoResponse(p.getId(), p.getTitulo(), p.getDescricao(), p.getCategoria(), p.getPreco(),
                 p.getPrecoOriginal(), p.getAvaliacaoMedia(), p.isDestaque(), p.getVendas(), p.getArquivoUrl(),
-                p.getImagemUrl(), p.isPublicado(), p.getCriadoEm());
+                p.getImagemUrl(), p.isPublicado(), p.isVendaEmAtacado(), p.getCriadoEm());
     }
 }

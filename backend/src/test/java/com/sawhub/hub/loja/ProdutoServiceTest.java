@@ -28,7 +28,7 @@ class ProdutoServiceTest {
 
     private static Produto produto(UUID id) {
         Produto p = new Produto("Planilha", "desc", CategoriaProduto.PLANILHA, new BigDecimal("100.00"), null, null,
-                false, "https://cdn.sawhub.com.br/x.zip", null);
+                false, "https://cdn.sawhub.com.br/x.zip", null, false);
         ReflectionTestUtils.setField(p, "id", id);
         return p;
     }
@@ -38,7 +38,7 @@ class ProdutoServiceTest {
         when(produtoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarProdutoRequest("Planilha", "desc", CategoriaProduto.PLANILHA, new BigDecimal("100.00"),
-                null, null, false, "https://cdn.sawhub.com.br/x.zip", null);
+                null, null, false, "https://cdn.sawhub.com.br/x.zip", null, false);
 
         Produto criado = service().criar(request);
 
@@ -63,7 +63,7 @@ class ProdutoServiceTest {
         when(produtoRepository.findById(id)).thenReturn(Optional.empty());
 
         var request = new AtualizarProdutoRequest("Planilha", "desc", CategoriaProduto.PLANILHA,
-                new BigDecimal("100.00"), null, null, false, "https://cdn.sawhub.com.br/x.zip", null);
+                new BigDecimal("100.00"), null, null, false, "https://cdn.sawhub.com.br/x.zip", null, false);
 
         assertThatThrownBy(() -> service().atualizar(id, request)).isInstanceOf(IllegalArgumentException.class);
     }

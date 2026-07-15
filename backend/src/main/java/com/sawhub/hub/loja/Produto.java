@@ -50,12 +50,20 @@ public class Produto extends BaseEntity {
     @Column(nullable = false)
     private boolean publicado = false;
 
+    // Achado de UX (Fase 5): a maioria dos produtos daqui é acesso digital de licença única (curso,
+    // e-book, template) — permitir quantidade > 1 no carrinho é um erro induzido do usuário mais
+    // vezes do que uma compra legítima. Default FALSE (só unidade) de propósito: o Admin precisa
+    // marcar explicitamente os itens que fazem sentido em lote (ex.: um kit físico, licença de
+    // equipe), em vez de todo produto novo nascer permitindo quantidade livre.
+    @Column(name = "venda_em_atacado", nullable = false)
+    private boolean vendaEmAtacado = false;
+
     protected Produto() {
     }
 
     public Produto(String titulo, String descricao, CategoriaProduto categoria, BigDecimal preco,
                     BigDecimal precoOriginal, BigDecimal avaliacaoMedia, boolean destaque,
-                    String arquivoUrl, String imagemUrl) {
+                    String arquivoUrl, String imagemUrl, boolean vendaEmAtacado) {
         this.titulo = titulo;
         this.descricao = descricao;
         this.categoria = categoria;
@@ -65,11 +73,12 @@ public class Produto extends BaseEntity {
         this.destaque = destaque;
         this.arquivoUrl = arquivoUrl;
         this.imagemUrl = imagemUrl;
+        this.vendaEmAtacado = vendaEmAtacado;
     }
 
     public void atualizar(String titulo, String descricao, CategoriaProduto categoria, BigDecimal preco,
                            BigDecimal precoOriginal, BigDecimal avaliacaoMedia, boolean destaque,
-                           String arquivoUrl, String imagemUrl) {
+                           String arquivoUrl, String imagemUrl, boolean vendaEmAtacado) {
         this.titulo = titulo;
         this.descricao = descricao;
         this.categoria = categoria;
@@ -79,6 +88,7 @@ public class Produto extends BaseEntity {
         this.destaque = destaque;
         this.arquivoUrl = arquivoUrl;
         this.imagemUrl = imagemUrl;
+        this.vendaEmAtacado = vendaEmAtacado;
     }
 
     public void publicar() {
@@ -135,5 +145,9 @@ public class Produto extends BaseEntity {
 
     public boolean isPublicado() {
         return publicado;
+    }
+
+    public boolean isVendaEmAtacado() {
+        return vendaEmAtacado;
     }
 }

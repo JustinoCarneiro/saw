@@ -21,6 +21,7 @@ public record AtualizarProdutoRequest(
         boolean destaque,
         // Mesmo achado do CriarProdutoRequest — ver comentário lá.
         @NotBlank @Size(max = 500) @Pattern(regexp = "^https?://.+") String arquivoUrl,
-        @Size(max = 500) @Pattern(regexp = "^https?://.+") String imagemUrl
+        @Size(max = 500) @Pattern(regexp = "^https?://.+") String imagemUrl,
+        boolean vendaEmAtacado
 ) {
 }

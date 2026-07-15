@@ -59,6 +59,8 @@ public class Pedido extends BaseEntity {
         ItemPedido existente = itens.stream()
                 .filter(i -> i.getProduto().getId().equals(produto.getId()))
                 .findFirst().orElse(null);
+        int quantidadeFinal = (existente == null ? 0 : existente.getQuantidade()) + quantidade;
+        exigirQuantidadePermitida(produto, quantidadeFinal);
         if (existente != null) {
             existente.somarQuantidade(quantidade);
         } else {
@@ -69,8 +71,22 @@ public class Pedido extends BaseEntity {
 
     public void atualizarQuantidadeItem(UUID itemId, int quantidade) {
         exigirCarrinho();
-        buscarItem(itemId).atualizarQuantidade(quantidade);
+        ItemPedido item = buscarItem(itemId);
+        exigirQuantidadePermitida(item.getProduto(), quantidade);
+        item.atualizarQuantidade(quantidade);
         recalcularTotal();
+    }
+
+    // Achado de UX (Fase 5): produto digital de licença única (default de todo produto novo, ver
+    // Produto.vendaEmAtacado) não pode acumular quantidade > 1 — nem numa chamada só nem somando
+    // "adicionar ao carrinho" repetido do mesmo produto (por isso confere a quantidade FINAL, não
+    // só o delta recebido). Front já desabilita o "+"/trava em 1 (LojaPage.tsx), isto é o
+    // reforço no servidor — mesmo raciocínio do teto de 20 unidades no @Max dos DTOs.
+    private static void exigirQuantidadePermitida(Produto produto, int quantidade) {
+        if (!produto.isVendaEmAtacado() && quantidade > 1) {
+            throw new IllegalArgumentException(
+                    "\"" + produto.getTitulo() + "\" só pode ser comprado em unidade única.");
+        }
     }
 
     public void removerItem(UUID itemId) {

@@ -90,6 +90,7 @@ function ProdutoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar:
   const [preco, setPreco] = useState('');
   const [precoOriginal, setPrecoOriginal] = useState('');
   const [destaque, setDestaque] = useState(false);
+  const [vendaEmAtacado, setVendaEmAtacado] = useState(false);
   const [arquivoUrl, setArquivoUrl] = useState('');
   const [imagemUrl, setImagemUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +107,7 @@ function ProdutoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar:
         precoOriginal: precoOriginal ? Number(precoOriginal) : null,
         avaliacaoMedia: null,
         destaque,
+        vendaEmAtacado,
         arquivoUrl,
         imagemUrl: imagemUrl || null,
       });
@@ -153,6 +155,14 @@ function ProdutoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar:
             Destaque
           </label>
         </div>
+        <label className={styles.checkboxField}>
+          <input type="checkbox" checked={vendaEmAtacado} onChange={(e) => setVendaEmAtacado(e.target.checked)} />
+          Permite comprar mais de uma unidade (atacado)
+        </label>
+        <p className={styles.helpText}>
+          Desmarcado (padrão): o mentorado só pode levar 1 unidade — recomendado pra acesso digital
+          de licença única (curso, e-book, template). Marque só se o produto fizer sentido em lote.
+        </p>
         <label className={styles.formField}>
           Link do arquivo (liberado ao mentorado após pagamento)
           <input className={styles.textInput} value={arquivoUrl} onChange={(e) => setArquivoUrl(e.target.value)} placeholder="https://..." required />

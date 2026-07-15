@@ -158,3 +158,9 @@
   font-size: 12px;
   color: var(--text-soft);
 }
+
+.helpText {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin: -4px 0 0;
+}

@@ -23,7 +23,7 @@ public class ProdutoService {
     public Produto criar(CriarProdutoRequest request) {
         Produto produto = new Produto(request.titulo(), request.descricao(), request.categoria(), request.preco(),
                 request.precoOriginal(), request.avaliacaoMedia(), request.destaque(), request.arquivoUrl(),
-                request.imagemUrl());
+                request.imagemUrl(), request.vendaEmAtacado());
         return produtoRepository.save(produto);
     }
 
@@ -36,7 +36,7 @@ public class ProdutoService {
         Produto produto = buscar(id);
         produto.atualizar(request.titulo(), request.descricao(), request.categoria(), request.preco(),
                 request.precoOriginal(), request.avaliacaoMedia(), request.destaque(), request.arquivoUrl(),
-                request.imagemUrl());
+                request.imagemUrl(), request.vendaEmAtacado());
         return produtoRepository.save(produto);
     }
 

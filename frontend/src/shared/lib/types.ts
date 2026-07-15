@@ -464,6 +464,7 @@ export interface Produto {
   arquivoUrl: string;
   imagemUrl: string | null;
   publicado: boolean;
+  vendaEmAtacado: boolean;
   criadoEm: string;
 }
 
@@ -489,6 +490,7 @@ export interface ItemCarrinho {
   quantidade: number;
   precoUnitario: number;
   subtotal: number;
+  vendaEmAtacado: boolean;
 }
 
 export interface Carrinho {

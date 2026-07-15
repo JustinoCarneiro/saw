@@ -46,7 +46,7 @@ class LojaMentoradoServiceTest {
 
     private static Produto produtoPublicado(UUID id, String preco) {
         Produto p = new Produto("Planilha", "desc", CategoriaProduto.PLANILHA, new BigDecimal(preco), null, null,
-                false, "https://cdn.sawhub.com.br/x.zip", null);
+                false, "https://cdn.sawhub.com.br/x.zip", null, false);
         p.publicar();
         ReflectionTestUtils.setField(p, "id", id);
         return p;
@@ -73,7 +73,7 @@ class LojaMentoradoServiceTest {
         UUID usuarioId = UUID.randomUUID();
         UUID produtoId = UUID.randomUUID();
         Produto rascunho = new Produto("X", "desc", CategoriaProduto.EBOOK, new BigDecimal("10.00"), null, null,
-                false, "https://cdn.sawhub.com.br/x.zip", null);
+                false, "https://cdn.sawhub.com.br/x.zip", null, false);
         ReflectionTestUtils.setField(rascunho, "id", produtoId);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado(UUID.randomUUID())));
         when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(rascunho));

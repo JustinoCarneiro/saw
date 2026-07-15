@@ -12,9 +12,19 @@ import org.springframework.test.util.ReflectionTestUtils;
  * mocks): a lógica de negócio mora aqui, não no service (mesmo padrão de Mentoria/Ata/Evento). */
 class PedidoTest {
 
+    // vendaEmAtacado=true de propósito: a maioria dos testes aqui exercita soma/matemática de
+    // quantidade (>1), ortogonal à regra de "só unidade única" — essa regra tem teste dedicado
+    // abaixo (produtoSoUnidade), com vendaEmAtacado=false explícito.
     private static Produto produto(String titulo, String preco) {
         Produto p = new Produto(titulo, "desc", CategoriaProduto.PLANILHA, new BigDecimal(preco), null, null, false,
-                "https://cdn.sawhub.com.br/x.zip", null);
+                "https://cdn.sawhub.com.br/x.zip", null, true);
+        ReflectionTestUtils.setField(p, "id", UUID.randomUUID());
+        return p;
+    }
+
+    private static Produto produtoSoUnidade(String titulo, String preco) {
+        Produto p = new Produto(titulo, "desc", CategoriaProduto.PLANILHA, new BigDecimal(preco), null, null, false,
+                "https://cdn.sawhub.com.br/x.zip", null, false);
         ReflectionTestUtils.setField(p, "id", UUID.randomUUID());
         return p;
     }
@@ -51,9 +61,47 @@ class PedidoTest {
         pedido.adicionarItem(produto, 1);
 
         produto.atualizar("Planilha", "desc", CategoriaProduto.PLANILHA, new BigDecimal("500.00"), null, null, false,
-                "https://cdn.sawhub.com.br/x.zip", null);
+                "https://cdn.sawhub.com.br/x.zip", null, true);
 
         assertThat(pedido.getValorTotal()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void produtoSoUnidadeNaoAceitaQuantidadeMaiorQueUmDeUmaVez() {
+        Pedido pedido = new Pedido(null);
+        assertThatThrownBy(() -> pedido.adicionarItem(produtoSoUnidade("Curso", "100.00"), 2))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(pedido.getItens()).isEmpty();
+    }
+
+    @Test
+    void produtoSoUnidadeNaoAceitaSomarParaAlemDeUmMesmoAdicionandoUmDeCadaVez() {
+        Pedido pedido = new Pedido(null);
+        Produto produto = produtoSoUnidade("Curso", "100.00");
+        pedido.adicionarItem(produto, 1);
+
+        assertThatThrownBy(() -> pedido.adicionarItem(produto, 1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(pedido.getItens().get(0).getQuantidade()).isEqualTo(1);
+    }
+
+    @Test
+    void produtoSoUnidadeNaoAceitaAtualizarQuantidadeParaAlemDeUm() {
+        Pedido pedido = new Pedido(null);
+        pedido.adicionarItem(produtoSoUnidade("Curso", "100.00"), 1);
+        UUID itemId = UUID.randomUUID();
+        ReflectionTestUtils.setField(pedido.getItens().get(0), "id", itemId);
+
+        assertThatThrownBy(() -> pedido.atualizarQuantidadeItem(itemId, 2))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(pedido.getItens().get(0).getQuantidade()).isEqualTo(1);
+    }
+
+    @Test
+    void produtoEmAtacadoAceitaQuantidadeMaiorQueUm() {
+        Pedido pedido = new Pedido(null);
+        pedido.adicionarItem(produto("Kit", "50.00"), 3);
+        assertThat(pedido.getItens().get(0).getQuantidade()).isEqualTo(3);
     }
 
     @Test

@@ -494,9 +494,12 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (produtoRepository.count() > 0) {
             return;
         }
+        // vendaEmAtacado=true de propósito: único produto do seed que faz sentido comprar em mais
+        // de uma unidade (ex.: presentear a equipe) — fixture também usado pelo E2E de ajuste de
+        // quantidade no carrinho (loja.spec.ts).
         criarProduto("Pacote de Planilhas Gerenciais",
                 "12 planilhas prontas para gestão completa do seu restaurante.", CategoriaProduto.PLANILHA,
-                "97.00", "197.00", "4.8", true, true);
+                "97.00", "197.00", "4.8", true, true, true);
         criarProduto("Curso de Precificação Estratégica",
                 "Aprenda a precificar seu cardápio sem perder margem.", CategoriaProduto.CURSO,
                 "297.00", null, "4.6", false, true);
@@ -534,10 +537,17 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private Produto criarProduto(String titulo, String descricao, CategoriaProduto categoria, String preco,
                                   String precoOriginal, String avaliacaoMedia, boolean destaque, boolean publicado) {
+        return criarProduto(titulo, descricao, categoria, preco, precoOriginal, avaliacaoMedia, destaque, publicado, false);
+    }
+
+    private Produto criarProduto(String titulo, String descricao, CategoriaProduto categoria, String preco,
+                                  String precoOriginal, String avaliacaoMedia, boolean destaque, boolean publicado,
+                                  boolean vendaEmAtacado) {
         Produto produto = new Produto(titulo, descricao, categoria, new BigDecimal(preco),
                 precoOriginal == null ? null : new BigDecimal(precoOriginal),
                 avaliacaoMedia == null ? null : new BigDecimal(avaliacaoMedia),
-                destaque, "https://cdn.sawhub.com.br/produtos/" + categoria.name().toLowerCase() + ".zip", null);
+                destaque, "https://cdn.sawhub.com.br/produtos/" + categoria.name().toLowerCase() + ".zip", null,
+                vendaEmAtacado);
         if (publicado) {
             produto.publicar();
         }

@@ -33,21 +33,46 @@ test.describe('M14 — E8 Loja SAW (catálogo, carrinho, checkout)', () => {
 
     await page.getByRole('link', { name: 'Loja SAW' }).click();
 
+    const pacote = page.locator('[data-testid^="produto-"]', { hasText: 'Pacote de Planilhas Gerenciais' });
+    await pacote.getByRole('button', { name: 'Adicionar ao carrinho' }).click();
+
+    await page.getByTestId('loja-tab-CARRINHO').click();
+    const item = page.locator('[data-testid^="item-carrinho-"]', { hasText: 'Pacote de Planilhas Gerenciais' });
+    await expect(item).toBeVisible();
+    // Sem exact:true: Intl.NumberFormat('pt-BR') usa espaço não separável ( ) entre "R$" e o
+    // valor — getByText normaliza espaço em branco em modo substring, não em modo exato.
+    // .first(): "R$ 97,00" aparece 2x na linha ("... cada" + subtotal, mesmo valor c/ quantidade=1).
+    await expect(item.getByText('R$ 97,00').first()).toBeVisible();
+
+    await item.getByRole('button', { name: '+' }).click();
+    await expect(item.getByText('R$ 194,00')).toBeVisible();
+
+    // Limpa o carrinho pra não poluir a próxima execução (item.getByRole 'Remover')
+    await item.getByRole('button', { name: 'Remover' }).click();
+    await expect(page.getByText('Seu carrinho está vazio.')).toBeVisible();
+  });
+
+  test('produto so-unidade nao deixa passar de 1 no carrinho', async ({ page }) => {
+    await loginAs(page, 'rafael@bistrogomes.com.br');
+    await expect(page).toHaveURL(/\/mentorado/);
+
+    const carrinhoInicial = await page.request.get('/api/v1/mentorado/loja/carrinho');
+    const { itens: itensIniciais }: { itens: { id: string }[] } = await carrinhoInicial.json();
+    for (const item of itensIniciais) {
+      await page.request.delete(`/api/v1/mentorado/loja/carrinho/itens/${item.id}`);
+    }
+
+    await page.getByRole('link', { name: 'Loja SAW' }).click();
+
     const ebook = page.locator('[data-testid^="produto-"]', { hasText: 'E-book: Gestão de Custos' });
     await ebook.getByRole('button', { name: 'Adicionar ao carrinho' }).click();
 
     await page.getByTestId('loja-tab-CARRINHO').click();
     const item = page.locator('[data-testid^="item-carrinho-"]', { hasText: 'E-book: Gestão de Custos' });
-    await expect(item).toBeVisible();
-    // Sem exact:true: Intl.NumberFormat('pt-BR') usa espaço não separável ( ) entre "R$" e o
-    // valor — getByText normaliza espaço em branco em modo substring, não em modo exato.
-    // .first(): "R$ 27,00" aparece 2x na linha ("... cada" + subtotal, mesmo valor c/ quantidade=1).
-    await expect(item.getByText('R$ 27,00').first()).toBeVisible();
+    // Reforço no servidor (Pedido.exigirQuantidadePermitida) coberto por PedidoTest (unit) —
+    // aqui o foco é o comportamento visível: o "+" trava em 1, sem tentar contornar via API crua.
+    await expect(item.getByRole('button', { name: '+' })).toBeDisabled();
 
-    await item.getByRole('button', { name: '+' }).click();
-    await expect(item.getByText('R$ 54,00')).toBeVisible();
-
-    // Limpa o carrinho pra não poluir a próxima execução (item.getByRole 'Remover')
     await item.getByRole('button', { name: 'Remover' }).click();
     await expect(page.getByText('Seu carrinho está vazio.')).toBeVisible();
   });

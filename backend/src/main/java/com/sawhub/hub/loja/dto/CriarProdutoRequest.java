@@ -22,6 +22,7 @@ public record CriarProdutoRequest(
         // Mesmo achado do M11 (Conteudo.url)/M12 (Mentoria.linkOnline)/M13 (Evento.linkOnline):
         // campo vira link clicável/download direto pro mentorado quando o pedido é liberado.
         @NotBlank @Size(max = 500) @Pattern(regexp = "^https?://.+") String arquivoUrl,
-        @Size(max = 500) @Pattern(regexp = "^https?://.+") String imagemUrl
+        @Size(max = 500) @Pattern(regexp = "^https?://.+") String imagemUrl,
+        boolean vendaEmAtacado
 ) {
 }

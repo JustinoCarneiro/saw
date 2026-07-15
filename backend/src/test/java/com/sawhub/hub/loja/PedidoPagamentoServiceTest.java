@@ -55,9 +55,10 @@ class PedidoPagamentoServiceTest {
         return new Mentorado(null, "Maria", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
     }
 
+    // vendaEmAtacado=true de propósito: usado com quantidade 2 numa das linhas abaixo.
     private static Produto produto(UUID id, String preco) {
         Produto p = new Produto("Planilha", "desc", CategoriaProduto.PLANILHA, new BigDecimal(preco), null, null,
-                false, "https://cdn.sawhub.com.br/x.zip", null);
+                false, "https://cdn.sawhub.com.br/x.zip", null, true);
         p.publicar();
         ReflectionTestUtils.setField(p, "id", id);
         return p;

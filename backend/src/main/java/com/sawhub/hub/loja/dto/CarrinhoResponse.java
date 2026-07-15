@@ -20,11 +20,15 @@ public record CarrinhoResponse(
             String imagemUrl,
             int quantidade,
             BigDecimal precoUnitario,
-            BigDecimal subtotal
+            BigDecimal subtotal,
+            // Fronte usa isto pra desabilitar o "+" de quantidade: produto só-unidade não deixa
+            // passar de 1 (ver Pedido.exigirQuantidadePermitida, que também barra no servidor).
+            boolean vendaEmAtacado
     ) {
         public static ItemCarrinhoResponse from(ItemPedido i) {
             return new ItemCarrinhoResponse(i.getId(), i.getProduto().getId(), i.getProduto().getTitulo(),
-                    i.getProduto().getImagemUrl(), i.getQuantidade(), i.getPrecoUnitario(), i.getSubtotal());
+                    i.getProduto().getImagemUrl(), i.getQuantidade(), i.getPrecoUnitario(), i.getSubtotal(),
+                    i.getProduto().isVendaEmAtacado());
         }
     }
 
