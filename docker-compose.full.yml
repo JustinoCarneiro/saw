@@ -31,6 +31,7 @@ services:
       SEED_DEMO_DATA: "true"
       BOOTSTRAP_FUNDADOR_SENHA: trocar-no-primeiro-login
       PGCRYPTO_KEY: chave-de-desenvolvimento-nunca-usar-em-producao
+      EMAIL_PERMITIR_FALLBACK_LOG: "true"
     ports:
       - "8080:8080"
     volumes:

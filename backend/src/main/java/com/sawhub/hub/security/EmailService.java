@@ -8,11 +8,14 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
-/** H1.4 (M18) — mesmo tratamento do M06 (IA)/M14 (Mercado Pago): sem credencial SMTP
- * configurada neste ambiente, o e-mail não é enviado de verdade — o link é logado em WARN, uma
- * prática comum de dev/staging (ver Suposição 1 do Blueprint M18). {@code JavaMailSender} é
- * injetado como opcional porque a autoconfiguração do Spring Boot só cria o bean quando
- * {@code spring.mail.host} está preenchido. */
+/** H1.4 (M18) — mesmo tratamento do M06 (IA)/M14 (Mercado Pago): sem credencial SMTP configurada,
+ * o e-mail não é enviado de verdade. Achado da revisão final de segurança (Fase 5): o link de
+ * redefinição de senha carrega o token bruto (credencial de account-takeover) — logá-lo em WARN é
+ * aceitável em dev/E2E (permitirFallbackLog=true, ver EmailProperties) mas seria um vazamento real
+ * se um deploy de produção esquecesse de configurar SMTP; por isso o fallback é opt-in, não o
+ * default, e lança EmailIndisponivelException fora desse opt-in — mesmo espírito fail-closed de
+ * PGCRYPTO_KEY/BOOTSTRAP_FUNDADOR_SENHA. {@code JavaMailSender} é injetado como opcional porque a
+ * autoconfiguração do Spring Boot só cria o bean quando {@code spring.mail.host} está preenchido. */
 @Service
 public class EmailService {
 
@@ -38,6 +41,10 @@ public class EmailService {
                 + "Se você não pediu isso, pode ignorar este e-mail.";
 
         if (!emailProperties.isEnabled() || mailSender == null) {
+            if (!emailProperties.isPermitirFallbackLog()) {
+                throw new EmailIndisponivelException(
+                        "SMTP não configurado (sawhub.email.host vazio) — redefinição de senha indisponível.");
+            }
             log.warn("SMTP não configurado (sawhub.email.host vazio) — e-mail de redefinição não enviado de "
                     + "verdade. Destinatário: {}, link: {}", destinatario, link);
             return;

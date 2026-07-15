@@ -107,8 +107,7 @@ sawhub:
     frontend-base-url: ${LOJA_FRONTEND_BASE_URL:http://localhost:5173}
     backend-base-url: ${LOJA_BACKEND_BASE_URL:http://localhost:8080}
   # H1.4 (M18) — recuperação de senha. Default vazio de propósito, mesmo raciocínio dos blocos
-  # `ia`/`pagamento` acima: sem SMTP configurado, o e-mail não é enviado de verdade — o link é
-  # logado em WARN (ver EmailService), não derruba o fluxo de dev/teste do resto do sistema.
+  # `ia`/`pagamento` acima: sem SMTP configurado, o e-mail não é enviado de verdade.
   email:
     host: ${MAIL_HOST:}
     port: ${MAIL_PORT:587}
@@ -116,6 +115,12 @@ sawhub:
     password: ${MAIL_PASSWORD:}
     remetente: ${MAIL_REMETENTE:no-reply@sawhub.com.br}
     frontend-base-url: ${EMAIL_FRONTEND_BASE_URL:http://localhost:5173}
+    # Achado da revisão final de segurança (Fase 5): sem isto, um deploy que esqueça de configurar
+    # SMTP logava o token de redefinição de senha (credencial de account-takeover) em texto puro
+    # em vez de falhar — default FALSE de propósito (fail-closed, mesmo espírito do achado H1 do
+    # SEED_DEMO_DATA). Dev/E2E precisam setar EMAIL_PERMITIR_FALLBACK_LOG=true explicitamente pra
+    # ver o link no log sem precisar configurar SMTP real (ver scripts/dev-up.sh, scripts/e2e-up.sh).
+    permitir-fallback-log: ${EMAIL_PERMITIR_FALLBACK_LOG:false}
 
 logging:
   level:

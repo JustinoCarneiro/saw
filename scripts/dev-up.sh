@@ -76,6 +76,7 @@ else
   # produção). Pro dev/demo local continuar funcionando sem fricção, exportamos explicitamente aqui.
   SEED_DEMO_DATA=true BOOTSTRAP_FUNDADOR_SENHA=trocar-no-primeiro-login \
     PGCRYPTO_KEY=chave-de-desenvolvimento-nunca-usar-em-producao \
+    EMAIL_PERMITIR_FALLBACK_LOG=true \
     nohup ./mvnw -q spring-boot:run > "$BACKEND_LOG" 2>&1 &
   echo $! > "$BACKEND_PID_FILE"
 

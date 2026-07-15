@@ -6,6 +6,8 @@ sawhub:
   bootstrap:
     fundador-senha: senha-de-teste-nunca-usar-em-producao
   seed-demo-data: false
+  email:
+    permitir-fallback-log: true
 
 spring:
   datasource:

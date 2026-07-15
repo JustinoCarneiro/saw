@@ -81,6 +81,7 @@ else
   # real (dev/produção) é o default do application.yml, intocado.
   SEED_DEMO_DATA=true BOOTSTRAP_FUNDADOR_SENHA=trocar-no-primeiro-login \
     PGCRYPTO_KEY=chave-de-desenvolvimento-nunca-usar-em-producao \
+    EMAIL_PERMITIR_FALLBACK_LOG=true \
     POSTGRES_DB="$DB_NAME" SERVER_PORT="$BACKEND_PORT" REDIS_DATABASE=1 \
     CORS_ALLOWED_ORIGINS="http://localhost:$FRONTEND_PORT" APP_RATE_LIMIT_LEAD=1000 \
     nohup ./mvnw -q spring-boot:run > "$BACKEND_LOG" 2>&1 &
