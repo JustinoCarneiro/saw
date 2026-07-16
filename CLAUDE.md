@@ -25,14 +25,15 @@ O cliente comparou o projeto com ferramentas no-code (ex.: Base44) e perguntou s
 - **Java + Spring Security** é a escolha para o backend justamente pela maturidade em regras de permissão complexas (RBAC por área no E15) — não é só uma preferência de conforto, é o ecossistema mais testado do mercado para esse tipo de controle de acesso.
 
 ### Backup
-- Backup automático diário do Postgres (incluso no plano da VPS) + `pg_dump` agendado como segunda camada, armazenado fora do próprio servidor (não adianta backup que morre junto com a VPS).
-- Retenção mínima de 30 dias; restauração testada periodicamente (backup que nunca foi restaurado é uma suposição, não uma garantia).
+- Backup automático diário do Postgres (incluso no plano da VPS) + `pg_dump` agendado como segunda camada — **implementado** (Fase 5, `backup_saw_hub_postgres.sh`, cron diário, retenção 30 dias, restauração testada com sucesso).
+- **Pendência real:** hoje essa segunda camada só existe *dentro* da própria VPS (`/root/backups/`) — ainda não é armazenada fora do servidor (não adianta backup que morre junto com a VPS). Destino off-site (Backblaze B2 ou outro servidor da Onda) é decisão que falta tomar.
 
 ### Criptografia
 - **Em trânsito:** TLS em toda comunicação (front↔back↔cliente), via Coolify/Let's Encrypt — automático, renovação sem intervenção manual.
-- **Senhas:** nunca armazenadas em texto puro — hash via Spring Security (BCrypt), irreversível por design.
-- **Dados sensíveis em repouso** (financeiro do mentorado, dados pessoais): criptografia a nível de coluna no Postgres (`pgcrypto`) além da criptografia de disco da própria VPS — duas camadas, não uma só.
-- Vale comunicar isso explicitamente ao cliente antes de avançar para não deixar a dúvida em aberto.
+- **Senhas:** nunca armazenadas em texto puro — hash via Spring Security. Fase 5: migrado de BCrypt puro para **Argon2id como padrão pra hashes novos** (`DelegatingPasswordEncoder`, recomendação atual do OWASP Password Storage Cheat Sheet), mantendo compatibilidade com hashes BCrypt já existentes no banco — migração transparente conforme cada usuário troca de senha, sem forçar re-cadastro.
+- **Dados sensíveis em repouso** (financeiro do mentorado, dados pessoais): criptografia a nível de coluna no Postgres (`pgcrypto`) — **implementada e verificada em produção** (migration `V19`, colunas armazenadas como `bytea` ilegível, aplicação decifra corretamente via `app.encryption_key`).
+- **Criptografia de disco da própria VPS:** **não implementada ainda** — o disco raiz atual é `ext4` puro, sem LUKS. Não dá pra ativar full-disk encryption a quente num servidor já em produção sem reprovisionar (risco real de downtime/perda de dados); fica como item pra uma janela de manutenção planejada, não uma ação de agora. Até lá, a proteção de dados sensíveis em repouso depende só do `pgcrypto` (uma camada, não duas).
+- Vale comunicar isso explicitamente ao cliente antes de avançar para não deixar a dúvida em aberto — inclusive a pendência da criptografia de disco, pra não prometer algo que ainda não existe.
 
 ## Perfil de projeto
 SaaS multi-tenant (1 tenant = 1 mentorado/restaurante) · perfis: **Mentorado** e **Admin (SAW)** · produto recorrente por assinatura (planos).

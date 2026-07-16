@@ -13,14 +13,18 @@ import com.sawhub.hub.security.OAuth2FailureHandler;
 import com.sawhub.hub.security.OAuth2SuccessHandler;
 import com.sawhub.hub.security.PasswordResetRateLimitFilter;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -82,9 +86,23 @@ public class SecurityConfig {
         this.objectMapper = objectMapper;
     }
 
+    /** Fase 5 — Argon2id (vencedor da Password Hashing Competition, primeira recomendação do OWASP
+     * Password Storage Cheat Sheet, resiste melhor a cracking em GPU/ASIC que BCrypt) para todo
+     * hash NOVO, sem invalidar os hashes BCrypt já existentes no banco (senhas de mentorados e
+     * colaboradores já cadastrados). {@code DelegatingPasswordEncoder} decide o algoritmo pelo
+     * prefixo {@code {id}} guardado junto do hash; hashes antigos, gerados pelo
+     * {@code BCryptPasswordEncoder} puro de antes, não têm prefixo nenhum — por isso
+     * {@code setDefaultPasswordEncoderForMatches} aponta esse caso pro BCrypt, migração
+     * transparente conforme cada usuário troca de senha (reset, admin), sem forçar re-cadastro. */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        String idPadrao = "argon2";
+        Map<String, PasswordEncoder> encoders = new HashMap<>();
+        encoders.put(idPadrao, Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8());
+        encoders.put("bcrypt", new BCryptPasswordEncoder());
+        DelegatingPasswordEncoder delegatingPasswordEncoder = new DelegatingPasswordEncoder(idPadrao, encoders);
+        delegatingPasswordEncoder.setDefaultPasswordEncoderForMatches(new BCryptPasswordEncoder());
+        return delegatingPasswordEncoder;
     }
 
     @Bean
