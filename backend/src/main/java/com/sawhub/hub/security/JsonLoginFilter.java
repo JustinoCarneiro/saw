@@ -28,7 +28,7 @@ public class JsonLoginFilter extends UsernamePasswordAuthenticationFilter {
             throws AuthenticationException {
         try {
             LoginRequest body = objectMapper.readValue(request.getInputStream(), LoginRequest.class);
-            String email = body.email() == null ? "" : body.email().trim();
+            String email = body.email() == null ? "" : body.email().trim().toLowerCase(java.util.Locale.ROOT);
             String senha = body.senha() == null ? "" : body.senha();
             UsernamePasswordAuthenticationToken authRequest =
                     UsernamePasswordAuthenticationToken.unauthenticated(email, senha);

@@ -11,12 +11,13 @@ interface CsvImportExportProps {
   exportFilename: string;
   importUrl: string;
   onImportado: () => void;
+  labelPrefix?: string;
 }
 
 // M21 — "Importar" é tudo-ou-nada (ver Blueprint, ROADMAP.md): o backend só devolve 200 quando
 // TODAS as linhas foram validadas e persistidas; 422 significa que nada foi salvo, e o corpo traz
 // o relatório de erro por linha pro usuário corrigir o arquivo e reenviar.
-export function CsvImportExport({ exportUrl, exportParams, exportFilename, importUrl, onImportado }: CsvImportExportProps) {
+export function CsvImportExport({ exportUrl, exportParams, exportFilename, importUrl, onImportado, labelPrefix = 'CSV' }: CsvImportExportProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [exportando, setExportando] = useState(false);
   const [importando, setImportando] = useState(false);
@@ -73,7 +74,7 @@ export function CsvImportExport({ exportUrl, exportParams, exportFilename, impor
     <div className={styles.wrapper}>
       <div className={styles.buttons}>
         <button type="button" className={styles.button} onClick={exportar} disabled={exportando} data-testid="csv-exportar">
-          {exportando ? 'Exportando…' : 'Exportar CSV'}
+          {exportando ? 'Exportando…' : `Exportar ${labelPrefix}`}
         </button>
         <button
           type="button"
@@ -82,7 +83,7 @@ export function CsvImportExport({ exportUrl, exportParams, exportFilename, impor
           disabled={importando}
           data-testid="csv-importar-botao"
         >
-          {importando ? 'Importando…' : 'Importar CSV'}
+          {importando ? 'Importando…' : `Importar ${labelPrefix}`}
         </button>
         <input
           ref={fileInputRef}

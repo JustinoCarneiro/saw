@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Avatar } from '../../shared/components/Avatar';
 import { Card } from '../../shared/components/Card';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { ICON_PROPS } from '../../shared/components/iconProps';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
@@ -82,9 +83,17 @@ export function TeamPage() {
 
       <div className={styles.content}>
         <div className={styles.toolbar}>
-          <button className={styles.newButton} onClick={() => setCriando(true)} data-testid="novo-colaborador-botao">
-            <span style={{ fontSize: 16 }}>+</span>Novo colaborador
-          </button>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <CsvImportExport
+              exportUrl="/admin/team/export"
+              exportFilename="colaboradores.csv"
+              importUrl="/admin/team/import"
+              onImportado={carregar}
+            />
+            <button className={styles.newButton} onClick={() => setCriando(true)} data-testid="novo-colaborador-botao">
+              <span style={{ fontSize: 16 }}>+</span>Novo colaborador
+            </button>
+          </div>
         </div>
 
         {criando && (

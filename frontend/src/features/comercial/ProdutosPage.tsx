@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill } from '../../shared/components/Pill';
@@ -63,9 +64,18 @@ export function ProdutosPage() {
             <option key={c} value={c}>{CATEGORIA_LABEL[c]}</option>
           ))}
         </select>
-        <button className={styles.newButton} onClick={() => setCriando(true)}>
-          <span style={{ fontSize: 16 }}>+</span>Novo produto
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <CsvImportExport
+            exportUrl="/admin/produtos/export"
+            exportParams={{ categoria: categoria || undefined }}
+            exportFilename="produtos.csv"
+            importUrl="/admin/produtos/import"
+            onImportado={carregar}
+          />
+          <button className={styles.newButton} onClick={() => setCriando(true)}>
+            <span style={{ fontSize: 16 }}>+</span>Novo produto
+          </button>
+        </div>
       </div>
 
       {criando && <ProdutoForm onSalvo={() => { setCriando(false); carregar(); }} onCancelar={() => setCriando(false)} />}

@@ -25,6 +25,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1';
 
   useEffect(() => {
     apiClient.get<OAuth2ConfigResponse>('/auth/oauth2-config')
@@ -143,6 +144,16 @@ export function LoginPage() {
             <Link className={styles.outlineButton} to="/solicitar-acesso">
               Solicitar acesso
             </Link>
+
+            {isDemoMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-soft)', textTransform: 'uppercase', fontWeight: 600 }}>Acesso rápido (Demo)</div>
+                <button type="button" className={styles.outlineButton} onClick={() => { setEmail('justinocarneiro161@gmail.com'); setSenha('7OstFrPSu4UHUHARddV6jKwo'); }}>Preencher Admin (Fundador)</button>
+                <button type="button" className={styles.outlineButton} onClick={() => { setEmail('lucas@sawhub.com.br'); setSenha('trocar-no-primeiro-login'); }}>Preencher Colaborador (Gestão)</button>
+                <button type="button" className={styles.outlineButton} onClick={() => { setEmail('paula@sawhub.com.br'); setSenha('trocar-no-primeiro-login'); }}>Preencher Colaborador (Comercial)</button>
+                <button type="button" className={styles.outlineButton} onClick={() => { setEmail('joao@saborearte.com.br'); setSenha('trocar-no-primeiro-login'); }}>Preencher Mentorado (João)</button>
+              </div>
+            )}
           </form>
 
           <div className={styles.hero}>

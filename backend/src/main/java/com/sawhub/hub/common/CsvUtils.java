@@ -1,18 +1,27 @@
 package com.sawhub.hub.common;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.web.multipart.MultipartFile;
 
-/** M21 — utilitários compartilhados entre {@code LancamentoCsvService}/{@code ContaCsvService}
- * (import/export CSV do Financeiro). */
+/** M21 — utilitários compartilhados entre todos os CsvServices do projeto.
+ * M23: estendido com helpers de boolean/Instant/int/URL/e-mail pra cobrir os módulos restantes. */
 public final class CsvUtils {
 
     private static final DateTimeFormatter DATA_PT_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DATA_HORA_PT_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final Set<Character> PREFIXOS_FORMULA = Set.of('=', '+', '-', '@');
 
     // Achado (médio) do revisor-seguranca do M21: sem um teto dedicado, o limite de 5.000 linhas
@@ -95,5 +104,134 @@ public final class CsvUtils {
             return "'" + valor;
         }
         return valor;
+    }
+
+    // --- M23: helpers adicionais para os módulos restantes ---
+
+    /** Aceita true/false/sim/nao/1/0 (case-insensitive). */
+    public static boolean parseBooleano(String bruto, String rotulo) {
+        if (bruto == null || bruto.isBlank()) {
+            return false;
+        }
+        String normalizado = bruto.trim().toLowerCase(Locale.ROOT);
+        if ("true".equals(normalizado) || "sim".equals(normalizado) || "1".equals(normalizado)) {
+            return true;
+        }
+        if ("false".equals(normalizado) || "nao".equals(normalizado) || "não".equals(normalizado) || "0".equals(normalizado)) {
+            return false;
+        }
+        throw new IllegalArgumentException(rotulo + " \"" + bruto + "\" inválido (use true/false).");
+    }
+
+    /** Formato dd/MM/yyyy HH:mm, fuso America/Sao_Paulo → Instant. */
+    public static Instant parseInstant(String bruto, String fuso) {
+        if (bruto == null || bruto.isBlank()) {
+            throw new IllegalArgumentException("Data/hora em branco.");
+        }
+        try {
+            LocalDateTime ldt = LocalDateTime.parse(bruto.trim(), DATA_HORA_PT_BR);
+            return ldt.atZone(ZoneId.of(fuso)).toInstant();
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Data/hora \"" + bruto + "\" inválida (use dd/MM/yyyy HH:mm).");
+        }
+    }
+
+    public static String formatarInstant(Instant instant, String fuso) {
+        return instant.atZone(ZoneId.of(fuso)).format(DATA_HORA_PT_BR);
+    }
+
+    public static Integer parseIntOpcional(String bruto, String rotulo) {
+        if (bruto == null || bruto.isBlank()) {
+            return null;
+        }
+        try {
+            int valor = Integer.parseInt(bruto.trim());
+            if (valor <= 0) {
+                throw new IllegalArgumentException(rotulo + " deve ser maior que zero.");
+            }
+            return valor;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(rotulo + " \"" + bruto + "\" inválido.");
+        }
+    }
+
+    public static void exigirUrl(String bruto, String rotulo) {
+        if (bruto == null || bruto.isBlank()) {
+            throw new IllegalArgumentException(rotulo + " em branco.");
+        }
+        if (!bruto.trim().matches("^https?://.+")) {
+            throw new IllegalArgumentException(rotulo + " inválida (use http:// ou https://).");
+        }
+        if (bruto.trim().length() > 500) {
+            throw new IllegalArgumentException(rotulo + " excede 500 caracteres.");
+        }
+    }
+
+    public static void exigirUrlOpcional(String bruto, String rotulo) {
+        if (bruto != null && !bruto.isBlank()) {
+            exigirUrl(bruto, rotulo);
+        }
+    }
+
+    /** Normaliza e-mail: trim + lowercase. */
+    public static String normalizarEmail(String bruto) {
+        if (bruto == null || bruto.isBlank()) {
+            throw new IllegalArgumentException("E-mail em branco.");
+        }
+        return bruto.trim().toLowerCase(Locale.ROOT);
+    }
+
+    public static <E extends Enum<E>> E parseEnum(Class<E> tipo, String bruto, String rotulo) {
+        if (bruto == null || bruto.isBlank()) {
+            throw new IllegalArgumentException(rotulo + " em branco.");
+        }
+        try {
+            return Enum.valueOf(tipo, bruto.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(rotulo + " \"" + bruto + "\" inválido.");
+        }
+    }
+
+    public static <E extends Enum<E>> E parseEnumOpcional(Class<E> tipo, String bruto, String rotulo, E padrao) {
+        if (bruto == null || bruto.isBlank()) {
+            return padrao;
+        }
+        return parseEnum(tipo, bruto, rotulo);
+    }
+
+    public static LocalDate parseDataOpcional(String bruto) {
+        if (bruto == null || bruto.isBlank()) {
+            return null;
+        }
+        return parseData(bruto);
+    }
+
+    public static void exigirColunas(List<String> cabecalhoEncontrado, String[] esperadas) {
+        for (String esperada : esperadas) {
+            if (!cabecalhoEncontrado.contains(esperada)) {
+                throw new IllegalArgumentException(
+                        "CSV sem a coluna \"" + esperada + "\". Colunas esperadas: " + String.join(", ", esperadas));
+            }
+        }
+    }
+
+    public static String lerConteudo(MultipartFile arquivo) {
+        try {
+            return new String(arquivo.getBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Não foi possível ler o arquivo.", e);
+        }
+    }
+
+    public static void exigirNaoVazio(String valor, String rotulo) {
+        if (valor == null || valor.isBlank()) {
+            throw new IllegalArgumentException(rotulo + " em branco.");
+        }
+    }
+
+    public static void exigirTamanhoMaximo(String valor, int max, String rotulo) {
+        if (valor != null && valor.length() > max) {
+            throw new IllegalArgumentException(rotulo + " excede " + max + " caracteres.");
+        }
     }
 }

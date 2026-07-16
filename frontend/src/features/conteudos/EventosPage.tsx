@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
@@ -67,9 +68,18 @@ export function EventosPage() {
             <option key={s} value={s}>{STATUS_LABEL[s].label}</option>
           ))}
         </select>
-        <button className={styles.newButton} onClick={() => setCriando(true)}>
-          <span style={{ fontSize: 16 }}>+</span>Novo evento
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <CsvImportExport
+            exportUrl="/admin/eventos/export"
+            exportParams={{ status: status || undefined }}
+            exportFilename="eventos.csv"
+            importUrl="/admin/eventos/import"
+            onImportado={carregar}
+          />
+          <button className={styles.newButton} onClick={() => setCriando(true)}>
+            <span style={{ fontSize: 16 }}>+</span>Novo evento
+          </button>
+        </div>
       </div>
 
       {criando && <EventoForm onSalvo={() => { setCriando(false); carregar(); }} onCancelar={() => setCriando(false)} />}

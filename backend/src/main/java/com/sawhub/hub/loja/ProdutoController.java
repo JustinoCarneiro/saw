@@ -5,6 +5,7 @@ import com.sawhub.hub.loja.dto.CriarProdutoRequest;
 import com.sawhub.hub.loja.dto.ProdutoResponse;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;
+import com.sawhub.hub.common.dto.ImportResultResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +20,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 /** H8.1 — CRUD do catálogo da Loja. `Modulo.COMERCIAL` é suposição explícita do Blueprint M14
  * (CLAUDE.md não define qual área da SAW cuida da Loja) — ver ROADMAP.md. */
@@ -28,9 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProdutoController {
 
     private final ProdutoService produtoService;
+    private final ProdutoCsvService produtoCsvService;
 
-    public ProdutoController(ProdutoService produtoService) {
+    public ProdutoController(ProdutoService produtoService, ProdutoCsvService produtoCsvService) {
         this.produtoService = produtoService;
+        this.produtoCsvService = produtoCsvService;
     }
 
     @PostMapping
@@ -60,5 +67,26 @@ public class ProdutoController {
     @PatchMapping("/{id}/despublicar")
     public ProdutoResponse despublicar(@PathVariable UUID id) {
         return ProdutoResponse.from(produtoService.despublicar(id));
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportarCsv(@RequestParam(required = false) CategoriaProduto categoria,
+                                               @RequestParam(required = false) Boolean publicado,
+                                               @RequestParam(required = false) Boolean destaque,
+                                               @RequestParam(required = false) String busca) {
+        String csv = produtoCsvService.exportar(categoria, publicado, destaque, busca);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"produtos.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csv.getBytes());
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<ImportResultResponse> importarCsv(@RequestParam("arquivo") MultipartFile arquivo) {
+        ImportResultResponse response = produtoCsvService.importar(arquivo);
+        if (!response.erros().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+        }
+        return ResponseEntity.ok(response);
     }
 }

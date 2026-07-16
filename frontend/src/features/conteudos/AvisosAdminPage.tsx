@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
@@ -56,9 +57,17 @@ export function AvisosAdminPage() {
   return (
     <div>
       <div className={styles.toolbar}>
-        <button className={styles.newButton} onClick={() => setCriando(true)}>
-          <span style={{ fontSize: 16 }}>+</span>Novo aviso
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <CsvImportExport
+            exportUrl="/admin/avisos/export"
+            exportFilename="avisos.csv"
+            importUrl="/admin/avisos/import"
+            onImportado={carregar}
+          />
+          <button className={styles.newButton} onClick={() => setCriando(true)}>
+            <span style={{ fontSize: 16 }}>+</span>Novo aviso
+          </button>
+        </div>
       </div>
 
       {criando && <AvisoForm onSalvo={() => { setCriando(false); carregar(); }} onCancelar={() => setCriando(false)} />}

@@ -61,14 +61,31 @@ export function MentoradosListaPage() {
           <input className={styles.textInput} placeholder="Buscar por nome…" value={busca} onChange={(e) => setBusca(e.target.value)} />
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <CsvImportExport
-            exportUrl="/admin/mentorados/export"
-            exportParams={{ plano: plano || undefined, status: status || undefined, busca: busca || undefined }}
-            exportFilename="mentorados.csv"
-            importUrl="/admin/mentorados/import"
-            onImportado={carregar}
-          />
-          <button className={styles.newButton} onClick={() => setCriando(true)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <CsvImportExport
+              exportUrl="/admin/mentorados/export"
+              exportParams={{ plano: plano || undefined, status: status || undefined, busca: busca || undefined }}
+              exportFilename="mentorados.csv"
+              importUrl="/admin/mentorados/import"
+              onImportado={carregar}
+              labelPrefix="Mentorados"
+            />
+            <CsvImportExport
+              exportUrl="/admin/metas/export"
+              exportFilename="metas.csv"
+              importUrl="/admin/metas/import"
+              onImportado={carregar}
+              labelPrefix="Metas"
+            />
+            <CsvImportExport
+              exportUrl="/admin/encaminhamentos/export"
+              exportFilename="tarefas.csv"
+              importUrl="/admin/encaminhamentos/import"
+              onImportado={carregar}
+              labelPrefix="Tarefas"
+            />
+          </div>
+          <button className={styles.newButton} onClick={() => setCriando(true)} style={{ height: 'fit-content' }}>
             <span style={{ fontSize: 16 }}>+</span>Criar a partir de um lead
           </button>
         </div>

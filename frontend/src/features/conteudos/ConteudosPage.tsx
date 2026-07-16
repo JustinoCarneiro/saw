@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
+import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
@@ -47,9 +48,18 @@ export function ConteudosPage() {
             <option key={t} value={t}>{TIPO_LABEL[t]}</option>
           ))}
         </select>
-        <button className={styles.newButton} onClick={() => setCriando(true)}>
-          <span style={{ fontSize: 16 }}>+</span>Novo conteúdo
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <CsvImportExport
+            exportUrl="/admin/conteudos/export"
+            exportParams={{ tipo: tipo || undefined }}
+            exportFilename="conteudos.csv"
+            importUrl="/admin/conteudos/import"
+            onImportado={carregar}
+          />
+          <button className={styles.newButton} onClick={() => setCriando(true)}>
+            <span style={{ fontSize: 16 }}>+</span>Novo conteúdo
+          </button>
+        </div>
       </div>
 
       {criando && <ConteudoForm onSalvo={() => { setCriando(false); carregar(); }} onCancelar={() => setCriando(false)} />}
