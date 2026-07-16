@@ -117,6 +117,17 @@ public class MercadoPagoGatewayService {
         }
         String manifest = "id:" + dataId.toLowerCase() + ";request-id:" + xRequestId + ";ts:" + ts + ";";
         String v1Calculado = hmacSha256Hex(manifest, properties.getWebhookSecret());
+        // DEBUG TEMPORÁRIO — pacote mínimo reprodutível pro chamado MP (WCS-43120). A secret é usada
+        // COMO STRING (properties.getWebhookSecret().getBytes(UTF_8) sobre os 64 caracteres hex,
+        // NÃO decodificada de hex pra 32 bytes crus) — exatamente como documentado pelo Mercado
+        // Pago. Log mostra o hex dessa chave-como-usada, pra não deixar ambiguidade. Remover depois.
+        org.slf4j.LoggerFactory.getLogger(MercadoPagoGatewayService.class).warn(
+                "DEBUG webhook MP pacote — manifest='{}' manifestHex='{}' secretUsadaComoStringHex='{}' secretUsadaComoStringLen={} v1Recebido='{}' v1Calculado='{}' bate={}",
+                manifest,
+                bytesToHex(manifest.getBytes(StandardCharsets.UTF_8)),
+                bytesToHex(properties.getWebhookSecret().getBytes(StandardCharsets.UTF_8)),
+                properties.getWebhookSecret().length(),
+                v1Recebido, v1Calculado, v1Calculado.equals(v1Recebido));
         return MessageDigest.isEqual(
                 v1Calculado.getBytes(StandardCharsets.UTF_8),
                 v1Recebido.getBytes(StandardCharsets.UTF_8));
@@ -158,16 +169,20 @@ public class MercadoPagoGatewayService {
         return partes;
     }
 
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder hex = new StringBuilder();
+        for (byte b : bytes) {
+            hex.append(String.format("%02x", b));
+        }
+        return hex.toString();
+    }
+
     private static String hmacSha256Hex(String data, String secret) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : hash) {
-                hex.append(String.format("%02x", b));
-            }
-            return hex.toString();
+            return bytesToHex(hash);
         } catch (Exception e) {
             throw new PagamentoIndisponivelException("Falha ao calcular assinatura HMAC do webhook.", e);
         }
