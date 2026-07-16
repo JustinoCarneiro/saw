@@ -117,6 +117,20 @@ public class MercadoPagoGatewayService {
         }
         String manifest = "id:" + dataId.toLowerCase() + ";request-id:" + xRequestId + ";ts:" + ts + ";";
         String v1Calculado = hmacSha256Hex(manifest, properties.getWebhookSecret());
+        // DEBUG TEMPORÁRIO — chamado MP (WCS-43120): roda o validador OFICIAL do SDK Java em
+        // paralelo à nossa implementação manual, só pra log, sem mudar o resultado retornado.
+        // Se o SDK oficial também rejeitar o mesmo evento, é prova adicional de bug no lado do MP
+        // (não é mais só "nossa implementação pode ter um erro sutil"). Remover depois.
+        try {
+            com.mercadopago.webhook.WebhookSignatureValidator.validate(xSignature, xRequestId, dataId, properties.getWebhookSecret());
+            org.slf4j.LoggerFactory.getLogger(MercadoPagoGatewayService.class).warn("DEBUG webhook MP SDK oficial — validou OK (aceitou a assinatura)");
+        } catch (com.mercadopago.exceptions.MPInvalidWebhookSignatureException e) {
+            org.slf4j.LoggerFactory.getLogger(MercadoPagoGatewayService.class).warn(
+                    "DEBUG webhook MP SDK oficial — REJEITOU, motivo={}", e.getReason());
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(MercadoPagoGatewayService.class).warn(
+                    "DEBUG webhook MP SDK oficial — erro inesperado ao validar: {}", e.toString());
+        }
         return MessageDigest.isEqual(
                 v1Calculado.getBytes(StandardCharsets.UTF_8),
                 v1Recebido.getBytes(StandardCharsets.UTF_8));
