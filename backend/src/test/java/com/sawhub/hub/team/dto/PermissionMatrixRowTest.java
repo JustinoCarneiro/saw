@@ -18,7 +18,7 @@ class PermissionMatrixRowTest {
         List<PermissionMatrixRow> full = PermissionMatrixRow.full();
         assertThat(full).hasSize(Area.values().length);
         assertThat(full.stream().map(PermissionMatrixRow::area)).containsExactlyInAnyOrder(
-                "COMERCIAL", "MARKETING", "GESTAO_PERFORMANCE", "FUNDADOR");
+                "COMERCIAL", "MARKETING", "GESTAO_PERFORMANCE", "ADMIN");
     }
 
     @Test

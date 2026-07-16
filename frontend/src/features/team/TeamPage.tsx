@@ -31,7 +31,7 @@ const AREA_LABEL: Record<Area, string> = {
   COMERCIAL: 'Comercial',
   MARKETING: 'Marketing',
   GESTAO_PERFORMANCE: 'Gestão de Performance',
-  FUNDADOR: 'Fundador',
+  ADMIN: 'Admin',
 };
 
 export function TeamPage() {
@@ -177,7 +177,7 @@ export function TeamPage() {
           <div className={styles.matrixHeader}>
             <div className={styles.sectionTitle}>Matriz de permissões por área</div>
             <div className={styles.matrixSubtitle}>
-              Cada colaborador acessa só as telas da própria área. O Fundador acessa tudo.
+              Cada colaborador acessa só as telas da própria área. O Admin acessa tudo.
             </div>
           </div>
           <div className={styles.matrixScroll}>

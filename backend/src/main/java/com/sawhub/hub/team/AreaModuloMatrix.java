@@ -17,7 +17,7 @@ public final class AreaModuloMatrix {
         MATRIX.put(Area.COMERCIAL, EnumSet.of(Modulo.COMERCIAL));
         MATRIX.put(Area.MARKETING, EnumSet.of(Modulo.CONTEUDOS));
         MATRIX.put(Area.GESTAO_PERFORMANCE, EnumSet.of(Modulo.MENTORADOS, Modulo.CONTEUDOS, Modulo.PAINEL_CONSOLIDADO));
-        MATRIX.put(Area.FUNDADOR, EnumSet.allOf(Modulo.class));
+        MATRIX.put(Area.ADMIN, EnumSet.allOf(Modulo.class));
     }
 
     private AreaModuloMatrix() {

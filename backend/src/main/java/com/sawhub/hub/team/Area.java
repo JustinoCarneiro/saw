@@ -4,5 +4,5 @@ public enum Area {
     COMERCIAL,
     MARKETING,
     GESTAO_PERFORMANCE,
-    FUNDADOR
+    ADMIN
 }

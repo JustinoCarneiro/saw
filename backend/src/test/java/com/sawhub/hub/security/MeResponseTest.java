@@ -37,7 +37,7 @@ class MeResponseTest {
     @Test
     void naoExpoeSenhaOuHashDeQualquerForma() {
         var principal = new AppUserPrincipal(UUID.randomUUID(), "matheus@sawhub.com.br", "hash-secreto",
-                "Matheus Brayan", Perfil.ADMIN, Area.FUNDADOR, List.of("ROLE_ADMIN"));
+                "Matheus Brayan", Perfil.ADMIN, Area.ADMIN, List.of("ROLE_ADMIN"));
 
         var response = MeResponse.from(principal);
 

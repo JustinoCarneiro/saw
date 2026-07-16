@@ -31,7 +31,7 @@ export function StatusPill({ status }: { status: string }) {
 }
 
 const AREA_TOKENS: Record<string, { bg: string; color: string; label: string; dot: string }> = {
-  FUNDADOR: { bg: 'var(--warning-bg)', color: 'var(--warning)', label: 'Fundador', dot: 'var(--gold)' },
+  ADMIN: { bg: 'var(--warning-bg)', color: 'var(--warning)', label: 'Admin', dot: 'var(--gold)' },
   COMERCIAL: { bg: 'var(--info-bg)', color: 'var(--info)', label: 'Comercial', dot: 'var(--info)' },
   MARKETING: { bg: 'rgba(122,35,40,.22)', color: '#E08A8E', label: 'Marketing', dot: '#E08A8E' },
   GESTAO_PERFORMANCE: {

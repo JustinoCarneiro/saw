@@ -92,7 +92,7 @@ class ModuloAccessAspectTest {
 
     @Test
     void fundadorPassaEmQualquerModulo() {
-        autenticarComo(Area.FUNDADOR);
+        autenticarComo(Area.ADMIN);
 
         for (Modulo modulo : Modulo.values()) {
             assertThatCode(() -> aspect.checarModulo(requires(modulo))).doesNotThrowAnyException();

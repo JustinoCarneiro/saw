@@ -53,7 +53,7 @@ public class FundadorBootstrap implements ApplicationRunner {
         }
         Usuario usuario = usuarioRepository.save(
                 new Usuario(fundadorEmail, passwordEncoder.encode(fundadorSenha), Perfil.ADMIN));
-        colaboradorRepository.save(new Colaborador(usuario, fundadorNome, Area.FUNDADOR));
+        colaboradorRepository.save(new Colaborador(usuario, fundadorNome, Area.ADMIN));
         log.warn("Fundador inicial criado: {} — troque a senha padrão assim que possível.", fundadorEmail);
     }
 }

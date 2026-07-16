@@ -68,6 +68,6 @@ class FundadorBootstrapTest {
         ArgumentCaptor<Colaborador> colaboradorCaptor = ArgumentCaptor.forClass(Colaborador.class);
         verify(colaboradorRepository).save(colaboradorCaptor.capture());
         assertThat(colaboradorCaptor.getValue().getNome()).isEqualTo("Matheus Brayan");
-        assertThat(colaboradorCaptor.getValue().getArea()).isEqualTo(Area.FUNDADOR);
+        assertThat(colaboradorCaptor.getValue().getArea()).isEqualTo(Area.ADMIN);
     }
 }

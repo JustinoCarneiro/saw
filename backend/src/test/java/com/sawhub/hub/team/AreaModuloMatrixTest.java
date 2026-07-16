@@ -36,7 +36,7 @@ class AreaModuloMatrixTest {
 
     @Test
     void fundadorAcessaTodosOsModulosSemExcecao() {
-        assertThat(AreaModuloMatrix.allowedModulos(Area.FUNDADOR)).containsExactlyInAnyOrder(Modulo.values());
+        assertThat(AreaModuloMatrix.allowedModulos(Area.ADMIN)).containsExactlyInAnyOrder(Modulo.values());
     }
 
     @Test
@@ -54,7 +54,7 @@ class AreaModuloMatrixTest {
     @Test
     void nenhumaAreaAlemDoFundadorAcessaFinanceiro() {
         for (Area area : Area.values()) {
-            if (area == Area.FUNDADOR) {
+            if (area == Area.ADMIN) {
                 continue;
             }
             assertThat(AreaModuloMatrix.allowedModulos(area))

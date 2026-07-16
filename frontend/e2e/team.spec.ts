@@ -16,7 +16,7 @@ test('Fundador sees the real seeded team and permission matrix', async ({ page }
 
   // Matriz de permissões por área.
   await expect(main.getByText('Matriz de permissões por área')).toBeVisible();
-  await expect(main.getByText('Fundador').first()).toBeVisible();
+  await expect(main.getByText('Admin').first()).toBeVisible();
 
   await page.screenshot({ path: 'e2e/screenshots/team.png', fullPage: true });
 });

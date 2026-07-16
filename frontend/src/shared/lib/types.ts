@@ -1,4 +1,4 @@
-export type Area = 'COMERCIAL' | 'MARKETING' | 'GESTAO_PERFORMANCE' | 'FUNDADOR';
+export type Area = 'COMERCIAL' | 'MARKETING' | 'GESTAO_PERFORMANCE' | 'ADMIN';
 
 export type Modulo =
   | 'DASHBOARD'
