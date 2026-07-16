@@ -2,6 +2,7 @@ package com.sawhub.hub.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sawhub.hub.comercial.LeadRateLimitFilter;
+import com.sawhub.hub.loja.pagamento.DebugWebhookHeadersFilter;
 import com.sawhub.hub.mentoria.AtaAudioRateLimitFilter;
 import com.sawhub.hub.security.AuthFailureHandler;
 import com.sawhub.hub.security.AuthSuccessHandler;
@@ -56,6 +57,7 @@ public class SecurityConfig {
     private final LeadRateLimitFilter leadRateLimitFilter;
     private final AtaAudioRateLimitFilter ataAudioRateLimitFilter;
     private final PasswordResetRateLimitFilter passwordResetRateLimitFilter;
+    private final DebugWebhookHeadersFilter debugWebhookHeadersFilter;
     private final GoogleOAuth2UserService googleOAuth2UserService;
     private final OAuth2SuccessHandler oauth2SuccessHandler;
     private final OAuth2FailureHandler oauth2FailureHandler;
@@ -69,6 +71,7 @@ public class SecurityConfig {
                            JsonAuthEntryPoint jsonAuthEntryPoint, CsrfCookieFilter csrfCookieFilter,
                            LeadRateLimitFilter leadRateLimitFilter, AtaAudioRateLimitFilter ataAudioRateLimitFilter,
                            PasswordResetRateLimitFilter passwordResetRateLimitFilter,
+                           DebugWebhookHeadersFilter debugWebhookHeadersFilter,
                            GoogleOAuth2UserService googleOAuth2UserService, OAuth2SuccessHandler oauth2SuccessHandler,
                            OAuth2FailureHandler oauth2FailureHandler, GoogleOAuthProperties googleOAuthProperties,
                            ObjectMapper objectMapper) {
@@ -79,6 +82,7 @@ public class SecurityConfig {
         this.leadRateLimitFilter = leadRateLimitFilter;
         this.ataAudioRateLimitFilter = ataAudioRateLimitFilter;
         this.passwordResetRateLimitFilter = passwordResetRateLimitFilter;
+        this.debugWebhookHeadersFilter = debugWebhookHeadersFilter;
         this.googleOAuth2UserService = googleOAuth2UserService;
         this.oauth2SuccessHandler = oauth2SuccessHandler;
         this.oauth2FailureHandler = oauth2FailureHandler;
@@ -190,7 +194,11 @@ public class SecurityConfig {
                 // Achado (médio) da revisão de segurança do M06 — roda depois (não antes) do filtro
                 // de login: precisa do SecurityContextHolder já populado (via sessão, carregado bem
                 // mais cedo no chain) pra identificar o usuário autenticado, diferente do leadRateLimitFilter.
-                .addFilterAfter(ataAudioRateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(ataAudioRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                // TEMPORÁRIO — diagnóstico do chamado MP sobre divergência de x-signature (ver
+                // CLAUDE.md). Mesmo raciocínio do leadRateLimitFilter: o webhook nunca autentica.
+                // Remover junto com DebugWebhookHeadersFilter depois de capturar uma notificação real.
+                .addFilterBefore(debugWebhookHeadersFilter, UsernamePasswordAuthenticationFilter.class);
 
         // M07 — só entra no filter chain com credencial configurada. Declarar
         // spring.security.oauth2.client.registration.google.client-id vazio no application.yml

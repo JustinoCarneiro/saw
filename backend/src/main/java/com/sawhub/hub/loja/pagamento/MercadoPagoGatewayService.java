@@ -46,11 +46,17 @@ public class MercadoPagoGatewayService {
                                                String backUrlPendente, String notificationUrl) {
         exigirConfigurado();
         List<Map<String, Object>> itens = pedido.getItens().stream().map(MercadoPagoGatewayService::paraItemPreferencia).toList();
+        // TESTE TEMPORÁRIO (chamado MP em aberto sobre x-signature não bater) — "notification_url"
+        // omitido de propósito: a doc do MP confirma que essa URL, quando definida na preferência,
+        // tem prioridade sobre a URL cadastrada no painel de Webhooks, e pode rotear a notificação
+        // por um mecanismo diferente (com secret distinta) do que estamos validando. Deixando de
+        // enviá-la, a notificação passa a depender só da URL/secret configuradas no painel.
+        // Reverter (voltar a incluir "notification_url", notificationUrl no Map) assim que o teste
+        // decidir a hipótese, num sentido ou noutro.
         Map<String, Object> body = Map.of(
                 "items", itens,
                 "external_reference", pedido.getId().toString(),
                 "back_urls", Map.of("success", backUrlSucesso, "failure", backUrlFalha, "pending", backUrlPendente),
-                "notification_url", notificationUrl,
                 "auto_return", "approved"
         );
 
