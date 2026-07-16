@@ -117,11 +117,6 @@ public class MercadoPagoGatewayService {
         }
         String manifest = "id:" + dataId.toLowerCase() + ";request-id:" + xRequestId + ";ts:" + ts + ";";
         String v1Calculado = hmacSha256Hex(manifest, properties.getWebhookSecret());
-        // DEBUG TEMPORÁRIO — segunda rodada de diagnóstico ao vivo (M14, comparação com log raw
-        // do Nginx do host pra descartar mangling de header na borda). Remover depois.
-        org.slf4j.LoggerFactory.getLogger(MercadoPagoGatewayService.class).warn(
-                "DEBUG webhook MP 2 — dataId='{}' xRequestId='{}' xSignatureRaw='{}' manifest='{}' v1Recebido='{}' v1Calculado='{}' bate={}",
-                dataId, xRequestId, xSignature, manifest, v1Recebido, v1Calculado, v1Calculado.equals(v1Recebido));
         return MessageDigest.isEqual(
                 v1Calculado.getBytes(StandardCharsets.UTF_8),
                 v1Recebido.getBytes(StandardCharsets.UTF_8));
