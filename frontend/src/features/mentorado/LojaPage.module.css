@@ -137,6 +137,7 @@
   align-items: baseline;
   gap: 8px;
   margin-top: 12px;
+  margin-bottom: 12px;
 }
 
 .precoOriginal {
@@ -155,9 +156,10 @@
   width: 100%;
   /* Card do produto agora é flex-column (ver LojaPage.tsx) — margin-top: auto empurra o botão
      pro rodapé mesmo quando descrição/avaliação/desconto variam de card pra card na mesma
-     grade, em vez de ficar "flutuando" em alturas diferentes. */
+     grade, em vez de ficar "flutuando" em alturas diferentes. O espaçamento do preço em si vem
+     do margin-bottom em .precoLine — um padding-top aqui não criaria gap nenhum (fica dentro do
+     próprio botão) e ainda por cima era sobrescrito pelo `padding: 10px` logo abaixo. */
   margin-top: auto;
-  padding-top: 16px;
   background: var(--gold);
   color: var(--on-gold);
   border: none;
