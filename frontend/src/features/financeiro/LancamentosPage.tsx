@@ -93,7 +93,7 @@ export function LancamentosPage() {
             importUrl="/admin/financeiro/lancamentos/import"
             onImportado={carregar}
           />
-          <button className={styles.cancelButton} onClick={() => setShowCategoriaForm((v) => !v)}>
+          <button className={styles.outlineButton} onClick={() => setShowCategoriaForm((v) => !v)}>
             <span style={{ fontSize: 16 }}>+</span>Nova categoria
           </button>
           <button className={styles.newButton} onClick={() => setShowForm((v) => !v)}>

@@ -13,6 +13,16 @@
   flex-wrap: wrap;
 }
 
+.csvRow {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
 .select {
   height: 40px;
   padding: 0 14px;
