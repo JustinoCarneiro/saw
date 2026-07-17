@@ -8,6 +8,8 @@ const TABS = [
   { to: '/admin/mentorados/consolidado', label: 'Painel Consolidado' },
   { to: '/admin/mentorados/lista', label: 'Mentorados' },
   { to: '/admin/mentorados/mentorias', label: 'Mentorias' },
+  { to: '/admin/mentorados/metas', label: 'Metas' },
+  { to: '/admin/mentorados/tarefas', label: 'Tarefas' },
 ];
 
 export function MentoradosShell() {

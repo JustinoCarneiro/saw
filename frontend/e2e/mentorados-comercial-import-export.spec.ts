@@ -153,3 +153,77 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     await expect(main.getByText(nomeValido)).not.toBeVisible();
   });
 });
+
+// Fase 5 — achado ao vivo (curl direto): GET /admin/metas/export e /admin/encaminhamentos/export
+// retornavam 500 (LazyInitializationException em `mentorado`, nunca coberto por E2E até aqui) e
+// não existia NENHUMA tela pra ver o resultado do import — só os botões cegos de CSV, movidos da
+// página de Mentorados pras abas dedicadas "Metas"/"Tarefas" nesta mesma leva.
+test.describe('Metas/Tarefas — Import/Export CSV e listagem admin (Fase 5)', () => {
+  test('Metas: exportar CSV dispara o download (regressão do 500 por LazyInitializationException)', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/metas');
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Exportar Metas' }).click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe('metas.csv');
+  });
+
+  test('Metas: importar CSV cria a meta e ela aparece na listagem admin', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/metas');
+
+    const titulo = `Meta E2E Fase5 ${Date.now()}`;
+    const csv = `emailMentorado;titulo;descricao;prazo\n`
+        + `joao@saborearte.com.br;${titulo};Descrição de teste;31/12/2026\n`;
+
+    const main = page.getByRole('main');
+    await main.getByTestId('csv-importar-input').setInputFiles({
+      name: 'metas.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(csv, 'utf-8'),
+    });
+
+    await expect(main.getByTestId('csv-import-sucesso')).toContainText('1 linha(s) importada(s)');
+    const linha = main.locator('text=' + titulo).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await expect(linha.getByText('João Silva')).toBeVisible();
+  });
+
+  test('Tarefas: exportar CSV dispara o download (regressão do 500 por LazyInitializationException)', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/tarefas');
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Exportar Tarefas' }).click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe('tarefas.csv');
+  });
+
+  test('Tarefas: importar CSV cria a tarefa e ela aparece na listagem admin', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/tarefas');
+
+    const titulo = `Tarefa E2E Fase5 ${Date.now()}`;
+    const csv = `emailMentorado;titulo;prazo;prioridade\n`
+        + `joao@saborearte.com.br;${titulo};31/12/2026;ALTA\n`;
+
+    const main = page.getByRole('main');
+    await main.getByTestId('csv-importar-input').setInputFiles({
+      name: 'tarefas.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(csv, 'utf-8'),
+    });
+
+    await expect(main.getByTestId('csv-import-sucesso')).toContainText('1 linha(s) importada(s)');
+    const linha = main.locator('text=' + titulo).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await expect(linha.getByText('João Silva')).toBeVisible();
+  });
+});

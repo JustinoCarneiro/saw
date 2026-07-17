@@ -391,6 +391,18 @@ export interface ResumoMetas {
   atrasadas: number;
 }
 
+// Fase 5 — visão admin (todos os mentorados), separada de Meta (self-service) acima.
+export interface MetaAdmin {
+  id: string;
+  mentoradoId: string;
+  mentoradoNome: string;
+  titulo: string;
+  descricao: string | null;
+  prazo: string;
+  progressoPct: number;
+  status: StatusMeta;
+}
+
 // M10 · E4 (Tarefas & Agenda)
 export type StatusTarefa = 'PENDENTE' | 'EM_ANDAMENTO' | 'CONCLUIDA';
 export type Prioridade = 'ALTA' | 'MEDIA' | 'BAIXA';
@@ -410,6 +422,18 @@ export interface Tarefa {
   status: StatusTarefa;
   atrasada: boolean;
   peso: number;
+}
+
+// Fase 5 — visão admin (todos os mentorados), separada de Tarefa (self-service) acima.
+export interface EncaminhamentoAdmin {
+  id: string;
+  mentoradoId: string;
+  mentoradoNome: string;
+  titulo: string;
+  peso: number;
+  status: StatusTarefa;
+  prazo: string | null;
+  prioridade: Prioridade;
 }
 
 export interface ResumoTarefas {

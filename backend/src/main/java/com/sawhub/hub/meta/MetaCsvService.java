@@ -44,7 +44,7 @@ public class MetaCsvService {
     }
 
     public String exportar() {
-        List<Meta> metas = metaRepository.findAll();
+        List<Meta> metas = metaRepository.listarTodasComMentorado();
         StringWriter destino = new StringWriter();
         CSVFormat formato = CSVFormat.Builder.create().setDelimiter(';').setHeader(CABECALHO_EXPORT).build();
         try (CSVPrinter printer = new CSVPrinter(destino, formato)) {

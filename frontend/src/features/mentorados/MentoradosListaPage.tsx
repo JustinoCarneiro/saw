@@ -74,20 +74,6 @@ export function MentoradosListaPage() {
           onImportado={carregar}
           labelPrefix="Mentorados"
         />
-        <CsvImportExport
-          exportUrl="/admin/metas/export"
-          exportFilename="metas.csv"
-          importUrl="/admin/metas/import"
-          onImportado={carregar}
-          labelPrefix="Metas"
-        />
-        <CsvImportExport
-          exportUrl="/admin/encaminhamentos/export"
-          exportFilename="tarefas.csv"
-          importUrl="/admin/encaminhamentos/import"
-          onImportado={carregar}
-          labelPrefix="Tarefas"
-        />
       </div>
 
       {criando && (

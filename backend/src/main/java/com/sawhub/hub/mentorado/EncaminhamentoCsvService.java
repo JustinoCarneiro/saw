@@ -43,7 +43,7 @@ public class EncaminhamentoCsvService {
     }
 
     public String exportar() {
-        List<Encaminhamento> encaminhamentos = encaminhamentoRepository.findAll();
+        List<Encaminhamento> encaminhamentos = encaminhamentoRepository.listarTodasComMentorado();
         StringWriter destino = new StringWriter();
         CSVFormat formato = CSVFormat.Builder.create().setDelimiter(';').setHeader(CABECALHO_EXPORT).build();
         try (CSVPrinter printer = new CSVPrinter(destino, formato)) {

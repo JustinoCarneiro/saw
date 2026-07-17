@@ -97,4 +97,31 @@ class EncaminhamentoRepositoryTest {
 
         assertThat(carregada.getMeta().getTitulo()).isEqualTo("Reduzir CMV");
     }
+
+    @Test
+    void listarTodasComMentoradoContinuaLegivelForaDaTransacaoOriginal() {
+        // Fase 5 — achado ao vivo (curl direto): GET /admin/encaminhamentos/export usava
+        // findAll() puro (sem fetch join) e devolvia entidades com `mentorado` LAZY não
+        // inicializado; EncaminhamentoCsvService.exportar() não roda numa transação, então ler
+        // e.getMentorado().getNome() sempre lançava LazyInitializationException (500 em
+        // produção). listarTodasComMentorado() faz FETCH JOIN em mentorado (e mentorado.usuario,
+        // usado pro e-mail no CSV) — precisa continuar legível mesmo depois do clear() abaixo,
+        // simulando o fim da transação da chamada ao repositório (mesmo raciocínio dos dois
+        // testes acima).
+        Mentorado mentorado = criarMentorado("3");
+        encaminhamentoRepository.save(new Encaminhamento(mentorado, "Renegociar fornecedor",
+                LocalDate.now().plusDays(10), Prioridade.ALTA, null));
+        entityManager.flush();
+        entityManager.clear();
+
+        var lista = encaminhamentoRepository.listarTodasComMentorado();
+        entityManager.clear();
+
+        assertThat(lista).isNotEmpty();
+        Encaminhamento encontrada = lista.stream()
+                .filter(e -> e.getMentorado().getId().equals(mentorado.getId()))
+                .findFirst().orElseThrow();
+        assertThat(encontrada.getMentorado().getNome()).isEqualTo("Mentorado 3");
+        assertThat(encontrada.getMentorado().getUsuario().getEmail()).isEqualTo("mentorado3@sawhub.com.br");
+    }
 }

@@ -24,6 +24,8 @@ import { PedidosPage } from './features/comercial/PedidosPage';
 import { MentoradosShell } from './features/mentorados/MentoradosShell';
 import { MentoradosListaPage } from './features/mentorados/MentoradosListaPage';
 import { MentoriasAgendaPage } from './features/mentorados/MentoriasAgendaPage';
+import { MetasAdminPage } from './features/mentorados/MetasAdminPage';
+import { TarefasAdminPage } from './features/mentorados/TarefasAdminPage';
 import { AtaDetalhePage } from './features/mentorados/AtaDetalhePage';
 import { ConteudosShell } from './features/conteudos/ConteudosShell';
 import { ConteudosPage } from './features/conteudos/ConteudosPage';
@@ -98,6 +100,8 @@ export default function App() {
           <Route path="consolidado" element={<ConsolidatedPage />} />
           <Route path="lista" element={<MentoradosListaPage />} />
           <Route path="mentorias" element={<MentoriasAgendaPage />} />
+          <Route path="metas" element={<MetasAdminPage />} />
+          <Route path="tarefas" element={<TarefasAdminPage />} />
           <Route path="mentorias/:mentoriaId/ata" element={<AtaDetalhePage />} />
         </Route>
         <Route

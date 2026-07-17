@@ -31,4 +31,12 @@ public interface EncaminhamentoRepository extends JpaRepository<Encaminhamento, 
     List<Encaminhamento> buscarPorMentorado(@Param("mentoradoId") UUID mentoradoId,
                                              @Param("status") StatusTarefa status,
                                              @Param("busca") String busca);
+
+    // Fase 5 — mesmo achado do MetaRepository.listarTodasComMentorado(): findAll() (usado por
+    // EncaminhamentoCsvService.exportar() e pela listagem admin nova) deixava `mentorado`/
+    // `mentorado.usuario` LAZY não inicializado fora de transação — GET /admin/encaminhamentos/
+    // export retornava 500 em produção, nunca coberto por E2E.
+    @Query("SELECT e FROM Encaminhamento e LEFT JOIN FETCH e.mentorado men LEFT JOIN FETCH men.usuario "
+            + "ORDER BY e.criadoEm DESC")
+    List<Encaminhamento> listarTodasComMentorado();
 }
