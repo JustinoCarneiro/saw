@@ -46,6 +46,30 @@ test.describe('Financeiro (E14)', () => {
     await expect(main.getByText(descricao)).toBeVisible();
   });
 
+  // Fase 5 (H14.1) — antes desta feature, uma instalação sem SEED_DEMO_DATA=true não tinha
+  // categoria nenhuma pra lançar nada e o Admin não tinha como criar uma (achado relatado pelo
+  // cliente durante o teste do sistema em produção: dropdown de categoria vazio).
+  test('Nova categoria criada aparece imediatamente no dropdown de lançamento', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await page.getByRole('link', { name: 'Financeiro' }).click();
+    await page.getByRole('link', { name: 'Lançamentos' }).click();
+    await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
+
+    const nomeCategoria = `Categoria E2E ${Date.now()}`;
+    const main = page.getByRole('main');
+    await main.getByRole('button', { name: 'Nova categoria' }).click();
+    await main.getByLabel('Nome').fill(nomeCategoria);
+    await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
+    await main.getByLabel('Grupo DRE').selectOption({ label: 'Despesa Operacional' });
+    await main.getByRole('button', { name: 'Salvar categoria' }).click();
+
+    // Some o form de criação e a categoria já está disponível pro form de lançamento, sem reload.
+    await expect(main.getByRole('button', { name: 'Salvar categoria' })).toHaveCount(0);
+    await main.getByRole('button', { name: 'Novo lançamento' }).click();
+    await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
+    await expect(main.getByLabel('Categoria').locator(`option:has-text("${nomeCategoria}")`)).toHaveCount(1);
+  });
+
   test('Contas a pagar/receber permite criar e liquidar uma conta', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();

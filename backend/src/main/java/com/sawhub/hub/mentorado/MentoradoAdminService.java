@@ -3,6 +3,7 @@ package com.sawhub.hub.mentorado;
 import com.sawhub.hub.comercial.Lead;
 import com.sawhub.hub.comercial.LeadRepository;
 import com.sawhub.hub.comercial.StatusLead;
+import com.sawhub.hub.common.AreasInteresseUtil;
 import com.sawhub.hub.mentorado.dto.AtualizarMentoradoRequest;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
@@ -45,6 +46,10 @@ public class MentoradoAdminService {
         Mentorado mentorado = buscar(id);
         mentorado.atualizar(request.nome(), request.negocio(), request.plano());
         mentorado.definirVencimentoPlano(request.vencimentoPlano());
+        // Fase 5 (H11.1) — Admin também pode preencher contato/bio/interesses/foto, além da
+        // autoedição do próprio mentorado (H9.1) — mesmo método de domínio, dois chamadores.
+        mentorado.atualizarPerfil(request.telefone(), request.bio(),
+                AreasInteresseUtil.join(request.areasInteresse()), request.fotoUrl());
         return mentoradoRepository.save(mentorado);
     }
 

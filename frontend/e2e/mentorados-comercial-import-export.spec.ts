@@ -9,9 +9,12 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
+    // Bulk import (M23) trouxe CsvImportExport pra Metas e Tarefas na mesma tela — testId genérico
+    // (data-testid="csv-exportar") deixou de ser único na página, precisa filtrar pelo label
+    // (labelPrefix="Mentorados") pra não colidir com os widgets de Metas/Tarefas.
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByTestId('csv-exportar').click(),
+      page.getByRole('button', { name: 'Exportar Mentorados' }).click(),
     ]);
 
     expect(download.suggestedFilename()).toBe('mentorados.csv');
@@ -63,13 +66,15 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     const csv = `email;nome;negocio;plano;vencimentoPlano;status\n`
         + `${email};${nome} Atualizado;${negocio};PROFISSIONAL;;ATIVO\n`;
 
-    await main.getByTestId('csv-importar-input').setInputFiles({
+    // Mesmo raciocínio do teste de export acima: escopa ao widget de Mentorados (não Metas/Tarefas).
+    const widgetMentorados = main.locator('xpath=//button[contains(text(),"Importar Mentorados")]/ancestor::div[contains(@class,"wrapper")]');
+    await widgetMentorados.getByTestId('csv-importar-input').setInputFiles({
       name: 'mentorados.csv',
       mimeType: 'text/csv',
       buffer: Buffer.from(csv, 'utf-8'),
     });
 
-    await expect(main.getByTestId('csv-import-sucesso')).toContainText('1 linha(s) importada(s)');
+    await expect(widgetMentorados.getByTestId('csv-import-sucesso')).toContainText('1 linha(s) importada(s)');
     const linhaAtualizada = main.locator('text=' + `${nome} Atualizado`).locator('xpath=ancestor::div[contains(@class,"row")]');
     await expect(linhaAtualizada.getByText(negocio)).toBeVisible();
   });
@@ -83,13 +88,14 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
         + `fantasma-m22-e2e@example.com;Qualquer;;GRATUITO;;ATIVO\n`;
 
     const main = page.getByRole('main');
-    await main.getByTestId('csv-importar-input').setInputFiles({
+    const widgetMentorados = main.locator('xpath=//button[contains(text(),"Importar Mentorados")]/ancestor::div[contains(@class,"wrapper")]');
+    await widgetMentorados.getByTestId('csv-importar-input').setInputFiles({
       name: 'mentorados.csv',
       mimeType: 'text/csv',
       buffer: Buffer.from(csv, 'utf-8'),
     });
 
-    await expect(main.getByTestId('csv-import-erros')).toContainText('não encontrado');
+    await expect(widgetMentorados.getByTestId('csv-import-erros')).toContainText('não encontrado');
   });
 
   test('Comercial: exportar CSV dispara o download do arquivo', async ({ page }) => {

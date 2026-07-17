@@ -1,6 +1,7 @@
 package com.sawhub.hub.comercial;
 
 import com.sawhub.hub.comercial.dto.AvancarLeadRequest;
+import com.sawhub.hub.comercial.dto.CriarLeadRequest;
 import com.sawhub.hub.comercial.dto.DashboardComercialResponse;
 import com.sawhub.hub.comercial.dto.LeadResponse;
 import com.sawhub.hub.comercial.dto.RankingItem;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -72,6 +74,14 @@ public class ComercialController {
     public List<LeadResponse> listarLeads(@RequestParam(required = false) StatusLead status,
                                            @RequestParam(required = false) UUID vendedorId) {
         return leadService.listar(status, vendedorId).stream().map(LeadResponse::from).toList();
+    }
+
+    // Fase 5 (H13.4) — cadastro manual pro time comercial, além do formulário público (H1.3) e do
+    // import CSV (M22): mesmo LeadService.criar() de sempre, só um segundo chamador autenticado.
+    @PostMapping("/leads")
+    @ResponseStatus(HttpStatus.CREATED)
+    public LeadResponse criarLead(@Valid @RequestBody CriarLeadRequest request) {
+        return LeadResponse.from(leadService.criar(request));
     }
 
     @PatchMapping("/leads/{id}/avancar")

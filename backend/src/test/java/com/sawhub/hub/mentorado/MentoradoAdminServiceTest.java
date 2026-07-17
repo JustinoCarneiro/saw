@@ -56,12 +56,31 @@ class MentoradoAdminServiceTest {
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new AtualizarMentoradoRequest("Novo Nome", "Novo Negócio", Plano.ESSENCIAL,
-                java.time.LocalDate.of(2026, 12, 1));
+                java.time.LocalDate.of(2026, 12, 1), null, null, null, null);
         Mentorado atualizado = service().atualizar(id, request);
 
         assertThat(atualizado.getNome()).isEqualTo("Novo Nome");
         assertThat(atualizado.getPlano()).isEqualTo(Plano.ESSENCIAL);
         assertThat(atualizado.getVencimentoPlano()).isEqualTo(java.time.LocalDate.of(2026, 12, 1));
+    }
+
+    @Test
+    void atualizarTambemGravaContatoBioAreasEFoto() {
+        UUID id = UUID.randomUUID();
+        Mentorado mentorado = new Mentorado(null, "Antigo", "Restaurante Antigo", Plano.GRATUITO,
+                java.math.BigDecimal.ZERO, 0, 0);
+        when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
+        when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new AtualizarMentoradoRequest("Novo Nome", "Novo Negócio", Plano.ESSENCIAL, null,
+                "11999998888", "Bio preenchida pelo Admin", java.util.List.of("Delivery", "Marketing"),
+                "https://exemplo.com/foto.jpg");
+        Mentorado atualizado = service().atualizar(id, request);
+
+        assertThat(atualizado.getTelefone()).isEqualTo("11999998888");
+        assertThat(atualizado.getBio()).isEqualTo("Bio preenchida pelo Admin");
+        assertThat(atualizado.getAreasInteresse()).isEqualTo("Delivery, Marketing");
+        assertThat(atualizado.getFotoUrl()).isEqualTo("https://exemplo.com/foto.jpg");
     }
 
     @Test

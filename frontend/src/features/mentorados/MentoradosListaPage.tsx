@@ -197,6 +197,10 @@ function EditarMentoradoForm({ mentorado, onSalvo, onCancelar }: {
   const [negocio, setNegocio] = useState(mentorado.negocio ?? '');
   const [plano, setPlano] = useState<Plano>(mentorado.plano);
   const [vencimentoPlano, setVencimentoPlano] = useState(mentorado.vencimentoPlano ?? '');
+  const [telefone, setTelefone] = useState(mentorado.telefone ?? '');
+  const [bio, setBio] = useState(mentorado.bio ?? '');
+  const [areasInteresse, setAreasInteresse] = useState(mentorado.areasInteresse.join(', '));
+  const [fotoUrl, setFotoUrl] = useState(mentorado.fotoUrl ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -207,6 +211,10 @@ function EditarMentoradoForm({ mentorado, onSalvo, onCancelar }: {
     try {
       await apiClient.put(`/admin/mentorados/${mentorado.id}`, {
         nome, negocio: negocio || null, plano, vencimentoPlano: vencimentoPlano || null,
+        telefone: telefone || null,
+        bio: bio || null,
+        areasInteresse: areasInteresse.trim() ? areasInteresse.split(',').map((a) => a.trim()).filter(Boolean) : [],
+        fotoUrl: fotoUrl || null,
       });
       onSalvo();
     } catch (err) {
@@ -242,6 +250,24 @@ function EditarMentoradoForm({ mentorado, onSalvo, onCancelar }: {
             <input className={styles.textInput} type="date" value={vencimentoPlano} onChange={(e) => setVencimentoPlano(e.target.value)} />
           </label>
         </div>
+        <div className={styles.formRow}>
+          <label className={styles.formField}>
+            Telefone
+            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 90000-0000" />
+          </label>
+          <label className={styles.formField} style={{ flex: 2 }}>
+            Áreas de interesse
+            <input className={styles.textInput} value={areasInteresse} onChange={(e) => setAreasInteresse(e.target.value)} placeholder="Gestão, Finanças, Marketing" />
+          </label>
+          <label className={styles.formField} style={{ flex: 2 }}>
+            Foto (URL)
+            <input className={styles.textInput} value={fotoUrl} onChange={(e) => setFotoUrl(e.target.value)} placeholder="https://..." />
+          </label>
+        </div>
+        <label className={styles.formField}>
+          Bio
+          <textarea className={styles.textarea} value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
+        </label>
         {error && <div className={styles.error}>{error}</div>}
         <div className={styles.formActions}>
           <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>

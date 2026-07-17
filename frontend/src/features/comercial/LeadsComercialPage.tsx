@@ -38,6 +38,7 @@ export function LeadsComercialPage() {
   const [vendedores, setVendedores] = useState<VendedorResumo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [acao, setAcao] = useState<Acao | null>(null);
+  const [showCriarForm, setShowCriarForm] = useState(false);
 
   const carregar = () => {
     setLeads(null);
@@ -70,14 +71,26 @@ export function LeadsComercialPage() {
             ))}
           </select>
         </div>
-        <CsvImportExport
-          exportUrl="/admin/comercial/leads/export"
-          exportParams={{ status: status || undefined, vendedorId: vendedorId || undefined }}
-          exportFilename="leads.csv"
-          importUrl="/admin/comercial/leads/import"
-          onImportado={carregar}
-        />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <CsvImportExport
+            exportUrl="/admin/comercial/leads/export"
+            exportParams={{ status: status || undefined, vendedorId: vendedorId || undefined }}
+            exportFilename="leads.csv"
+            importUrl="/admin/comercial/leads/import"
+            onImportado={carregar}
+          />
+          <button className={styles.newButton} onClick={() => setShowCriarForm((v) => !v)}>
+            <span style={{ fontSize: 16 }}>+</span>Criar Lead
+          </button>
+        </div>
       </div>
+
+      {showCriarForm && (
+        <CriarLeadForm
+          onCriado={() => { setShowCriarForm(false); carregar(); }}
+          onCancelar={() => setShowCriarForm(false)}
+        />
+      )}
 
       {acao && (
         <AvancarLeadForm
@@ -143,6 +156,88 @@ export function LeadsComercialPage() {
         })}
       </DataGrid>
     </div>
+  );
+}
+
+function CriarLeadForm({ onCriado, onCancelar }: {
+  onCriado: () => void;
+  onCancelar: () => void;
+}) {
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [planoInteresse, setPlanoInteresse] = useState<Plano | ''>('');
+  const [mensagem, setMensagem] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiClient.post('/admin/comercial/leads', {
+        nome, email, telefone: telefone || undefined, mensagem: mensagem || undefined,
+        planoInteresse: planoInteresse || undefined,
+      });
+      onCriado();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível criar o lead. Confira os dados.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }}>
+      <div className={styles.formTitle}>Criar Lead</div>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.formRow}>
+          <label className={styles.formField}>
+            Nome
+            <input className={styles.textInput} value={nome} onChange={(e) => setNome(e.target.value)} required maxLength={120} />
+          </label>
+          <label className={styles.formField}>
+            E-mail
+            <input className={styles.textInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} />
+          </label>
+          <label className={styles.formField}>
+            Telefone
+            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(e.target.value)} maxLength={20} />
+          </label>
+        </div>
+        <div className={styles.formRow}>
+          <label className={styles.formField}>
+            Plano de interesse
+            <select className={styles.select} value={planoInteresse} onChange={(e) => setPlanoInteresse(e.target.value as Plano | '')}>
+              <option value="">Não informado</option>
+              {(Object.keys(PLANO_LABEL) as Plano[]).map((p) => (
+                <option key={p} value={p}>{PLANO_LABEL[p]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className={styles.formField}>
+          Mensagem
+          <textarea
+            className={styles.textarea}
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            rows={3}
+            maxLength={500}
+          />
+        </label>
+
+        {error && <div className={styles.error}>{error}</div>}
+
+        <div className={styles.formActions}>
+          <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
+          <button type="submit" className={styles.newButton} disabled={submitting}>
+            {submitting ? 'Salvando…' : 'Salvar lead'}
+          </button>
+        </div>
+      </form>
+    </Card>
   );
 }
 

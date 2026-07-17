@@ -58,6 +58,30 @@ test.describe('Comercial (E13)', () => {
     await page.screenshot({ path: 'e2e/screenshots/comercial-funil.png' });
   });
 
+  // Fase 5 (H13.4) — antes desta feature, o único jeito de cadastrar um lead pela área Comercial
+  // sem ser o formulário público era importar CSV (M22); não havia como digitar um lead avulso
+  // direto na tela (achado relatado pelo cliente ao testar o sistema em produção).
+  test('Comercial cria um Lead manualmente, sem passar pelo formulário público', async ({ page }) => {
+    const nome = `Lead Manual E2E ${Date.now()}`;
+    const email = `lead.manual.${Date.now()}@example.com`;
+
+    await loginAs(page, 'paula@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/comercial/leads');
+
+    const main = page.getByRole('main');
+    await main.getByRole('button', { name: 'Criar Lead' }).click();
+    await main.getByLabel('Nome').fill(nome);
+    await main.getByLabel('E-mail').fill(email);
+    await main.getByLabel('Telefone').fill('11988887777');
+    await main.getByLabel('Plano de interesse').selectOption({ label: 'Essencial' });
+    await main.getByRole('button', { name: 'Salvar lead' }).click();
+
+    const linha = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await expect(linha.getByText('Solicitação', { exact: true })).toBeVisible();
+    await expect(linha.getByText(email)).toBeVisible();
+  });
+
   test('Marcar lead como Perdido exige motivo e aparece na linha', async ({ page }) => {
     const nome = `Perdido E2E ${Date.now()}`;
     await page.goto('/solicitar-acesso');

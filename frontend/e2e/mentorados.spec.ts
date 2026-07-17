@@ -170,6 +170,35 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(page.getByText('Publicada', { exact: true })).toBeVisible();
   });
 
+  // Fase 5 (H11.1) — antes desta feature, telefone/bio/áreas de interesse/foto só podiam ser
+  // preenchidos pelo próprio mentorado logando (H9.1); o Admin não tinha como completar o
+  // cadastro (achado relatado pelo cliente: só nome/e-mail/plano apareciam pra editar).
+  test('Admin preenche telefone/bio/áreas/foto de um mentorado sem depender dele logar', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/lista');
+
+    // Carlos Menezes nasce no seed sem telefone/bio/áreas (ver DemoDataSeeder) — bom fixture pro
+    // caso real reportado: Admin prospectando/completando um cadastro ainda vazio.
+    const main = page.getByRole('main');
+    const linha = main.locator('text=Carlos Menezes').locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linha.getByRole('button', { name: 'Editar' }).click();
+
+    const foto = `https://exemplo.com/foto-e2e-${Date.now()}.jpg`;
+    await page.getByLabel('Telefone').fill('(11) 90000-1234');
+    await page.getByLabel('Áreas de interesse').fill('Delivery, Marketing');
+    await page.getByLabel('Foto (URL)').fill(foto);
+    await page.getByLabel('Bio').fill('Bio preenchida pelo Admin no teste E2E.');
+    await page.getByRole('button', { name: 'Salvar' }).click();
+
+    await expect(page.getByText('Editar mentorado')).toHaveCount(0);
+    await linha.getByRole('button', { name: 'Editar' }).click();
+    await expect(page.getByLabel('Telefone')).toHaveValue('(11) 90000-1234');
+    await expect(page.getByLabel('Áreas de interesse')).toHaveValue('Delivery, Marketing');
+    await expect(page.getByLabel('Foto (URL)')).toHaveValue(foto);
+    await expect(page.getByLabel('Bio')).toHaveValue('Bio preenchida pelo Admin no teste E2E.');
+  });
+
   test('Admin cura materiais recomendados numa ata ainda em rascunho', async ({ page }) => {
     // Ana/Carlos, mentor Ricardo Costa: mentoria em grupo REALIZADA cuja ata fica
     // deliberadamente em RASCUNHO no seed (ver DemoDataSeeder + mentorias.spec.ts) — bom fixture

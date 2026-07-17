@@ -209,6 +209,10 @@ export interface MentoradoAdmin {
   plano: Plano;
   vencimentoPlano: string | null;
   status: StatusMentorado;
+  telefone: string | null;
+  bio: string | null;
+  areasInteresse: string[];
+  fotoUrl: string | null;
   criadoEm: string;
 }
 

@@ -4,7 +4,7 @@ import { Card } from '../../shared/components/Card';
 import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
-import type { CategoriaFinanceira, Lancamento, StatusLancamento, TipoLancamento } from '../../shared/lib/types';
+import type { CategoriaFinanceira, GrupoDre, Lancamento, OrigemReceita, StatusLancamento, TipoLancamento } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import styles from './LancamentosPage.module.css';
@@ -27,6 +27,20 @@ const STATUS_LABEL: Record<StatusLancamento, { label: string; bg: string; color:
   REALIZADO: { label: 'Realizado', bg: 'var(--success-bg)', color: 'var(--success)' },
 };
 
+const GRUPO_DRE_LABEL: Record<GrupoDre, string> = {
+  RECEITA_BRUTA: 'Receita Bruta',
+  DEDUCOES: 'Deduções',
+  CUSTOS: 'Custos',
+  DESPESA_OPERACIONAL: 'Despesa Operacional',
+};
+
+const ORIGEM_RECEITA_LABEL: Record<OrigemReceita, string> = {
+  ASSINATURA: 'Assinatura',
+  LOJA: 'Loja',
+  EVENTO: 'Evento',
+  OUTRA: 'Outra',
+};
+
 export function LancamentosPage() {
   const [de, setDe] = useState(primeiroDiaDoMes());
   const [ate, setAte] = useState(ultimoDiaDoMes());
@@ -35,6 +49,7 @@ export function LancamentosPage() {
   const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showCategoriaForm, setShowCategoriaForm] = useState(false);
 
   const carregar = () => {
     setLancamentos(null);
@@ -44,11 +59,13 @@ export function LancamentosPage() {
       .catch(() => setError('Não foi possível carregar os lançamentos.'));
   };
 
+  const carregarCategorias = () => {
+    apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias').then((res) => setCategorias(res.data));
+  };
+
   useEffect(carregar, [de, ate, tipo]);
 
-  useEffect(() => {
-    apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias').then((res) => setCategorias(res.data));
-  }, []);
+  useEffect(carregarCategorias, []);
 
   return (
     <div>
@@ -76,11 +93,24 @@ export function LancamentosPage() {
             importUrl="/admin/financeiro/lancamentos/import"
             onImportado={carregar}
           />
+          <button className={styles.cancelButton} onClick={() => setShowCategoriaForm((v) => !v)}>
+            <span style={{ fontSize: 16 }}>+</span>Nova categoria
+          </button>
           <button className={styles.newButton} onClick={() => setShowForm((v) => !v)}>
             <span style={{ fontSize: 16 }}>+</span>Novo lançamento
           </button>
         </div>
       </div>
+
+      {showCategoriaForm && (
+        <NovaCategoriaForm
+          onCriado={() => {
+            setShowCategoriaForm(false);
+            carregarCategorias();
+          }}
+          onCancelar={() => setShowCategoriaForm(false)}
+        />
+      )}
 
       {showForm && (
         <NovoLancamentoForm
@@ -120,6 +150,82 @@ export function LancamentosPage() {
         })}
       </DataGrid>
     </div>
+  );
+}
+
+function NovaCategoriaForm({ onCriado, onCancelar }: {
+  onCriado: () => void;
+  onCancelar: () => void;
+}) {
+  const [nome, setNome] = useState('');
+  const [tipo, setTipo] = useState<TipoLancamento>('RECEITA');
+  const [grupoDre, setGrupoDre] = useState<GrupoDre>('RECEITA_BRUTA');
+  const [origemReceita, setOrigemReceita] = useState<OrigemReceita | ''>('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiClient.post('/admin/financeiro/categorias', {
+        nome, tipo, grupoDre, origemReceita: tipo === 'RECEITA' && origemReceita ? origemReceita : null,
+      });
+      onCriado();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível criar a categoria. Confira os dados.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }}>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.formRow}>
+          <label className={styles.formField} style={{ flex: 2 }}>
+            Nome
+            <input className={styles.textInput} value={nome} onChange={(e) => setNome(e.target.value)} required />
+          </label>
+          <label className={styles.formField}>
+            Tipo
+            <select className={styles.select} value={tipo} onChange={(e) => { setTipo(e.target.value as TipoLancamento); setOrigemReceita(''); }}>
+              <option value="RECEITA">Receita</option>
+              <option value="DESPESA">Despesa</option>
+            </select>
+          </label>
+          <label className={styles.formField}>
+            Grupo DRE
+            <select className={styles.select} value={grupoDre} onChange={(e) => setGrupoDre(e.target.value as GrupoDre)}>
+              {Object.entries(GRUPO_DRE_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          {tipo === 'RECEITA' && (
+            <label className={styles.formField}>
+              Origem da receita
+              <select className={styles.select} value={origemReceita} onChange={(e) => setOrigemReceita(e.target.value as OrigemReceita | '')}>
+                <option value="">Nenhuma</option>
+                {Object.entries(ORIGEM_RECEITA_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+
+        {error && <div className={styles.error}>{error}</div>}
+
+        <div className={styles.formActions}>
+          <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
+          <button type="submit" className={styles.newButton} disabled={submitting}>
+            {submitting ? 'Salvando…' : 'Salvar categoria'}
+          </button>
+        </div>
+      </form>
+    </Card>
   );
 }
 
