@@ -1,8 +1,8 @@
 package com.sawhub.hub.loja;
 
+import com.sawhub.hub.loja.pagamento.AssinaturaWebhookInvalidaException;
 import com.sawhub.hub.loja.pagamento.MercadoPagoGatewayService;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,7 +35,7 @@ public class WebhookMercadoPagoController {
             return; // outros tipos de notificação (ex.: merchant_order) — só payment interessa aqui
         }
         if (!gateway.verificarAssinatura(xSignature, xRequestId, dataId)) {
-            throw new AccessDeniedException("Assinatura do webhook inválida.");
+            throw new AssinaturaWebhookInvalidaException("Assinatura do webhook inválida.");
         }
         pedidoPagamentoService.processarNotificacao(dataId);
     }

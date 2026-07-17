@@ -1,5 +1,6 @@
 package com.sawhub.hub.common;
 
+import com.sawhub.hub.loja.pagamento.AssinaturaWebhookInvalidaException;
 import com.sawhub.hub.loja.pagamento.PagamentoIndisponivelException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -101,5 +102,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handlePagamentoIndisponivel(PagamentoIndisponivelException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiError.of(503, "Service Unavailable", ex.getMessage(), request.getRequestURI()));
+    }
+
+    // Achado ao vivo (suporte do Mercado Pago, 2026-07-17): antes reusava AccessDeniedException,
+    // e o handler acima devolvia "Você não tem acesso a este módulo." — mensagem de RBAC
+    // administrativo que não tem nada a ver com falha de assinatura de webhook e atrapalhou o
+    // próprio diagnóstico do suporte. Exceção e mensagem dedicadas evitam a confusão.
+    @ExceptionHandler(AssinaturaWebhookInvalidaException.class)
+    public ResponseEntity<ApiError> handleAssinaturaWebhookInvalida(AssinaturaWebhookInvalidaException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiError.of(403, "Forbidden", ex.getMessage(), request.getRequestURI()));
     }
 }
