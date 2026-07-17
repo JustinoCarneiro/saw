@@ -60,7 +60,9 @@ export function LancamentosPage() {
   };
 
   const carregarCategorias = () => {
-    apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias').then((res) => setCategorias(res.data));
+    apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias')
+      .then((res) => setCategorias(res.data))
+      .catch(() => setError('Não foi possível carregar as categorias financeiras.'));
   };
 
   useEffect(carregar, [de, ate, tipo]);
@@ -279,11 +281,16 @@ function NovoLancamentoForm({ categorias, onCriado, onCancelar }: {
           <label className={styles.formField}>
             Categoria
             <select className={styles.select} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} required>
-              <option value="">Selecione…</option>
+              <option value="">{categoriasDoTipo.length === 0 ? 'Nenhuma categoria cadastrada' : 'Selecione…'}</option>
               {categoriasDoTipo.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
+            {categoriasDoTipo.length === 0 && (
+              <div className={styles.muted}>
+                Nenhuma categoria de {tipo === 'RECEITA' ? 'receita' : 'despesa'} cadastrada — crie uma em "+ Nova categoria".
+              </div>
+            )}
           </label>
           <label className={styles.formField}>
             Status

@@ -40,7 +40,9 @@ export function ContasPage() {
   useEffect(carregar, [tipo, status]);
 
   useEffect(() => {
-    apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias').then((res) => setCategorias(res.data));
+    apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias')
+      .then((res) => setCategorias(res.data))
+      .catch(() => setError('Não foi possível carregar as categorias financeiras.'));
   }, []);
 
   return (

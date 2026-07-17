@@ -1,0 +1,16 @@
+✅ *Importação/Exportação em massa — concluída em todos os módulos*
+
+Terminamos de estender a função de importar/exportar CSV pro sistema inteiro. Agora dá pra migrar as planilhas antigas direto pra dentro do SAW HUB em *todos* os módulos do Admin:
+
+📋 Time (colaboradores)
+🛍️ Produtos da Loja
+📚 Conteúdos
+📅 Eventos
+📢 Avisos
+🎯 Metas e Tarefas dos mentorados
+
+Como já funciona pra Mentorados/Comercial/Financeiro, esse mesmo padrão seguro foi replicado: se alguma linha da planilha tiver erro, o sistema *não importa nada* e mostra exatamente qual linha e qual campo está errado — evita ficar com cadastro pela metade.
+
+Também ajustamos um detalhe importante: agora todo campo de texto e e-mail é normalizado automaticamente (sem espaço extra, sem diferença de maiúscula/minúscula) — evita duplicidade de cadastro por besteira de digitação.
+
+Testado e compilando limpo nos dois lados (back e front). Já dá pra usar.

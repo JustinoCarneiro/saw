@@ -205,7 +205,9 @@ function MateriaisCard({ mentoriaId, mentoria, podeEditar, onSalvo }: {
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    apiClient.get<Conteudo[]>('/admin/conteudos').then((res) => setConteudos(res.data));
+    apiClient.get<Conteudo[]>('/admin/conteudos')
+      .then((res) => setConteudos(res.data))
+      .catch(() => setError('Não foi possível carregar a lista de conteúdos.'));
   }, []);
 
   useEffect(() => {

@@ -274,7 +274,9 @@ function CriarMentoradoForm({ onCriado, onCancelar }: {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    apiClient.get<Lead[]>('/admin/comercial/leads', { params: { status: 'FECHADO' } }).then((res) => setLeads(res.data));
+    apiClient.get<Lead[]>('/admin/comercial/leads', { params: { status: 'FECHADO' } })
+      .then((res) => setLeads(res.data))
+      .catch(() => setError('Não foi possível carregar a lista de leads fechados.'));
   }, []);
 
   async function handleSubmit(e: FormEvent) {

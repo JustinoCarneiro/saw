@@ -200,4 +200,94 @@ test.describe('M14 — E8 Loja SAW (catálogo, carrinho, checkout)', () => {
     await linha.getByRole('button', { name: 'Publicar' }).click();
     await expect(linha.getByText('Publicado')).toBeVisible();
   });
+
+  // Achado ao vivo (print do cliente): "Cancelar"/"Reembolsar" em Comercial → Loja — Pedidos
+  // devolvia "Não foi possível concluir a ação." (500) pra TODO pedido — buscarPorIdComItens()
+  // não fazia FETCH JOIN em mentorado (@ManyToOne LAZY), e PedidoAdminResponse.from() lê
+  // pedido.getMentorado() no controller, já fora da transação do service. Corrigido no
+  // PedidoRepository (ver PedidoRepositoryTest, unit). Nenhum dos dois fluxos tinha E2E até aqui.
+  test('Admin cancela um pedido Aguardando pagamento', async ({ page }) => {
+    await loginAs(page, 'marina@sabordamarina.com.br');
+    await expect(page).toHaveURL(/\/mentorado/);
+
+    const carrinhoInicial = await page.request.get('/api/v1/mentorado/loja/carrinho');
+    const { itens: itensIniciais }: { itens: { id: string }[] } = await carrinhoInicial.json();
+    for (const item of itensIniciais) {
+      await page.request.delete(`/api/v1/mentorado/loja/carrinho/itens/${item.id}`, { headers: await csrfHeaders(page) });
+    }
+
+    await page.getByRole('link', { name: 'Loja SAW' }).click();
+    const ebook = page.locator('[data-testid^="produto-"]', { hasText: 'E-book: Gestão de Custos' });
+    await ebook.getByRole('button', { name: 'Adicionar ao carrinho' }).click();
+    await page.getByTestId('loja-tab-CARRINHO').click();
+    await expect(page.locator('[data-testid^="item-carrinho-"]', { hasText: 'E-book: Gestão de Custos' })).toBeVisible();
+
+    const checkoutRes = await page.request.post('/api/v1/mentorado/loja/checkout', { headers: await csrfHeaders(page) });
+    expect(checkoutRes.ok()).toBe(true);
+    const pedidosRes = await page.request.get('/api/v1/mentorado/loja/pedidos');
+    const pedidos: { id: string; status: string }[] = await pedidosRes.json();
+    const pedido = pedidos.find((p) => p.status === 'AGUARDANDO_PAGAMENTO');
+    expect(pedido).toBeTruthy();
+
+    await page.context().clearCookies();
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin/);
+    await page.goto('/admin/comercial/pedidos');
+
+    const linhaPedido = page.getByTestId(`pedido-row-${pedido!.id}`);
+    await expect(linhaPedido).toBeVisible();
+    await linhaPedido.getByRole('button', { name: 'Cancelar' }).click();
+    await page.getByRole('button', { name: 'Cancelar pedido' }).click();
+
+    await expect(linhaPedido.getByText('Cancelado')).toBeVisible();
+    await expect(page.getByText('Não foi possível concluir a ação.')).toHaveCount(0);
+  });
+
+  test('Admin reembolsa um pedido Liberado', async ({ page, request }) => {
+    await loginAs(page, 'fernanda@cantinadafernanda.com.br');
+    await expect(page).toHaveURL(/\/mentorado/);
+
+    const carrinhoInicial = await page.request.get('/api/v1/mentorado/loja/carrinho');
+    const { itens: itensIniciais }: { itens: { id: string }[] } = await carrinhoInicial.json();
+    for (const item of itensIniciais) {
+      await page.request.delete(`/api/v1/mentorado/loja/carrinho/itens/${item.id}`, { headers: await csrfHeaders(page) });
+    }
+
+    await page.getByRole('link', { name: 'Loja SAW' }).click();
+    const pacote = page.locator('[data-testid^="produto-"]', { hasText: 'Pacote de Planilhas Gerenciais' });
+    await pacote.getByRole('button', { name: 'Adicionar ao carrinho' }).click();
+    await page.getByTestId('loja-tab-CARRINHO').click();
+    await expect(page.locator('[data-testid^="item-carrinho-"]', { hasText: 'Pacote de Planilhas Gerenciais' })).toBeVisible();
+
+    const checkoutRes = await page.request.post('/api/v1/mentorado/loja/checkout', { headers: await csrfHeaders(page) });
+    expect(checkoutRes.ok()).toBe(true);
+    const pedidosRes = await page.request.get('/api/v1/mentorado/loja/pedidos');
+    const pedidos: { id: string; status: string }[] = await pedidosRes.json();
+    const pedido = pedidos.find((p) => p.status === 'AGUARDANDO_PAGAMENTO');
+    expect(pedido).toBeTruthy();
+
+    const paymentId = `stub-payment-reembolso-${pedido!.id}`;
+    await registrarPagamentoNoStub(request, paymentId, 'approved', pedido!.id);
+    const xRequestId = `stub-request-reembolso-${Date.now()}`;
+    const { xSignature } = assinaturaWebhook(paymentId, xRequestId);
+    const webhookRes = await page.request.post(
+      `/api/v1/webhooks/mercadopago?data.id=${paymentId}&type=payment`,
+      { headers: { 'x-signature': xSignature, 'x-request-id': xRequestId } },
+    );
+    expect(webhookRes.ok()).toBe(true);
+
+    await page.context().clearCookies();
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin/);
+    await page.goto('/admin/comercial/pedidos');
+
+    const linhaPedido = page.getByTestId(`pedido-row-${pedido!.id}`);
+    await expect(linhaPedido).toBeVisible();
+    await expect(linhaPedido.getByText('Liberado')).toBeVisible();
+    await linhaPedido.getByRole('button', { name: 'Reembolsar' }).click();
+    await page.getByRole('button', { name: 'Confirmar reembolso' }).click();
+
+    await expect(linhaPedido.getByText('Reembolsado')).toBeVisible();
+    await expect(page.getByText('Não foi possível concluir a ação.')).toHaveCount(0);
+  });
 });

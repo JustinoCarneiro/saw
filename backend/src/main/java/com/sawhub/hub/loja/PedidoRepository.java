@@ -21,7 +21,12 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
             + "WHERE p.mentorado.id = :mentoradoId AND p.status <> :statusExcluido ORDER BY p.criadoEm DESC")
     List<Pedido> buscarHistorico(@Param("mentoradoId") UUID mentoradoId, @Param("statusExcluido") StatusPedido statusExcluido);
 
-    @Query("SELECT DISTINCT p FROM Pedido p LEFT JOIN FETCH p.itens i LEFT JOIN FETCH i.produto WHERE p.id = :id")
+    // LEFT JOIN FETCH em mentorado também: PedidoAdminService.cancelar()/reembolsar() usam esta
+    // query e o controller monta PedidoAdminResponse.from(pedido) (lê pedido.getMentorado().getNome())
+    // FORA da transação do service — sem o fetch join, LazyInitializationException (500), achado ao
+    // vivo em produção (mesma classe de bug do M12/Fase 5, ver EncaminhamentoRepositoryTest/MetaRepositoryTest).
+    @Query("SELECT DISTINCT p FROM Pedido p LEFT JOIN FETCH p.itens i LEFT JOIN FETCH i.produto "
+            + "LEFT JOIN FETCH p.mentorado m WHERE p.id = :id")
     Optional<Pedido> buscarPorIdComItens(@Param("id") UUID id);
 
     // Admin (H8.4) — visão de todos os pedidos, mais recente primeiro, com fetch join de

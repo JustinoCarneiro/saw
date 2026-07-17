@@ -13,5 +13,5 @@ public interface ColaboradorRepository extends JpaRepository<Colaborador, UUID> 
     // — ORDER BY nome no SQL ordenaria pelos bytes do texto cifrado, não pelo nome real. Os
     // chamadores agora ordenam em memória Java depois do fetch (lista pequena, time interno) —
     // findAll() já vem do JpaRepository, não precisa de método próprio.
-    List<Colaborador> findAllByArea(Area area);
+    List<Colaborador> findAllByAreaIn(List<Area> areas);
 }

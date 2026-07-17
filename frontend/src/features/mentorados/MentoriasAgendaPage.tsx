@@ -161,8 +161,12 @@ function NovaMentoriaForm({ onCriada, onCancelar }: { onCriada: () => void; onCa
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    apiClient.get<MentorResumo[]>('/admin/mentorias/mentores').then((res) => setMentores(res.data));
-    apiClient.get<MentoradoAdmin[]>('/admin/mentorados', { params: { status: 'ATIVO' } }).then((res) => setMentorados(res.data));
+    apiClient.get<MentorResumo[]>('/admin/mentorias/mentores')
+      .then((res) => setMentores(res.data))
+      .catch(() => setError('Não foi possível carregar a lista de mentores.'));
+    apiClient.get<MentoradoAdmin[]>('/admin/mentorados', { params: { status: 'ATIVO' } })
+      .then((res) => setMentorados(res.data))
+      .catch(() => setError('Não foi possível carregar a lista de mentorados.'));
   }, []);
 
   const mentoradosFiltrados = mentorados.filter((m) => m.nome.toLowerCase().includes(buscaMentorado.trim().toLowerCase()));
@@ -212,11 +216,16 @@ function NovaMentoriaForm({ onCriada, onCancelar }: { onCriada: () => void; onCa
           <label className={styles.formField}>
             Mentor
             <select className={styles.select} value={mentorId} onChange={(e) => setMentorId(e.target.value)} required>
-              <option value="">Selecione</option>
+              <option value="">{mentores.length === 0 ? 'Nenhum mentor cadastrado' : 'Selecione'}</option>
               {mentores.map((m) => (
                 <option key={m.id} value={m.id}>{m.nome}</option>
               ))}
             </select>
+            {mentores.length === 0 && (
+              <div className={styles.muted}>
+                Nenhum colaborador de Gestão de Performance ou Admin cadastrado — crie um em Time.
+              </div>
+            )}
           </label>
         </div>
 

@@ -64,7 +64,7 @@ public class ComercialController {
      * área Comercial. */
     @GetMapping("/vendedores")
     public List<VendedorResumo> vendedores() {
-        return colaboradorRepository.findAllByArea(Area.COMERCIAL).stream()
+        return colaboradorRepository.findAllByAreaIn(List.of(Area.COMERCIAL, Area.ADMIN)).stream()
                 .sorted(Comparator.comparing(Colaborador::getNome))
                 .map(VendedorResumo::from)
                 .toList();

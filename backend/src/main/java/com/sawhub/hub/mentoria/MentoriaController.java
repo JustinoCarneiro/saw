@@ -50,7 +50,7 @@ public class MentoriaController {
      * uma Gestão de Performance não-Fundador não conseguiria listar colaboradores por ali. */
     @GetMapping("/mentores")
     public List<MentorResumoResponse> mentores() {
-        return colaboradorRepository.findAllByArea(Area.GESTAO_PERFORMANCE).stream()
+        return colaboradorRepository.findAllByAreaIn(List.of(Area.GESTAO_PERFORMANCE, Area.ADMIN)).stream()
                 .sorted(Comparator.comparing(Colaborador::getNome))
                 .map(MentorResumoResponse::from)
                 .toList();

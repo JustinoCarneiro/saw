@@ -51,7 +51,9 @@ export function LeadsComercialPage() {
   useEffect(carregar, [status, vendedorId]);
 
   useEffect(() => {
-    apiClient.get<VendedorResumo[]>('/admin/comercial/vendedores').then((res) => setVendedores(res.data));
+    apiClient.get<VendedorResumo[]>('/admin/comercial/vendedores')
+      .then((res) => setVendedores(res.data))
+      .catch(() => setError('Não foi possível carregar a lista de vendedores.'));
   }, []);
 
   return (
