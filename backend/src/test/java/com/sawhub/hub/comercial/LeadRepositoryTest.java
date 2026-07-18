@@ -11,6 +11,8 @@ import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
 import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
+import java.time.Instant;
 import org.hibernate.LazyInitializationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,5 +76,46 @@ class LeadRepositoryTest {
         entityManager.clear();
 
         assertThat(recarregado.getVendedor().getNome()).isEqualTo("Paula");
+    }
+
+    // M25 (Suposição 7) — teste contra banco real de propósito: a query mistura "produtoVenda IS
+    // NULL" (caminho legado, Lead.fechar(Plano) nunca seta produtoVenda) com "<> :produtoExcluido"
+    // (caminho novo, fecharVenda()) — um mock nunca provaria que o SQL gerado trata os dois casos
+    // certo (em especial NULL, que em SQL puro "NULL <> X" é UNKNOWN, não TRUE).
+    @Test
+    void countByStatusAndDataFechamentoBetweenExcluindoProdutoIncluiLegadoEExcluiSoOProdutoIndicado() {
+        Colaborador vendedor = criarVendedor("3");
+        Instant antes = Instant.now().minusSeconds(60);
+        Instant depois = Instant.now().plusSeconds(60);
+
+        Lead legado = new Lead("Legado", "legado@restaurante.com", null, null, null);
+        legado.moverParaEmContato(vendedor);
+        legado.moverParaProposta();
+        legado.fechar(Plano.ESSENCIAL);
+        leadRepository.save(legado);
+
+        Lead mentoria = new Lead("Mentoria", "mentoria@restaurante.com", null, null, null);
+        mentoria.moverParaEmContato(vendedor);
+        mentoria.moverParaProposta();
+        mentoria.fecharVenda(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA, new BigDecimal("26000.00"),
+                new BigDecimal("6000.00"), FormaPagamento.PIX);
+        leadRepository.save(mentoria);
+
+        Lead ingresso = new Lead("Ingresso", "ingresso@restaurante.com", null, null, null);
+        ingresso.moverParaEmContato(vendedor);
+        ingresso.moverParaProposta();
+        ingresso.fecharVenda(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA, new BigDecimal("300.00"),
+                new BigDecimal("300.00"), FormaPagamento.PIX);
+        leadRepository.save(ingresso);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        long total = leadRepository.countByStatusAndDataFechamentoBetween(StatusLead.FECHADO, antes, depois);
+        long semIngresso = leadRepository.countByStatusAndDataFechamentoBetweenExcluindoProduto(
+                StatusLead.FECHADO, antes, depois, ProdutoVenda.INGRESSO_EVENTO);
+
+        assertThat(total).isEqualTo(3);
+        assertThat(semIngresso).isEqualTo(2);
     }
 }

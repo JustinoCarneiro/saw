@@ -11,6 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import org.hibernate.annotations.ColumnTransformer;
 
 /** H14.4 — conta a pagar/receber. Máquina de estado: {@link StatusConta#PENDENTE} -&gt;
  * {@link StatusConta#PAGO}/{@link StatusConta#RECEBIDO} (ou desvio -&gt;
@@ -24,7 +25,14 @@ public class ContaPagarReceber extends BaseEntity {
     @Column(nullable = false)
     private TipoConta tipo;
 
-    @Column(nullable = false)
+    // pgcrypto (achado alto do revisor-seguranca, M25): descricao costuma conter nome de lead/
+    // mentorado (ex. "Parcela 1 - Maria Souza") — PII já protegida na tabela de origem (V19),
+    // criptografar aqui também fecha o buraco de reintroduzir esse mesmo dado em claro. Mesmo
+    // padrão de Lead.nome/Mentorado.telefone — ver V28.
+    @Column(nullable = false, columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(descricao, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String descricao;
 
     @Column(nullable = false)

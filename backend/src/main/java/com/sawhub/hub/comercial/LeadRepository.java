@@ -39,4 +39,21 @@ public interface LeadRepository extends JpaRepository<Lead, UUID> {
 
     /** H13.3 — realizado do vendedor no período (leads fechados por ele). */
     long countByVendedorIdAndStatusAndDataFechamentoBetween(UUID vendedorId, StatusLead status, Instant de, Instant ate);
+
+    /** M25 (Suposição 7) — "novos mentorados no mês" exclui um produto (venda de ingresso é
+     * contabilizada à parte, ver ComercialDashboardService). produtoVenda IS NULL cobre o caminho
+     * legado (Lead.fechar(Plano) nunca seta produtoVenda) — continua contando normalmente. Produto
+     * é parâmetro, não literal — mesmo padrão do resto do projeto pra enum em JPQL. */
+    @Query("SELECT COUNT(l) FROM Lead l WHERE l.status = :status AND l.dataFechamento BETWEEN :de AND :ate "
+            + "AND (l.produtoVenda IS NULL OR l.produtoVenda <> :produtoExcluido)")
+    long countByStatusAndDataFechamentoBetweenExcluindoProduto(@Param("status") StatusLead status,
+            @Param("de") Instant de, @Param("ate") Instant ate, @Param("produtoExcluido") ProdutoVenda produtoExcluido);
+
+    /** M25 (Suposição 7) — mesma exclusão de produto, escopada por vendedor (ranking/H13.3). */
+    @Query("SELECT COUNT(l) FROM Lead l WHERE l.vendedor.id = :vendedorId AND l.status = :status "
+            + "AND l.dataFechamento BETWEEN :de AND :ate "
+            + "AND (l.produtoVenda IS NULL OR l.produtoVenda <> :produtoExcluido)")
+    long countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(@Param("vendedorId") UUID vendedorId,
+            @Param("status") StatusLead status, @Param("de") Instant de, @Param("ate") Instant ate,
+            @Param("produtoExcluido") ProdutoVenda produtoExcluido);
 }

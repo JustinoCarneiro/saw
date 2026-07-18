@@ -3,10 +3,14 @@ package com.sawhub.hub.comercial;
 import com.sawhub.hub.comercial.dto.AvancarLeadRequest;
 import com.sawhub.hub.comercial.dto.CriarLeadRequest;
 import com.sawhub.hub.comercial.dto.DashboardComercialResponse;
+import com.sawhub.hub.comercial.dto.EventoVendaResumo;
+import com.sawhub.hub.comercial.dto.FecharVendaRequest;
 import com.sawhub.hub.comercial.dto.LeadResponse;
 import com.sawhub.hub.comercial.dto.RankingItem;
 import com.sawhub.hub.comercial.dto.VendedorResumo;
 import com.sawhub.hub.common.dto.ImportResultResponse;
+import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.StatusEvento;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
@@ -47,15 +51,17 @@ public class ComercialController {
     private final RankingComercialService rankingService;
     private final ColaboradorRepository colaboradorRepository;
     private final LeadCsvService leadCsvService;
+    private final EventoRepository eventoRepository;
 
     public ComercialController(LeadService leadService, ComercialDashboardService dashboardService,
                                 RankingComercialService rankingService, ColaboradorRepository colaboradorRepository,
-                                LeadCsvService leadCsvService) {
+                                LeadCsvService leadCsvService, EventoRepository eventoRepository) {
         this.leadService = leadService;
         this.dashboardService = dashboardService;
         this.rankingService = rankingService;
         this.colaboradorRepository = colaboradorRepository;
         this.leadCsvService = leadCsvService;
+        this.eventoRepository = eventoRepository;
     }
 
     /** Só leitura, pro seletor de vendedor na tela de funil (mover lead pra Em contato) —
@@ -87,6 +93,23 @@ public class ComercialController {
     @PatchMapping("/leads/{id}/avancar")
     public LeadResponse avancar(@PathVariable UUID id, @Valid @RequestBody AvancarLeadRequest request) {
         return LeadResponse.from(leadService.avancar(id, request));
+    }
+
+    // M25 — "formulário único de venda": fecha o Lead (deve estar em PROPOSTA, ver
+    // Lead.fecharVenda) já distribuindo parcelamento pro financeiro e ingresso de evento pro
+    // credenciamento. Endpoint dedicado, não substitui PATCH .../avancar com FECHADO.
+    @PostMapping("/leads/{id}/fechar-venda")
+    public LeadResponse fecharVenda(@PathVariable UUID id, @Valid @RequestBody FecharVendaRequest request) {
+        return LeadResponse.from(leadService.fecharVenda(id, request));
+    }
+
+    // M25 — só leitura, pro seletor de evento no formulário único de venda (produtoVenda =
+    // INGRESSO_EVENTO). Mesmo raciocínio de vendedores(): EventoController é gated por
+    // Modulo.CONTEUDOS, escopo mínimo aqui é só eventos ainda abertos pra venda.
+    @GetMapping("/eventos")
+    public List<EventoVendaResumo> eventosParaVenda() {
+        return eventoRepository.buscarPorStatusIn(List.of(StatusEvento.PROGRAMADO, StatusEvento.AO_VIVO), null)
+                .stream().map(EventoVendaResumo::from).toList();
     }
 
     // M22 — mesmos filtros de GET /leads.

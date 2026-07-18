@@ -42,8 +42,8 @@ class RankingComercialServiceTest {
         UUID paulaId = UUID.randomUUID();
         MetaComercial meta = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 6);
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of(meta));
-        when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetween(
-                eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class))).thenReturn(4L);
+        when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(
+                eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(4L);
 
         List<RankingItem> ranking = service().ranking(2026, 7);
 
@@ -62,10 +62,10 @@ class RankingComercialServiceTest {
         MetaComercial metaPaula = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 6);
         MetaComercial metaRicardo = new MetaComercial(colaborador(ricardoId, "Ricardo"), 2026, 7, 6);
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of(metaPaula, metaRicardo));
-        when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetween(
-                eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class))).thenReturn(2L);
-        when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetween(
-                eq(ricardoId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class))).thenReturn(5L);
+        when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(
+                eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(2L);
+        when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(
+                eq(ricardoId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(5L);
 
         List<RankingItem> ranking = service().ranking(2026, 7);
 
@@ -77,8 +77,8 @@ class RankingComercialServiceTest {
         UUID paulaId = UUID.randomUUID();
         MetaComercial meta = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 0);
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of(meta));
-        when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetween(
-                eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class))).thenReturn(0L);
+        when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(
+                eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(0L);
 
         List<RankingItem> ranking = service().ranking(2026, 7);
 

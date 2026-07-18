@@ -81,4 +81,23 @@ class ContaPagarReceberRepositoryTest {
 
         assertThat(recarregada.getCategoria().getNome()).isEqualTo(categoria.getNome());
     }
+
+    // M25 — achado alto do revisor-seguranca: descricao costuma conter nome de lead/mentorado
+    // (ex. "Parcela 1 - Maria Souza"), PII que precisa do mesmo tratamento pgcrypto da tabela de
+    // origem (V19/V28). Teste contra banco real de propósito — só ele prova que o
+    // @ColumnTransformer está lendo/escrevendo a coluna bytea corretamente (um mock nunca
+    // exercitaria o SQL gerado pelo Hibernate).
+    @Test
+    void descricaoSobrevivePgcryptoRoundTripForaDaTransacaoOriginal() {
+        CategoriaFinanceira categoria = criarCategoria();
+        ContaPagarReceber salva = contaRepository.save(new ContaPagarReceber(TipoConta.A_RECEBER,
+                "Parcela 1 - Maria Souza", new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), categoria));
+        entityManager.flush();
+        entityManager.clear();
+
+        ContaPagarReceber recarregada = contaRepository.findById(salva.getId()).orElseThrow();
+        entityManager.clear();
+
+        assertThat(recarregada.getDescricao()).isEqualTo("Parcela 1 - Maria Souza");
+    }
 }

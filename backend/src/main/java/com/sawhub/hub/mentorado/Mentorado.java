@@ -66,12 +66,6 @@ public class Mentorado extends BaseEntity {
             write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String bio;
 
-    @Column(name = "areas_interesse", columnDefinition = "bytea")
-    @ColumnTransformer(
-            read = "pgp_sym_decrypt(areas_interesse, current_setting('app.encryption_key'))",
-            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
-    private String areasInteresse;
-
     @Column(name = "foto_url", length = 500)
     private String fotoUrl;
 
@@ -84,6 +78,47 @@ public class Mentorado extends BaseEntity {
     // PerfilJornadaService.sincronizarConquistas.
     @Column(name = "conquistas_observadas_em")
     private Instant conquistasObservadasEm;
+
+    // M23 (change request pós-MVP, 17/07/2026) — dados de contrato levantados do Notion real da
+    // operação ("CRM Saw"). nomeFantasia/dataFechamentoContrato/documentoContratoUrl não são
+    // sensíveis o bastante pra pgcrypto (não são PII de indivíduo, e dataFechamentoContrato
+    // precisa ficar filtrável); cnpj/socios/valorContrato entram criptografados, mesmo critério
+    // do V19 (nunca aparecem em WHERE/ORDER BY/SUM nesta leva).
+    @Column(name = "nome_fantasia", length = 255)
+    private String nomeFantasia;
+
+    @Column(columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(cnpj, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
+    private String cnpj;
+
+    // Texto livre "Nome 1; Nome 2" (Suposição 2 do Blueprint M23) — o Notion só usa isso como
+    // referência de contato, nenhum fluxo do produto precisa consultar sócio individualmente
+    // ainda; promover pra tabela própria é trivial depois se um caso de uso real pedir.
+    @Column(columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(socios, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
+    private String socios;
+
+    @Column(name = "valor_contrato", columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(valor_contrato, current_setting('app.encryption_key'))::numeric",
+            write = "pgp_sym_encrypt(?::text, current_setting('app.encryption_key'))")
+    private BigDecimal valorContrato;
+
+    @Column(name = "data_fechamento_contrato")
+    private LocalDate dataFechamentoContrato;
+
+    @Column(name = "documento_contrato_url", length = 500)
+    private String documentoContratoUrl;
+
+    // Nullable de propósito: TipoContrato é aditivo, não substitui Plano (ver Suposição 1 do
+    // Blueprint M23) — dado legado/seed não tem essa informação real.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_contrato")
+    private TipoContrato tipoContrato;
 
     protected Mentorado() {
     }
@@ -116,16 +151,43 @@ public class Mentorado extends BaseEntity {
     }
 
     /** H9.1 — autoedição do mentorado: só contato/preferências, nunca identidade/plano (esses são admin-only via {@link #atualizar}). */
-    public void atualizarPerfil(String telefone, String bio, String areasInteresse, String fotoUrl) {
+    public void atualizarPerfil(String telefone, String bio, String fotoUrl) {
         this.telefone = telefone;
         this.bio = bio;
-        this.areasInteresse = areasInteresse;
         this.fotoUrl = fotoUrl;
     }
 
     /** H9.3 — setado pelo Admin junto com o plano (M02/E15); ver Suposição 4 do Blueprint do M15. */
     public void definirVencimentoPlano(LocalDate vencimentoPlano) {
         this.vencimentoPlano = vencimentoPlano;
+    }
+
+    /** M23 — edição administrativa dos dados de contrato (H11.1 estendida). vencimentoContrato
+     * é sempre derivado de tipoContrato+dataFechamentoContrato ({@link TipoContrato#calcularVencimento}),
+     * nunca um valor de entrada — evita as duas fontes divergirem. */
+    public void atualizarDadosContrato(String nomeFantasia, String cnpj, String socios,
+                                        TipoContrato tipoContrato, BigDecimal valorContrato,
+                                        LocalDate dataFechamentoContrato) {
+        this.nomeFantasia = nomeFantasia;
+        this.cnpj = cnpj;
+        this.socios = socios;
+        this.tipoContrato = tipoContrato;
+        this.valorContrato = valorContrato;
+        this.dataFechamentoContrato = dataFechamentoContrato;
+    }
+
+    public void atualizarDocumentoContrato(String documentoContratoUrl) {
+        this.documentoContratoUrl = documentoContratoUrl;
+    }
+
+    /** Deriva o vencimento a partir do tipo de contrato — null se tipoContrato ou
+     * dataFechamentoContrato ainda não foram preenchidos, ou se o tipo não tem prazo fixo
+     * (Consultoria, "esporádica"). */
+    public LocalDate getVencimentoContrato() {
+        if (tipoContrato == null || dataFechamentoContrato == null) {
+            return null;
+        }
+        return tipoContrato.calcularVencimento(dataFechamentoContrato);
     }
 
     public void marcarConquistasObservadas() {
@@ -174,10 +236,6 @@ public class Mentorado extends BaseEntity {
         return bio;
     }
 
-    public String getAreasInteresse() {
-        return areasInteresse;
-    }
-
     public String getFotoUrl() {
         return fotoUrl;
     }
@@ -188,5 +246,33 @@ public class Mentorado extends BaseEntity {
 
     public Instant getConquistasObservadasEm() {
         return conquistasObservadasEm;
+    }
+
+    public String getNomeFantasia() {
+        return nomeFantasia;
+    }
+
+    public String getCnpj() {
+        return cnpj;
+    }
+
+    public String getSocios() {
+        return socios;
+    }
+
+    public BigDecimal getValorContrato() {
+        return valorContrato;
+    }
+
+    public LocalDate getDataFechamentoContrato() {
+        return dataFechamentoContrato;
+    }
+
+    public String getDocumentoContratoUrl() {
+        return documentoContratoUrl;
+    }
+
+    public TipoContrato getTipoContrato() {
+        return tipoContrato;
     }
 }

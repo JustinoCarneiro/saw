@@ -3,6 +3,7 @@ package com.sawhub.hub.comercial;
 import com.sawhub.hub.common.BaseEntity;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.Plano;
+import com.sawhub.hub.mentorado.TipoContrato;
 import com.sawhub.hub.team.Colaborador;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +13,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import org.hibernate.annotations.ColumnTransformer;
 
@@ -82,6 +84,40 @@ public class Lead extends BaseEntity {
     @JoinColumn(name = "mentorado_id")
     private Mentorado mentorado;
 
+    // M23 (change request pós-MVP, 17/07/2026) — em paralelo a planoFechado, não o substitui (ver
+    // Suposição 1 do Blueprint M23 em ROADMAP.md: TipoContrato é aditivo). Setado só por
+    // criarJaFechado() nesta leva.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_contrato_fechado")
+    private TipoContrato tipoContratoFechado;
+
+    // M25 (change request pós-MVP, 17/07/2026) — "formulário único de venda", aditivo em
+    // paralelo aos campos do M23 (planoFechado/tipoContratoFechado). Setado só por
+    // fecharVenda(), nunca pelo fechar(Plano) legado.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "produto_venda")
+    private ProdutoVenda produtoVenda;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origem_venda")
+    private OrigemVenda origemVenda;
+
+    @Column(name = "valor_total_venda", columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(valor_total_venda, current_setting('app.encryption_key'))::numeric",
+            write = "pgp_sym_encrypt(?::text, current_setting('app.encryption_key'))")
+    private BigDecimal valorTotalVenda;
+
+    @Column(name = "valor_pago_no_ato", columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(valor_pago_no_ato, current_setting('app.encryption_key'))::numeric",
+            write = "pgp_sym_encrypt(?::text, current_setting('app.encryption_key'))")
+    private BigDecimal valorPagoNoAto;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pagamento")
+    private FormaPagamento formaPagamento;
+
     protected Lead() {
     }
 
@@ -94,6 +130,19 @@ public class Lead extends BaseEntity {
         this.status = StatusLead.SOLICITACAO;
     }
 
+    /** M23 — "criar mentorado direto" (pedido explícito do cliente: "É IMPORTANTE PODER CRIAR
+     * DIRETAMENTE O MENTORADO, SENDO AUTOMÁTICAMENTE UM LEAD FECHADO"). Construtor alternativo,
+     * não uma transição — nasce direto em FECHADO sem passar pelas etapas do funil
+     * (Solicitação->Em contato->Proposta), mas continua sendo um Lead FECHADO de verdade: o
+     * mesmo {@link #vincularMentorado} de sempre funciona a partir daqui. */
+    public static Lead criarJaFechado(String nome, String email, String telefone, TipoContrato tipoContrato) {
+        Lead lead = new Lead(nome, email, telefone, null, null);
+        lead.status = StatusLead.FECHADO;
+        lead.tipoContratoFechado = tipoContrato;
+        lead.dataFechamento = Instant.now();
+        return lead;
+    }
+
     /** Só a partir de SOLICITACAO — primeiro contato do time comercial com o lead. */
     public void moverParaEmContato(Colaborador vendedor) {
         exigirStatus(StatusLead.SOLICITACAO);
@@ -101,9 +150,20 @@ public class Lead extends BaseEntity {
         this.vendedor = vendedor;
     }
 
-    /** Só a partir de EM_CONTATO. */
-    public void moverParaProposta() {
+    /** M25 — só a partir de EM_CONTATO. Opcional: quem não passa por aqui continua indo direto
+     * pra PROPOSTA (ver {@link #moverParaProposta}), bate com o funil real mas não é um gate
+     * obrigatório imposto sobre o comportamento já existente. */
+    public void moverParaDiagnostico() {
         exigirStatus(StatusLead.EM_CONTATO);
+        this.status = StatusLead.DIAGNOSTICO;
+    }
+
+    /** A partir de EM_CONTATO (caminho direto já existente) ou DIAGNOSTICO (M25, etapa nova). */
+    public void moverParaProposta() {
+        if (status != StatusLead.EM_CONTATO && status != StatusLead.DIAGNOSTICO) {
+            throw new IllegalStateException(
+                    "Lead precisa estar em EM_CONTATO ou DIAGNOSTICO para essa transição (está em " + status + ").");
+        }
         this.status = StatusLead.PROPOSTA;
     }
 
@@ -113,6 +173,21 @@ public class Lead extends BaseEntity {
         exigirStatus(StatusLead.PROPOSTA);
         this.status = StatusLead.FECHADO;
         this.planoFechado = planoFechado;
+        this.dataFechamento = Instant.now();
+    }
+
+    /** M25 — "formulário único de venda". Só a partir de PROPOSTA, mesma guarda de
+     * {@link #fechar(Plano)} — os dois convivem, nenhum lead-fechamento existente precisa migrar
+     * pra este caminho. */
+    public void fecharVenda(ProdutoVenda produtoVenda, OrigemVenda origemVenda, BigDecimal valorTotalVenda,
+                             BigDecimal valorPagoNoAto, FormaPagamento formaPagamento) {
+        exigirStatus(StatusLead.PROPOSTA);
+        this.status = StatusLead.FECHADO;
+        this.produtoVenda = produtoVenda;
+        this.origemVenda = origemVenda;
+        this.valorTotalVenda = valorTotalVenda;
+        this.valorPagoNoAto = valorPagoNoAto;
+        this.formaPagamento = formaPagamento;
         this.dataFechamento = Instant.now();
     }
 
@@ -187,5 +262,29 @@ public class Lead extends BaseEntity {
 
     public Instant getDataFechamento() {
         return dataFechamento;
+    }
+
+    public TipoContrato getTipoContratoFechado() {
+        return tipoContratoFechado;
+    }
+
+    public ProdutoVenda getProdutoVenda() {
+        return produtoVenda;
+    }
+
+    public OrigemVenda getOrigemVenda() {
+        return origemVenda;
+    }
+
+    public BigDecimal getValorTotalVenda() {
+        return valorTotalVenda;
+    }
+
+    public BigDecimal getValorPagoNoAto() {
+        return valorPagoNoAto;
+    }
+
+    public FormaPagamento getFormaPagamento() {
+        return formaPagamento;
     }
 }

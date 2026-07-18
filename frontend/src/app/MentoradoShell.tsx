@@ -4,7 +4,9 @@ import logoSawIcon from '../assets/logo-saw-icon.png';
 import { useAuth } from '../features/auth/AuthContext';
 import { Avatar } from '../shared/components/Avatar';
 import { ICON_PROPS } from '../shared/components/iconProps';
+import { PausedScreen } from '../shared/components/PausedScreen';
 import { apiClient } from '../shared/lib/apiClient';
+import { AREA_MENTORADO_PAUSADA } from '../shared/lib/featureFlags';
 import type { ResumoAvisos } from '../shared/lib/types';
 import styles from './MentoradoShell.module.css';
 
@@ -33,7 +35,7 @@ export function MentoradoShell() {
   const [naoLidos, setNaoLidos] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || AREA_MENTORADO_PAUSADA) return;
     apiClient.get<ResumoAvisos>('/mentorado/avisos/resumo')
       .then((res) => setNaoLidos(res.data.naoLidos))
       .catch(() => {});
@@ -47,6 +49,32 @@ export function MentoradoShell() {
 
   if (!user || user.perfil !== 'MENTORADO') {
     return <Navigate to="/login" replace />;
+  }
+
+  if (AREA_MENTORADO_PAUSADA) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <div className={styles.brand}>
+            <img src={logoSawIcon} alt="SAW" width={28} height={28} />
+            <span className={styles.brandWord}>SAW HUB</span>
+          </div>
+          <div className={styles.right}>
+            <div className={styles.userChip}>
+              <Avatar name={user.nome} size={32} />
+              <span className={styles.userName}>{user.nome}</span>
+            </div>
+            <button className={styles.logoutBtn} onClick={logout}>
+              Sair
+            </button>
+          </div>
+        </header>
+        <PausedScreen
+          title="Área do mentorado temporariamente indisponível"
+          description="O acesso de auto-atendimento do mentorado está pausado no momento. O foco atual é Comercial, Financeiro e a gestão de mentorados pelo time interno."
+        />
+      </div>
+    );
   }
 
   return (

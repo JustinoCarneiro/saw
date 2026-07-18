@@ -5,16 +5,28 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.comercial.dto.AvancarLeadRequest;
 import com.sawhub.hub.comercial.dto.CriarLeadRequest;
+import com.sawhub.hub.comercial.dto.FecharVendaRequest;
+import com.sawhub.hub.comercial.dto.ParcelaVendaRequest;
+import com.sawhub.hub.comercial.dto.VendaIngressoRequest;
+import com.sawhub.hub.evento.Evento;
+import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.TipoEvento;
+import com.sawhub.hub.financeiro.ContaPagarReceberRepository;
 import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,9 +46,25 @@ class LeadServiceTest {
     private ColaboradorRepository colaboradorRepository;
     @Mock
     private AtividadeLogService atividadeLogService;
+    @Mock
+    private ParcelaVendaRepository parcelaVendaRepository;
+    @Mock
+    private VendaIngressoRepository vendaIngressoRepository;
+    @Mock
+    private EventoRepository eventoRepository;
+    @Mock
+    private ContaPagarReceberRepository contaPagarReceberRepository;
 
     private LeadService service() {
-        return new LeadService(leadRepository, colaboradorRepository, atividadeLogService);
+        return new LeadService(leadRepository, colaboradorRepository, atividadeLogService,
+                parcelaVendaRepository, vendaIngressoRepository, eventoRepository, contaPagarReceberRepository);
+    }
+
+    private static Lead leadEmProposta() {
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        lead.moverParaEmContato(colaborador(UUID.randomUUID(), "Paula"));
+        lead.moverParaProposta();
+        return lead;
     }
 
     private static Colaborador colaborador(UUID id, String nome) {
@@ -220,5 +248,163 @@ class LeadServiceTest {
         assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.PERDIDO, null, null, "   ")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Motivo");
+    }
+
+    // M25 — "formulário único de venda".
+    @Test
+    void fecharVendaSimplesGravaCamposSemParcelaNemIngresso() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new FecharVendaRequest(ProdutoVenda.CONSULTORIA, OrigemVenda.DIRETA,
+                new BigDecimal("9000.00"), new BigDecimal("9000.00"), FormaPagamento.PIX, null, null, null);
+        Lead fechado = service().fecharVenda(leadId, request);
+
+        assertThat(fechado.getStatus()).isEqualTo(StatusLead.FECHADO);
+        assertThat(fechado.getProdutoVenda()).isEqualTo(ProdutoVenda.CONSULTORIA);
+        verify(atividadeLogService).registrar("LEAD_VENDA_FECHADA", "Venda fechada: Maria Souza");
+        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, eventoRepository, contaPagarReceberRepository);
+    }
+
+    @Test
+    void fecharVendaComParcelasCriaContaPagarReceberPraCadaUma() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(contaPagarReceberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(parcelaVendaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var parcelas = List.of(
+                new ParcelaVendaRequest(1, new BigDecimal("2000.00"), LocalDate.of(2026, 8, 17)),
+                new ParcelaVendaRequest(2, new BigDecimal("2000.00"), LocalDate.of(2026, 9, 17)));
+        var request = new FecharVendaRequest(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA,
+                new BigDecimal("26000.00"), new BigDecimal("6000.00"), FormaPagamento.PIX, parcelas, null, null);
+
+        service().fecharVenda(leadId, request);
+
+        verify(contaPagarReceberRepository, times(2)).save(any());
+        verify(parcelaVendaRepository, org.mockito.Mockito.times(4)).save(any()); // save + vincularConta -> save de novo, por parcela
+    }
+
+    @Test
+    void fecharVendaDeIngressoSemEventoLancaErro() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new FecharVendaRequest(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA,
+                new BigDecimal("300.00"), new BigDecimal("300.00"), FormaPagamento.PIX, null, null, null);
+
+        assertThatThrownBy(() -> service().fecharVenda(leadId, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Evento");
+    }
+
+    @Test
+    void fecharVendaDeIngressoSemIngressosLancaErro() {
+        UUID leadId = UUID.randomUUID();
+        UUID eventoId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(
+                new Evento("Receita do Sucesso", TipoEvento.PRESENCIAL, null, Instant.now(), "Recife", null, 100)));
+
+        var request = new FecharVendaRequest(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA,
+                new BigDecimal("300.00"), new BigDecimal("300.00"), FormaPagamento.PIX, null, eventoId, null);
+
+        assertThatThrownBy(() -> service().fecharVenda(leadId, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ingresso");
+    }
+
+    @Test
+    void fecharVendaDeIngressoCriaUmaVendaIngressoPorIngresso() {
+        UUID leadId = UUID.randomUUID();
+        UUID eventoId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        Evento evento = new Evento("Receita do Sucesso", TipoEvento.PRESENCIAL, null, Instant.now(), "Recife", null, 100);
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento));
+        when(vendaIngressoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var ingressos = List.of(
+                new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true),
+                new VendaIngressoRequest(CategoriaIngresso.ESSENCIAL, "Ana Sócia", "Financeiro", false));
+        var request = new FecharVendaRequest(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA,
+                new BigDecimal("600.00"), new BigDecimal("600.00"), FormaPagamento.PIX, null, eventoId, ingressos);
+
+        service().fecharVenda(leadId, request);
+
+        verify(vendaIngressoRepository, times(2)).save(any());
+        // Achado M2 da revisão de segurança: venda de ingresso precisa ocupar vaga de verdade
+        // (mesma invariante já usada em EventoMentoradoService.inscrever(), H7.2) — senão o
+        // funil comercial vende ingresso além da capacidade do evento sem qualquer aviso.
+        assertThat(evento.getVagasOcupadas()).isEqualTo(2);
+        verify(eventoRepository).save(evento);
+    }
+
+    @Test
+    void fecharVendaDeIngressoSemVagaSuficienteLancaErro() {
+        UUID leadId = UUID.randomUUID();
+        UUID eventoId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        Evento evento = new Evento("Receita do Sucesso", TipoEvento.PRESENCIAL, null, Instant.now(), "Recife", null, 1);
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento));
+
+        var ingressos = List.of(
+                new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true),
+                new VendaIngressoRequest(CategoriaIngresso.ESSENCIAL, "Ana Sócia", "Financeiro", false));
+        var request = new FecharVendaRequest(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA,
+                new BigDecimal("600.00"), new BigDecimal("600.00"), FormaPagamento.PIX, null, eventoId, ingressos);
+
+        assertThatThrownBy(() -> service().fecharVenda(leadId, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("vaga");
+        // @Transactional garante rollback do que já foi salvo (ex.: o 1º ingresso, antes do 2º
+        // estourar a vaga) — não testável com mocks, coberto pela infraestrutura de transação.
+    }
+
+    @Test
+    void fecharVendaDeIngressoParaEventoCanceladoLancaErro() {
+        UUID leadId = UUID.randomUUID();
+        UUID eventoId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        Evento evento = new Evento("Receita do Sucesso", TipoEvento.PRESENCIAL, null, Instant.now(), "Recife", null, 100);
+        evento.cancelar();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento));
+
+        var ingressos = List.of(new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true));
+        var request = new FecharVendaRequest(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA,
+                new BigDecimal("300.00"), new BigDecimal("300.00"), FormaPagamento.PIX, null, eventoId, ingressos);
+
+        assertThatThrownBy(() -> service().fecharVenda(leadId, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Evento");
+        verifyNoInteractions(vendaIngressoRepository);
+    }
+
+    @Test
+    void fecharVendaComValorPagoNoAtoMaiorQueOTotalLancaErro() {
+        // Achado B3 da revisão de segurança: sem esta checagem dá pra registrar uma venda com
+        // valor pago no ato maior que o valor total, corrompendo silenciosamente o financeiro.
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+
+        var request = new FecharVendaRequest(ProdutoVenda.CONSULTORIA, OrigemVenda.DIRETA,
+                new BigDecimal("1000.00"), new BigDecimal("1500.00"), FormaPagamento.PIX, null, null, null);
+
+        assertThatThrownBy(() -> service().fecharVenda(leadId, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("pago no ato");
+        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, contaPagarReceberRepository);
     }
 }

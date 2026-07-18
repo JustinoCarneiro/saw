@@ -169,36 +169,36 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
         seedMentorado("João Silva", "joao@saborearte.com.br", "Restaurante Sabor & Arte", Plano.PROFISSIONAL,
                 "18.0", 3, 3, new int[][]{{1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 0}},
-                "(11) 91234-5678", "Apaixonado por gestão e por negócios sustentáveis.", "Gestão, Finanças, Liderança",
+                "(11) 91234-5678", "Apaixonado por gestão e por negócios sustentáveis.",
                 LocalDate.of(2026, 10, 15));
         seedMentorado("Ana Costa", "ana@anacosta.com.br", "Cantina Ana Costa", Plano.ESSENCIAL,
                 "12.0", 2, 3, new int[][]{{1, 1}, {1, 1}, {1, 1}, {1, 1}, {2, 1}, {2, 1}, {1, 0}, {1, 0}, {2, 0}},
-                "(11) 98877-6655", "Focada em padronizar a cozinha e reduzir desperdício.", "Processos, Finanças",
+                "(11) 98877-6655", "Focada em padronizar a cozinha e reduzir desperdício.",
                 LocalDate.of(2026, 9, 20));
         seedMentorado("Carlos Menezes", "carlos@pointdocarlos.com.br", "Point do Carlos", Plano.PROFISSIONAL,
                 "5.0", 1, 3, new int[][]{{1, 1}, {1, 1}, {1, 1}, {2, 1}, {1, 0}, {1, 0}, {1, 0}, {2, 0}, {2, 0}, {2, 0}},
-                null, null, null, LocalDate.of(2026, 8, 5));
+                null, null, LocalDate.of(2026, 8, 5));
         seedMentorado("Rafael Gomes", "rafael@bistrogomes.com.br", "Bistrô Gomes", Plano.ESSENCIAL,
                 "-3.0", 0, 3, new int[][]{{1, 1}, {1, 1}, {1, 0}, {1, 0}, {1, 0}, {2, 0}, {2, 0}, {2, 0}},
-                "(21) 99988-7766", "Buscando virar o jogo do fluxo de caixa.", "Finanças",
+                "(21) 99988-7766", "Buscando virar o jogo do fluxo de caixa.",
                 LocalDate.of(2026, 8, 30));
         seedMentorado("Fernanda Lima", "fernanda@cantinadafernanda.com.br", "Cantina da Fernanda", Plano.BASICO,
                 "24.0", 3, 3, new int[][]{{1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1}},
-                "(31) 97766-5544", "Sempre em busca da próxima tendência de cardápio.", "Marketing, Processos",
+                "(31) 97766-5544", "Sempre em busca da próxima tendência de cardápio.",
                 LocalDate.of(2026, 11, 10));
         seedMentorado("Marina Souza", "marina@sabordamarina.com.br", "Sabor da Marina", Plano.BASICO,
                 "-8.0", 0, 3, new int[][]{{1, 1}, {1, 0}, {1, 0}, {1, 0}, {2, 0}, {2, 0}, {2, 0}},
-                null, null, null, LocalDate.of(2026, 7, 25));
+                null, null, LocalDate.of(2026, 7, 25));
     }
 
     private void seedMentorado(String nome, String email, String negocio, Plano plano, String crescimentoPct,
                                 int ferramentasConcluidas, int ferramentasTotal, int[][] encaminhamentosPesoConcluido,
-                                String telefone, String bio, String areasInteresse, LocalDate vencimentoPlano) {
+                                String telefone, String bio, LocalDate vencimentoPlano) {
         Usuario usuario = usuarioRepository.save(
                 new Usuario(email, passwordEncoder.encode("trocar-no-primeiro-login"), Perfil.MENTORADO));
         Mentorado mentorado = new Mentorado(usuario, nome, negocio, plano,
                 new BigDecimal(crescimentoPct), ferramentasConcluidas, ferramentasTotal);
-        mentorado.atualizarPerfil(telefone, bio, areasInteresse, null);
+        mentorado.atualizarPerfil(telefone, bio, null);
         mentorado.definirVencimentoPlano(vencimentoPlano);
         mentorado = mentoradoRepository.save(mentorado);
 

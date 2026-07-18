@@ -1,6 +1,5 @@
 package com.sawhub.hub.perfil;
 
-import com.sawhub.hub.common.AreasInteresseUtil;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentorado.Plano;
@@ -33,8 +32,7 @@ public class PerfilMentoradoService {
     @Transactional
     public PerfilMentoradoResponse atualizar(UUID usuarioId, AtualizarPerfilMentoradoRequest request) {
         Mentorado mentorado = resolverMentorado(usuarioId);
-        String areasCsv = AreasInteresseUtil.join(request.areasInteresse());
-        mentorado.atualizarPerfil(request.telefone(), request.bio(), areasCsv, request.fotoUrl());
+        mentorado.atualizarPerfil(request.telefone(), request.bio(), request.fotoUrl());
         return PerfilMentoradoResponse.from(mentorado);
     }
 

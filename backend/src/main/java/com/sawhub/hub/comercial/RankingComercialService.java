@@ -30,8 +30,11 @@ public class RankingComercialService {
 
         return metaComercialRepository.buscarComVendedorPorPeriodo(ano, mes).stream()
                 .map(meta -> {
-                    long realizado = leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetween(
-                            meta.getVendedor().getId(), StatusLead.FECHADO, inicio, fim);
+                    // M25 (Suposição 7) — realizado exclui venda de ingresso de evento: comissão
+                    // de fechamento de mentoria/consultoria é uma coisa diferente de vender
+                    // ingresso, não faz sentido pesar igual na meta do vendedor.
+                    long realizado = leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(
+                            meta.getVendedor().getId(), StatusLead.FECHADO, inicio, fim, ProdutoVenda.INGRESSO_EVENTO);
                     double pctAtingido = meta.getMetaFechamentos() == 0 ? 0.0
                             : BigDecimal.valueOf(realizado)
                                     .divide(BigDecimal.valueOf(meta.getMetaFechamentos()), 4, RoundingMode.HALF_UP)

@@ -50,10 +50,18 @@ test.describe('Comercial (E13)', () => {
     await page.getByRole('button', { name: 'Confirmar' }).click();
     await expect(linha.getByText('Proposta', { exact: true })).toBeVisible();
 
+    // M25 — "Fechar venda" agora abre o formulário único de venda (POST .../fechar-venda),
+    // substituindo o antigo "Plano fechado" (planoFechado legado continua existindo no backend,
+    // só não é mais o caminho da UI).
     await linha.getByRole('button', { name: 'Fechar venda' }).click();
-    await page.getByLabel('Plano fechado').selectOption({ label: 'Básico' });
-    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await page.getByLabel('Produto vendido').selectOption({ label: 'Consultoria' });
+    await page.getByLabel('Origem da venda').selectOption({ label: 'Direta' });
+    await page.getByLabel('Valor total da venda').fill('9000');
+    await page.getByLabel('Valor pago no ato').fill('9000');
+    await page.getByLabel('Forma de pagamento').selectOption({ label: 'Pix' });
+    await page.getByRole('button', { name: 'Confirmar venda' }).click();
     await expect(linha.getByText('Fechado', { exact: true })).toBeVisible();
+    await expect(linha.getByText('Consultoria · R$ 9.000,00')).toBeVisible();
 
     await page.screenshot({ path: 'e2e/screenshots/comercial-funil.png' });
   });

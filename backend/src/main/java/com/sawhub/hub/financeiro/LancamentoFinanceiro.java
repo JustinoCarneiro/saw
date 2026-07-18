@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import org.hibernate.annotations.ColumnTransformer;
 
 /** H14.1 — receita/despesa lançada, alimenta fluxo de caixa (H14.1), DRE (H14.2) e dashboard
  * de faturamento (H14.3). Máquina de estado: {@link StatusLancamento#PREVISTO} -&gt;
@@ -28,7 +29,13 @@ public class LancamentoFinanceiro extends BaseEntity {
     @JoinColumn(name = "categoria_id", nullable = false)
     private CategoriaFinanceira categoria;
 
-    @Column(nullable = false)
+    // pgcrypto (lacuna encontrada confirmando a V28): ContaPagarReceberService.liquidar() copia
+    // ContaPagarReceber.descricao (já criptografada) pra cá — sem isto, o nome de lead/mentorado
+    // reaparece em claro nesta terceira coluna. Ver V29.
+    @Column(nullable = false, columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(descricao, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
     private String descricao;
 
     @Column(nullable = false)

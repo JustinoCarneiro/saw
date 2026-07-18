@@ -2680,6 +2680,615 @@ evitavam isso navegando via clique em link (que só existe depois do redirect re
 adicionando `await expect(page).toHaveURL(/\/admin\//)` logo após todo `loginAs()`, antes de
 qualquer `page.goto()` subsequente — ver lição na memória do projeto.
 
+## Blueprint (M23 · Mentorado — dados de contrato, Diagnóstico Inicial, TipoContrato, criar direto)
+
+**Origem:** change request pós-MVP — reunião com o Victor Oliveira (17/07/2026) + investigação
+do Notion/planilhas reais da operação (`CRM Saw`, `Fluxograma.pdf`), documentado em
+`docs/reuniao-2026-07-17-atualizacoes.md`. Todo o MVP original (M04-M22) já está `✅ Concluído`;
+este módulo é a primeira leva de mudança sobre um sistema em produção, não construção do zero.
+
+**Achado que redesenha o escopo pedido — `Plano` não é um rename 1:1 pra `TipoContrato`, é uma
+cisão.** Levantamento no código (antes de desenhar) mostrou que `Plano` (`GRATUITO < BASICO <
+ESSENCIAL < PROFISSIONAL`, comparação por `ordinal()` via `atendePlanoMinimo()`) faz **dois
+papéis hoje**, em 27 arquivos:
+1. **Hierarquia de acesso a conteúdo** — `Conteudo.planoMinimo`, `Aviso.planoMinimo`,
+   `Mentoria` (materiais recomendados) todos gateiam visibilidade comparando o plano do
+   mentorado contra um mínimo, por ordinal.
+2. **"O que foi vendido" comercialmente** — `Lead.planoInteresse`/`planoFechado`,
+   `Mentorado.plano`, `LancamentoFinanceiro.planoReferencia`.
+
+Os 3 `TipoContrato` confirmados pelo cliente (Mentoria Contínua/Individual/Consultoria) **não
+têm hierarquia** — são formatos diferentes, não níveis um do outro. Migrar o papel 1 pra
+`TipoContrato` quebraria `atendePlanoMinimo()` sem nenhuma regra de substituição confirmada
+("com o fim dos planos, o que cada mentorado deveria ver em Materiais/Avisos?" nunca foi
+perguntado nem respondido na reunião). **Decisão pra esta leva: cindir, não substituir.**
+`TipoContrato` nasce como conceito **novo e aditivo**, só pro papel 2 (Mentorado/Lead — "o que
+foi vendido"). `Plano` continua existindo, intacto, gateando conteúdo exatamente como hoje —
+fica deprecado em comentário, não em código, até o cliente confirmar a regra de substituição.
+Isso reduz o raio de mudança de 27 arquivos pra ~6 (`Mentorado`, `MentoradoAdminService`,
+`MentoradoAdminController`, `Lead`, DTOs novos, seeder) e elimina o risco de quebrar
+Conteúdo/Avisos/Mentoria sem necessidade.
+
+**Por que Médio-Grande:** duas tabelas novas (colunas em `mentorado` + `mentorado_diagnostico_
+inicial`), um enum novo com regra de vencimento por tipo, um endpoint de criação direta que
+reusa mas não duplica a lógica de senha temporária de `criarAPartirDeLead()`, upload de PDF
+(mesmo padrão de `AudioStorageService`), e a maior parte dos campos novos carrega dado sensível
+do negócio do mentorado (CNPJ, sócios, valor de contrato, faturamento) — entra na mesma
+disciplina `pgcrypto` do `V19`.
+
+**Suposições assumidas pra este Blueprint seguir adiante** (perguntas reais, sem resposta do
+cliente ainda — ver `docs/reuniao-2026-07-17-atualizacoes.md` § Perguntas pendentes):
+1. **Cisão Plano/TipoContrato** (acima) — assumida como a opção de menor risco; se o cliente
+   quiser de fato aposentar `Plano` por completo, isso vira um Blueprint próprio depois de
+   confirmar a nova regra de gating de conteúdo.
+2. **`sócios`** vira um campo de texto livre (BYTEA/pgcrypto, "Nome 1; Nome 2"), não uma tabela
+   filha por sócio — o Notion só usa isso como referência de contato, nenhum fluxo do produto
+   precisa consultar/filtrar sócio individualmente ainda. Promover pra tabela própria é trivial
+   depois, se um caso de uso real pedir (ex.: sócio com login próprio).
+3. **`valorContrato` e os campos do Diagnóstico Inicial (`faturamentoAnual` etc.) entram
+   criptografados (`pgcrypto`)**, seguindo o critério do `V19` (nunca aparecem em
+   `WHERE`/`ORDER BY`/`SUM` nesta leva) — `crescimentoFaturamentoPct` (E17, ranking) é um campo
+   *separado* e já existente, não descriptografa o diagnóstico pra calcular ranking.
+4. **`tipoContrato` fica `NULLABLE`** em `mentorado` — dado legado/seed (10-15 mentorados de
+   demo) não tem essa informação real e não deve ganhar um valor fabricado; só `criarDireto()` e
+   o import em massa (M24) exigem o campo.
+5. **`areasInteresse`** é removido (coluna + campo + DTOs) — confirmado pelo cliente como não
+   aplicável ("é geral, não precisa dessa área").
+6. **Mentor sem login** (achado na pesquisa: `Colaborador.usuario` é `NOT NULL`, não existe hoje
+   forma de cadastrar mentor/professor sem conta) — **fora do escopo desta leva**, registrado
+   como item futuro do E15, não decidido aqui.
+7. **`Lead.dataFechamento`** já existe (timestamp genérico de transição terminal,
+   `FECHADO`/`PERDIDO`) — o novo campo do Mentorado é `dataFechamentoContrato` (tipo `DATE`, só
+   a data do contrato), nome deliberadamente diferente pra não colidir.
+
+**`revisor-seguranca` obrigatório nesta leva**, mesmo não estando listado como "risco alto" no
+`CLAUDE.md` — mesmo raciocínio já usado no M06: três vetores reais (colunas `pgcrypto` novas com
+dado sensível de negócio do cliente, endpoint que gera credencial de login em massa, upload de
+PDF de contrato).
+
+## Modelagem de banco (M23)
+
+```sql
+-- V23__mentorado_dados_contrato.sql
+ALTER TABLE mentorado DROP COLUMN areas_interesse;  -- confirmado como não aplicável pelo cliente
+
+ALTER TABLE mentorado ADD COLUMN nome_fantasia VARCHAR(255);
+ALTER TABLE mentorado ADD COLUMN cnpj BYTEA;                       -- pgcrypto
+ALTER TABLE mentorado ADD COLUMN socios BYTEA;                     -- pgcrypto, texto livre "Nome 1; Nome 2"
+ALTER TABLE mentorado ADD COLUMN valor_contrato BYTEA;             -- pgcrypto
+ALTER TABLE mentorado ADD COLUMN data_fechamento_contrato DATE;
+ALTER TABLE mentorado ADD COLUMN documento_contrato_url VARCHAR(500);
+ALTER TABLE mentorado ADD COLUMN tipo_contrato VARCHAR(30);        -- nullable, dado legado não tem
+ALTER TABLE mentorado ADD CONSTRAINT chk_mentorado_tipo_contrato
+    CHECK (tipo_contrato IS NULL OR tipo_contrato IN ('MENTORIA_CONTINUA','MENTORIA_INDIVIDUAL','CONSULTORIA'));
+
+-- 1:1 — nasce vazia/nula até alguém preencher o Diagnóstico Inicial (Léa, antes da 1ª reunião com o Mateus)
+CREATE TABLE mentorado_diagnostico_inicial (
+    mentorado_id              UUID PRIMARY KEY REFERENCES mentorado(id) ON DELETE CASCADE,
+    faturamento_anual         BYTEA,                     -- pgcrypto
+    quantidade_colaboradores  INT,
+    empresa_regularizada      BOOLEAN,
+    quantidade_lojas          INT,
+    cmv_definido              VARCHAR(10),                -- SIM|NAO, null = não perguntado ainda
+    cmv_detalhe               VARCHAR(255),
+    tempo_medio_atendimento   VARCHAR(100),
+    cultura_construida        VARCHAR(20) NOT NULL DEFAULT 'NAO',
+    processos_desenhados      VARCHAR(20) NOT NULL DEFAULT 'NAO',
+    preenchido_em             TIMESTAMP NOT NULL DEFAULT now(),
+    versao                    BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_diag_cultura CHECK (cultura_construida IN ('SIM','NAO','EM_CONSTRUCAO')),
+    CONSTRAINT chk_diag_processos CHECK (processos_desenhados IN ('SIM','NAO','EM_CONSTRUCAO')),
+    CONSTRAINT chk_diag_cmv CHECK (cmv_definido IS NULL OR cmv_definido IN ('SIM','NAO'))
+);
+
+-- Lead precisa registrar o tipo de contrato fechado (paralelo a planoFechado, não substitui)
+ALTER TABLE lead ADD COLUMN tipo_contrato_fechado VARCHAR(30);
+ALTER TABLE lead ADD CONSTRAINT chk_lead_tipo_contrato
+    CHECK (tipo_contrato_fechado IS NULL OR tipo_contrato_fechado IN ('MENTORIA_CONTINUA','MENTORIA_INDIVIDUAL','CONSULTORIA'));
+```
+
+`TipoContrato` (novo enum, `com.sawhub.hub.mentorado`):
+```java
+public enum TipoContrato {
+    MENTORIA_CONTINUA, MENTORIA_INDIVIDUAL, CONSULTORIA;
+
+    // 12 meses fixos da data de fechamento pra Contínua/Individual; Consultoria é "esporádica"
+    // (confirmado com o cliente) — sem prazo fixo, retorna null de propósito.
+    public LocalDate calcularVencimento(LocalDate dataFechamentoContrato) {
+        return switch (this) {
+            case MENTORIA_CONTINUA, MENTORIA_INDIVIDUAL -> dataFechamentoContrato.plusMonths(12);
+            case CONSULTORIA -> null;
+        };
+    }
+}
+```
+
+## Contratos de API (M23)
+
+### Mentorados (`@RequiresModulo(Modulo.MENTORADOS)`) — estende H11.1
+```jsonc
+PATCH /api/v1/admin/mentorados/{id}/dados-contrato
+{
+  "nomeFantasia": "Menu Caseirinho", "cnpj": "42.521.899/0001-38",
+  "socios": "Girlandia Aragão de Sousa; Jaene Oliveira de Araujo",
+  "tipoContrato": "MENTORIA_CONTINUA", "valorContrato": 26000.00,
+  "dataFechamentoContrato": "2025-04-18"
+}
+// vencimentoContrato é derivado (calcularVencimento), não entra no request
+
+PATCH /api/v1/admin/mentorados/{id}/diagnostico-inicial
+{
+  "faturamentoAnual": "600000", "quantidadeColaboradores": 6,
+  "empresaRegularizada": true, "quantidadeLojas": 1,
+  "cmvDefinido": "SIM", "cmvDetalhe": "...", "tempoMedioAtendimento": "5 a 10 minutos",
+  "culturaConstruida": "EM_CONSTRUCAO", "processosDesenhados": "EM_CONSTRUCAO"
+}
+
+POST /api/v1/admin/mentorados/{id}/documento-contrato   // multipart/form-data, campo "arquivo", só PDF
+// Response 200: { "documentoContratoUrl": "uuid-epoch.pdf" }
+
+POST /api/v1/admin/mentorados/direto      // "criar mentorado direto", fecha o pedido do cliente
+{
+  "email": "...", "nome": "...", "negocio": "...", "telefone": "...",
+  "tipoContrato": "MENTORIA_CONTINUA", "valorContrato": 26000.00,
+  "dataFechamentoContrato": "2026-07-17"
+}
+// Internamente: Lead.criarJaFechado(...) (status=FECHADO direto, sem passar pelas transições)
+// + criação de Usuario/Mentorado (mesma geração de senha temporária de criarAPartirDeLead) +
+// lead.vincularMentorado(mentorado). Resposta 201 igual à de /a-partir-do-lead/{leadId}:
+{ "id": "uuid", "nome": "...", "email": "...", "senhaTemporaria": "..." }
+```
+
+## Rastreabilidade história ↔ módulo (M23)
+| História | Cobertura |
+|---|---|
+| H11.1 (gerenciar mentorados) | Estendida com dados de contrato + diagnóstico + criação direta |
+| — | Não há história em `spec.md` pra "criar mentorado direto"/"Diagnóstico Inicial" — pedido direto do cliente em reunião pós-MVP, mesmo padrão de rastreabilidade do M21/M22 (fora do levantamento original) |
+
+**Status: 🟡 Backend concluído + `revisor-seguranca` rodado** (17/07/2026) — TDD genuíno (RED
+confirmado por erro de compilação/diagnóstico antes de cada implementação, depois GREEN):
+`TipoContratoTest`, `LeadTest` (`criarJaFechado`) e as novas suítes em
+`MentoradoAdminServiceTest` (`criarDireto`, `atualizarDadosContrato`,
+`atualizarDiagnosticoInicial`). Suíte completa do backend rodada ao vivo duas vezes (antes e
+depois dos achados do `revisor-seguranca`): **413/413 testes** nas duas rodadas, migration `V23`
+validada contra Postgres real (Flyway `Current version of schema "public": 23`), inserts/selects
+com `pgcrypto` nas colunas novas conferidos no log do Hibernate. Endpoints novos:
+`POST .../mentorados/direto`, `PATCH .../{id}/dados-contrato`, `PATCH .../{id}/diagnostico-inicial`.
+
+**Achados do `revisor-seguranca`, todos corrigidos:**
+- **Médio:** `POST .../direto` e `PATCH .../{id}/dados-contrato` nasceram sob
+  `@RequiresModulo(Modulo.MENTORADOS)` (herdado do controller existente) — mas `Modulo.MENTORADOS`
+  também é concedido à área **Gestão de Performance** (`AreaModuloMatrix`), que pelo `CLAUDE.md`
+  só deveria ver Mentorados/Mentorias/Conteúdos/Painel Consolidado, não CNPJ/sócios/valor de
+  contrato nem a capacidade de criar credencial de login. Corrigido extraindo os dois endpoints
+  pra um controller novo, `MentoradoContratoController`, com `@RequiresModulo(Modulo.COMERCIAL)`
+  próprio — evita a ambiguidade de misturar `@RequiresModulo` de classe e de método no mesmo
+  `ModuloAccessAspect` (pointcut `@annotation() || @within()`, precedência não documentada).
+  `PATCH .../{id}/diagnostico-inicial` ficou em `Modulo.MENTORADOS` de propósito — é
+  literalmente o trabalho da Leia (papel "Sucesso do Gestor"/Gestão de Performance), diferente do
+  dado comercial/contratual.
+- **Baixo:** `valorContrato` sem `@PositiveOrZero` em `CriarMentoradoDiretoRequest` e
+  `AtualizarDadosContratoRequest` — corrigido, os dois agora rejeitam valor negativo.
+- **Baixo:** `cnpj` só validava tamanho (`@Size(max=18)`), aceitava qualquer string — corrigido
+  com `@Pattern` (formato `00.000.000/0000-00` ou 14 dígitos).
+- **Confirmado sem achado:** colunas `pgcrypto` novas seguem exatamente o padrão do `V19`; sem
+  vazamento de senha temporária em log/exceção; sem injeção SQL/XSS. `findByEmail` case-sensitive
+  é uma limitação pré-existente (já em `criarAPartirDeLead`, M06), não introduzida nesta leva —
+  registrado como observação informativa, não bloqueante.
+
+**Frontend concluído** (17/07/2026) — `MentoradosListaPage.tsx`: botão "Criar mentorado direto"
+(só visível com `Modulo.COMERCIAL`, mesmo achado do `revisor-seguranca`), seção "Dados de
+contrato" (idem, própria de `Modulo.COMERCIAL`) e seção "Diagnóstico Inicial" (sempre visível a
+quem já vê a tela — `Modulo.MENTORADOS`) dentro do formulário de edição, cada uma com o próprio
+botão salvar e feedback independente. `GET .../diagnostico-inicial` novo (não estava no Blueprint
+original) pra a tela carregar o valor já preenchido antes de editar — sem isso o form sempre
+nasceria em branco, sobrescrevendo silenciosamente o que a Leia já tivesse preenchido antes.
+
+**Verificado ao vivo** (sem browser automation neste ambiente — verificado via `curl` replicando
+exatamente o que o `apiClient`/axios do frontend faz, incluindo o header CSRF
+`X-XSRF-TOKEN`/cookie `XSRF-TOKEN` que o Spring Security exige em todo POST/PATCH): login como
+Fundador → `POST .../direto` cria mentorado + retorna senha → `PATCH .../dados-contrato` grava e
+`vencimentoContrato` sai calculado certo (`2027-07-17` a partir de `2026-07-17` +
+`MENTORIA_CONTINUA`) → `GET`/`PATCH .../diagnostico-inicial` upsert funcionando. RBAC confirmado
+na marra: login como Lucas Alves (Gestão de Performance) recebe 403 em `/direto` e
+`/dados-contrato` ("Você não tem acesso a este módulo"), mas 200 em `/diagnostico-inicial` —
+exatamente o corte pretendido pelo achado do `revisor-seguranca`.
+
+**E2E Playwright concluído** — `mentorados-contrato-m23.spec.ts` (2 testes novos): Fundador cria
+mentorado direto + edita dados de contrato (confirma persistência reabrindo a tela, não só o
+estado local do form); Gestão de Performance preenche o Diagnóstico Inicial e confirma que não vê
+"Dados de contrato" nem o botão "Criar mentorado direto". **Achado real durante a escrita do
+E2E** (não só ajuste de seletor): `DadosContratoSection` reusava o mesmo `onSalvo` que fecha o
+modal inteiro — salvar os dados de contrato fechava a tela antes do "Salvo." aparecer, e o
+usuário nunca via a confirmação. Corrigido separando `onSalvo` (fecha, usado só pelo formulário
+de perfil) de `onAtualizarLista` (só recarrega a lista de fundo, usado pelas seções de
+contrato/diagnóstico, que ficam abertas depois de salvar). Também precisou de `{ exact: true }`
+em 5 seletores de specs **já existentes** (`mentorados.spec.ts` ×3, `mentorados-comercial-
+import-export.spec.ts`, `perfil.spec.ts`) — os botões novos ("+ Criar mentorado direto", "Salvar
+dados de contrato", "Salvar Diagnóstico Inicial") batiam por substring com "Criar mentorado" e
+"Salvar" já usados nesses testes, quebrando o modo estrito do Playwright. Suíte completa desses
+5 arquivos rodada depois da correção: 18/18 (mentorados + import-export) + 1/6 (perfil — os
+outros 5 falham pela pausa da área do mentorado, `AREA_MENTORADO_PAUSADA`, já registrada como
+consequência esperada, não regressão desta leva) + 2/2 novos.
+
+**Fechamento do módulo** (17/07/2026, mesma sessão) — as duas pendências acima foram concluídas:
+
+1. **Upload/download de PDF do "documento do contrato"** — `ContratoDocumentoStorageService`
+   (mesmo padrão de defesa em profundidade do `AudioStorageService`/M06: allow-list `.pdf` +
+   `content-type application/pdf`) + `POST`/`GET .../{id}/documento-contrato` em
+   `MentoradoContratoController` (`Modulo.COMERCIAL`, mesmo gate do resto do controller). Frontend:
+   `DocumentoContratoUpload` dentro de `DadosContratoSection` (upload + botão "Baixar contrato
+   atual", reaproveitando o padrão de `CsvImportExport` pra download via blob).
+   **`revisor-seguranca` dedicado a essa parte**: achado médio corrigido — não havia teto de
+   tamanho próprio pra PDF (só o limite global de 150MB, dimensionado pro áudio do M06); corrigido
+   com `TAMANHO_MAXIMO_BYTES = 15MB` dentro do próprio `ContratoDocumentoStorageService`. Achado
+   baixo (sem rate limit dedicado, ao contrário do `AtaAudioRateLimitFilter` do M06) registrado
+   como débito técnico não-bloqueante — motivo: aqui não há custo de API externa por chamada
+   (era esse o driver do rate limit no M06), e o endpoint já exige `Modulo.COMERCIAL`, não é
+   superfície pública.
+2. **Remoção de `areasInteresse`** — coluna dropada (`V24__remove_areas_interesse.sql`), campo e
+   `AreasInteresseUtil` (classe inteira, ficou sem nenhum consumidor) removidos do backend
+   (`Mentorado`, `MentoradoAdminService`, `PerfilMentoradoService`, DTOs de request/response nos
+   dois lados admin e autoedição) e do frontend (`MentoradosListaPage`, `PerfilPage`, `types.ts`),
+   incluindo os specs E2E que preenchiam esse campo (`mentorados.spec.ts`, `perfil.spec.ts`).
+
+**Verificação final**: suíte completa do backend rodada 3× ao longo desta sessão (depois do PDF
+upload, depois da remoção do `areasInteresse`, depois da correção do teto de tamanho) —
+**423/423 testes** na última rodada. E2E: `mentorados.spec.ts` + `mentorados-comercial-import-
+export.spec.ts` + `mentorados-contrato-m23.spec.ts` (agora com upload/download de PDF incluído no
+1º teste) + `perfil.spec.ts` — **20/25 passando**, os 5 que falham são todos do self-service
+pausado (`AREA_MENTORADO_PAUSADA`), não regressão desta leva. Testado também via `curl` contra
+`dev-up.sh`: upload aceita PDF válido, rejeita `content-type` errado, download devolve o mesmo
+conteúdo com `Content-Disposition: attachment`.
+
+**Pendência registrada, não implementada** (achado ao longo do fechamento, não bloqueia): "Criar
+mentorado direto" e "Dados de contrato" hoje só são alcançáveis pelo Fundador/ADMIN na prática —
+`Area.COMERCIAL` sozinha não tem `Modulo.MENTORADOS`, então não abre `/admin/mentorados/lista`
+pra sequer ver o botão. Não é bug (a segurança está correta: ninguém sem permissão vê dado
+sensível), mas pode ser mais restritivo do que o Victor imaginava ao pedir a feature — vale
+confirmar se o Comercial precisa de um caminho próprio.
+
+**M23 status final: ✅ Concluído.**
+
+---
+
+## Blueprint (M24 · Import bulk-CREATE de mentorados via CSV)
+
+**Por que é um módulo separado do M22, não uma extensão dele:** `MentoradoCsvService` (M22) é
+bulk-**UPDATE**-only por decisão de produto explícita ("import de Mentorados faz só bulk-UPDATE
+... nunca cria conta nova, nunca gera senha") — usa o padrão de **duas passadas** porque toda
+linha resolve pra uma entidade *já gerenciada* pelo Hibernate. Bulk-CREATE é o oposto: cada linha
+vira uma entidade *nova*, nunca carregada do banco antes de salvar — mesmo padrão de
+**passe único** já usado em `LeadCsvService`/`LancamentoCsvService` (M21). Forçar os dois
+comportamentos dentro do mesmo `MentoradoCsvService` misturaria duas garantias transacionais
+diferentes na mesma classe — mais arriscado que ter dois serviços pequenos e claros.
+
+**Motivação de negócio:** as ~40 empresas reais da operação (hoje só no Notion, ver `docs/
+reuniao-2026-07-17-atualizacoes.md` § Plano pra migrar o Diagnóstico Inicial) não existem ainda
+no SAW HUB — são criação nova em massa, não atualização. O parser Notion→CSV (a ser escrito
+quando o export completo chegar) mira neste contrato de CSV como formato de saída.
+
+**Achado de design que precisa de resposta nova:** o contrato de resposta hoje
+(`ImportResultResponse`) não tem onde guardar N senhas temporárias geradas — decisão: um record
+de resposta próprio (`ImportCreateMentoradosResponse`), não reaproveitar `ImportResultResponse`
+como está (evita adicionar um campo opcional só usado por um consumidor, mesmo critério de
+"não generalizar antes da segunda necessidade real" já seguido no resto do código).
+
+**Suposições:**
+1. Colunas obrigatórias por linha: `email`, `nome`, `tipoContrato`. Todo o resto é opcional —
+   dado real do Notion está incompleto por natureza (nem todo mentorado tem CNPJ/diagnóstico
+   preenchido), rejeitar a linha inteira por um campo secundário faltando derrotaria o propósito
+   do import.
+2. Mesma trava de duplicidade de `criarAPartirDeLead`/`criarDireto`: e-mail já existente em
+   `Usuario` rejeita a linha (nunca faz upsert) — consistente com a decisão "sem deduplicação"
+   já documentada no M21/M22.
+3. Cada linha cria também um `Lead` via `Lead.criarJaFechado(...)` (mesmo caminho do `criarDireto`
+   do M23) — mantém o funil comercial como fonte única de "todo mentorado veio de algum lead
+   fechado", mesmo quando a origem real é uma migração de dados, não uma venda nova.
+4. Todo-ou-nada, igual aos demais imports: erro em qualquer linha ⇒ nenhuma persistida, nenhuma
+   senha gerada (gerar senha e depois descartar a conta seria pior — credencial fantasma).
+
+## Contratos de API (M24)
+
+```jsonc
+POST /api/v1/admin/mentorados/importar-em-massa
+// multipart/form-data, campo "arquivo"
+// Cabeçalho CSV: email;nome;negocio;nomeFantasia;cnpj;socios;telefone;tipoContrato;valorContrato;
+//   dataFechamentoContrato;faturamentoAnual;quantidadeColaboradores;empresaRegularizada;
+//   quantidadeLojas;cmvDefinido;cmvDetalhe;tempoMedioAtendimento;culturaConstruida;processosDesenhados
+// Response 200 (tudo válido e persistido):
+{
+  "totalLinhas": 40, "importados": 40,
+  "criados": [{ "email": "...", "nome": "...", "senhaTemporaria": "..." }, ...],
+  "erros": []
+}
+// ou 422 (nada persistido, nenhuma senha gerada):
+{
+  "totalLinhas": 40, "importados": 0, "criados": [],
+  "erros": [{ "linha": 7, "motivo": "E-mail \"x@y.com\" já cadastrado." }]
+}
+```
+
+## Rastreabilidade história ↔ módulo (M24)
+| História | Cobertura |
+|---|---|
+| H11.1 (gerenciar mentorados) | Caminho de entrada em massa, mesma rastreabilidade do M22 |
+| — | Pedido direto do cliente (migração de dados real), fora do levantamento original de `spec.md` — mesmo padrão do M21/M22 |
+
+---
+
+## Blueprint (M25 · Comercial — formulário único de venda, parcelamento, venda de ingresso, split de comissão)
+
+**Origem:** change request pós-MVP (reunião 17/07/2026), `docs/reuniao-2026-07-17-atualizacoes.md`
+§ E13. Confirmado pelo cliente como o item de maior prioridade depois do M23 ("comercial é o que
+mais desbloqueia trabalho manual real hoje" — a vendedora preenche 2-3 planilhas separadas por
+venda: venda por fora, venda de ingresso, credenciamento).
+
+**Por que Grande:** não é extensão de um campo, é modelagem nova em cima de um funil que hoje
+(`Lead`/`LeadService`, M05) não tem noção de produto, parcelamento, evento nem comissão
+diferenciada. Cinco pedaços genuinamente novos, cada um com decisão de schema própria:
+1. Catálogo de produto (o que foi vendido).
+2. Parcelamento estruturado (hoje não existe — nem como coluna solta, nem como tabela — em
+   nenhum lugar do Financeiro, confirmado na pesquisa: `LancamentoFinanceiro`/
+   `ContaPagarReceber` são sempre linhas soltas, sem conceito de "parcela N de M").
+3. Venda de ingresso de evento (schema novo — `Evento`/`InscricaoEvento` do E7 são do domínio
+   errado: gratuito, ligado a `Mentorado`, sem categoria de ingresso/credenciamento/preço).
+4. Split de comissão (não existe hoje — `RankingComercialService.realizado` conta qualquer
+   `Lead` FECHADO igual, sem exceção).
+5. Etapa "Diagnóstico" no funil (`StatusLead` hoje pula de `EM_CONTATO` direto pra `PROPOSTA`,
+   sem bater com o fluxo real mostrado em `fluxograma_aline_comercial.pdf`).
+
+**Achado que redesenha o escopo pedido — não dá pra sobrecarregar `Lead.fechar(Plano)`.** Hoje
+`fechar()` só recebe `planoFechado` (enum legado de conteúdo) e não tem onde pendurar produto/
+valor/parcelamento. Mesma decisão de cisão aditiva do M23 (`TipoContrato` não substituiu
+`Plano`): os campos novos entram em `Lead` como aditivos, um método novo (`fecharVenda(...)`)
+convive com o `fechar(Plano)` existente sem quebrá-lo — nenhum teste/fluxo atual precisa mudar de
+comportamento.
+
+**Suposições assumidas pra este Blueprint seguir adiante** (perguntas reais, sem resposta do
+cliente ainda — ver `docs/reuniao-2026-07-17-atualizacoes.md` § Perguntas pendentes):
+1. **Catálogo de `ProdutoVenda`**: `MENTORIA_CONTINUA`, `MENTORIA_INDIVIDUAL`, `CONSULTORIA`,
+   `FORMULA_SAW`, `FORMACAO_PROFISSIONAL`, `INGRESSO_EVENTO`, `PRODUTO_DIGITAL` (catch-all pra
+   planilha/aula avulsa citados na reunião: "pode ser uma mentoria, pode ser uma planilha, pode
+   ser uma aula").
+   **Totalmente resolvido em 18/07/2026** — o Marcos confirmou as duas Perguntas pendentes do
+   catálogo: "Fórmula SAW" (`V27__produto_venda_formula_saw.sql`) e "Formação Profissional"
+   (`V30__produto_venda_formacao_profissional.sql`) são categorias próprias, mesmo nível de
+   MENTORIA_CONTINUA/MENTORIA_INDIVIDUAL/CONSULTORIA — nenhuma das duas é sinônimo de produto já
+   mapeado nem nome de kit/metodologia. Nenhuma das duas entrou como `TipoContrato` (Mentorado)
+   — `MentoradoAdminService.mapearTipoContrato()` trata as duas igual a
+   `INGRESSO_EVENTO`/`PRODUTO_DIGITAL` (sem propagação de contrato), porque não há confirmação de
+   que essas vendas geram contrato de mentorado com vencimento. Se confirmado que também deveriam
+   virar `TipoContrato`, é um novo valor de enum + decisão de vencimento — nova Suposição a
+   resolver se isso for perguntado ao cliente depois.
+   **Campo "Vencimento" do Notion (3ª Pergunta pendente, relevante pro M24) — resolvido em
+   18/07/2026:** o Marcos confirmou que é simples — um par de campos diretos, "data de início" e
+   "data de vencimento", sem regra derivada (não é "dias restantes" nem "dia do mês"). Import do
+   M24 deve ler os dois campos literalmente do export do Notion, não computar vencimento a partir
+   de `TipoContrato.calcularVencimento()` (que já assume regra de 12 meses fixos — pode divergir
+   do dado real histórico, ex. contrato renegociado/estendido). Fica registrado aqui pra quando o
+   M24 for implementado (ainda bloqueado, esperando o export do Notion).
+2. **`OrigemVenda`**: `DIRETA` (o vendedor já é `Lead.vendedor`), `HOTMART`, `CORTESIA`,
+   `PATROCINIO`, `PALESTRANTE` — direto da planilha real "Origem da Venda".
+3. **`CategoriaIngresso`** (só quando produto=`INGRESSO_EVENTO`): `CORTESIA`, `ESSENCIAL`, `VIP`,
+   `ESPECIAL` — valores reais encontrados na planilha "Vendas Eventos", substituem o
+   "Individual/Duplo/VIP" que a reunião tinha citado de memória.
+4. **Venda de ingresso é modelada como entidade nova** (`VendaIngresso`), uma linha por ingresso
+   (não por venda) — pra bater com o "credenciamento nominal" real (uma venda de 2 ingressos gera
+   2 registros, cada um com nome/setor/almoço próprios, mesmo padrão da planilha "Vendas
+   Eventos"/"CREDENCIAMENTO"). Ligada a `Lead` (quem comprou) + `Evento` (existente, E7) — não
+   reaproveita `InscricaoEvento` (é do domínio errado: gratuito, mentorado, sem preço).
+5. **Parcelamento é modelado como entidade nova** (`ParcelaVenda`), 1:N a partir de `Lead`. Cada
+   parcela, quando registrada, cria automaticamente um `ContaPagarReceber` (`A_RECEBER`) — reusa
+   a entidade existente do Financeiro em vez de duplicar o conceito de "conta a receber".
+6. **Propagação Lead→Mentorado**: quando `MentoradoAdminService.criarAPartirDeLead` roda,
+   `produtoVenda`/`valorTotalVenda`/`dataFechamento` do Lead devem preencher automaticamente
+   `Mentorado.tipoContrato`/`valorContrato`/`dataFechamentoContrato` (M23) — evita redigitar o
+   mesmo dado duas vezes. Só se aplica quando `produtoVenda` é um dos 3 tipos de mentoria/
+   consultoria (não faz sentido pra `INGRESSO_EVENTO`/`PRODUTO_DIGITAL`, que nunca viram
+   mentorado).
+7. **Split de comissão**: `realizado` do `RankingComercialService` passa a excluir
+   `ProdutoVenda.INGRESSO_EVENTO` (contabilizado à parte, na data em que o `Evento` vira
+   `REALIZADO`, não na data da venda) — `ComercialDashboardService.dashboard()` ganha uma seção
+   separada "venda de ingressos por evento" ao lado do "vendido no mês" já existente.
+8. **`StatusLead.DIAGNOSTICO`** entra entre `EM_CONTATO` e `PROPOSTA` — aditivo (novo valor de
+   enum, dado antigo nunca teve esse status, nenhuma migração de dado necessária). Fecha a
+   diferença entre o funil real (`fluxograma_aline_comercial.pdf`) e o modelado.
+9. **Fallback `Area.ADMIN` em `ComercialController.vendedores()`** — a reunião confirmou que
+   vendedor deveria ser só `Area.COMERCIAL`. Não removido nesta leva: precisa antes confirmar que
+   sempre existe ao menos 1 `Colaborador` com `Area.COMERCIAL` cadastrado (senão a tela trava,
+   risco que o comentário original do código já previa) — vira um achado registrado, não uma
+   mudança silenciosa.
+10. **Plano de contas hierárquico** (categoria + subcategoria — Estrutura/Pessoal/Operação/
+    Financeiro da planilha real) fica **fora desta leva**, é trabalho do E14 (Financeiro), não
+    E13. `CategoriaFinanceira` continua plana; as `ParcelaVenda`→`ContaPagarReceber` geradas
+    aqui nascem sem `categoria` obrigatória (campo já é opcional na entidade existente) — evita
+    acoplar um módulo Grande a uma decisão de schema que pertence a outro épico.
+
+**`revisor-seguranca` obrigatório nesta leva** — mesmo raciocínio já usado no M06/M23: dado
+financeiro novo (`valorTotalVenda`, `valorPagoNoAto`, valores de parcela) entra no mesmo
+tratamento `pgcrypto` do resto do sistema, e a propagação automática Lead→Mentorado mexe em
+criação de conta/dado sensível.
+
+## Modelagem de banco (M25, migration V25 em diante)
+
+```sql
+-- V25__comercial_venda.sql
+
+-- Aditivo em Lead — convive com plano_fechado/tipo_contrato_fechado, não substitui.
+ALTER TABLE lead ADD COLUMN produto_venda VARCHAR(30);
+ALTER TABLE lead ADD COLUMN origem_venda VARCHAR(20);
+ALTER TABLE lead ADD COLUMN valor_total_venda BYTEA;      -- pgcrypto
+ALTER TABLE lead ADD COLUMN valor_pago_no_ato BYTEA;      -- pgcrypto
+ALTER TABLE lead ADD COLUMN forma_pagamento VARCHAR(20);
+ALTER TABLE lead ADD CONSTRAINT chk_lead_produto_venda
+    CHECK (produto_venda IS NULL OR produto_venda IN
+        ('MENTORIA_CONTINUA','MENTORIA_INDIVIDUAL','CONSULTORIA','INGRESSO_EVENTO','PRODUTO_DIGITAL'));
+ALTER TABLE lead ADD CONSTRAINT chk_lead_origem_venda
+    CHECK (origem_venda IS NULL OR origem_venda IN ('DIRETA','HOTMART','CORTESIA','PATROCINIO','PALESTRANTE'));
+
+-- Aditivo em StatusLead — novo valor de enum, sem migração de dado (nenhum Lead antigo teve
+-- esse status).
+-- (enum Java, não precisa de ALTER TYPE — StatusLead é armazenado como VARCHAR via @Enumerated(STRING))
+
+CREATE TABLE parcela_venda (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id             UUID NOT NULL REFERENCES lead(id),
+    numero              INT NOT NULL,
+    valor               BYTEA NOT NULL,                    -- pgcrypto
+    data_prevista       DATE NOT NULL,
+    conta_pagar_receber_id UUID REFERENCES conta_pagar_receber(id),
+    criado_em           TIMESTAMP NOT NULL DEFAULT now(),
+    versao              BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT uq_parcela_venda_numero UNIQUE (lead_id, numero)
+);
+
+-- Uma linha por ingresso (não por venda) — credenciamento é nominal.
+CREATE TABLE venda_ingresso (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id             UUID NOT NULL REFERENCES lead(id),
+    evento_id           UUID NOT NULL REFERENCES evento(id),
+    categoria_ingresso  VARCHAR(20) NOT NULL,
+    nome_credenciado    BYTEA,                              -- pgcrypto (pode ser diferente do comprador)
+    setor               VARCHAR(100),
+    almoco              BOOLEAN NOT NULL DEFAULT false,
+    check_in            BOOLEAN NOT NULL DEFAULT false,
+    criado_em           TIMESTAMP NOT NULL DEFAULT now(),
+    versao              BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_venda_ingresso_categoria CHECK (categoria_ingresso IN ('CORTESIA','ESSENCIAL','VIP','ESPECIAL'))
+);
+```
+
+`ProdutoVenda`, `OrigemVenda`, `CategoriaIngresso`, `FormaPagamento` — enums Java novos em
+`com.sawhub.hub.comercial`. `StatusLead` ganha `DIAGNOSTICO` (novo valor), com
+`Lead.moverParaDiagnostico()` seguindo o mesmo padrão de `exigirStatus()` dos demais.
+
+## Contratos de API (M25)
+
+```jsonc
+// Substitui a etapa "PROPOSTA -> FECHADO" pra quem passa pelo formulário único (fluxo normal do
+// funil continua existindo — AvancarLeadRequest/avancar() não muda; este é um endpoint dedicado
+// à venda de verdade, mais rico que "só marcar FECHADO").
+POST /api/v1/admin/comercial/leads/{leadId}/fechar-venda
+{
+  "produtoVenda": "MENTORIA_CONTINUA",
+  "origemVenda": "DIRETA",
+  "valorTotalVenda": 26000.00,
+  "valorPagoNoAto": 6000.00,
+  "formaPagamento": "PIX",
+  "parcelas": [
+    { "numero": 1, "valor": 2000.00, "dataPrevista": "2026-08-17" },
+    { "numero": 2, "valor": 2000.00, "dataPrevista": "2026-09-17" }
+    // ... N parcelas — cada uma vira um ContaPagarReceber A_RECEBER automaticamente
+  ],
+  // Só obrigatório quando produtoVenda = INGRESSO_EVENTO:
+  "eventoId": null,
+  "ingressos": null // [{ "categoriaIngresso": "VIP", "nomeCredenciado": "...", "setor": "...", "almoco": true }]
+}
+// Response 200: LeadResponse estendido com produtoVenda/origemVenda/valorTotalVenda/... e a
+// lista de parcelas geradas.
+
+PATCH /api/v1/admin/comercial/leads/{leadId}/mover-diagnostico   // nova transição do funil
+
+GET /api/v1/admin/comercial/dashboard?ano=2026&mes=7
+// Response estendida: além dos campos já existentes, "vendaIngressos": [{ eventoId, eventoTitulo,
+// quantidadeVendida, quantidadeTotal, valorLiquido }], separado de "novosMentoradosNoMes" (que
+// passa a excluir INGRESSO_EVENTO do count).
+```
+
+## Rastreabilidade história ↔ módulo (M25)
+| História | Cobertura |
+|---|---|
+| H13.2 (funil de vendas) | Estendida — etapa Diagnóstico, produto além de mentoria |
+| H13.1 (dashboard comercial) | Estendida — split "vendido no mês" x "venda de ingressos por evento" |
+| H13.3 (metas e ranking) | Estendida — `realizado` exclui `INGRESSO_EVENTO` |
+| — | Parcelamento, venda de ingresso, propagação Lead→Mentorado: pedido direto do cliente em reunião pós-MVP, fora do levantamento original de `spec.md` — mesmo padrão do M21-M24 |
+
+**Status: 🟢 Backend + frontend + E2E concluídos** (17/07/2026) — `StatusLead.DIAGNOSTICO`,
+`Lead.fecharVenda()`, `ParcelaVenda`, `VendaIngresso`, `LeadService.fecharVenda()` (orquestra
+parcela→conta a receber e ingresso→credenciamento numa única `@Transactional`),
+`POST .../leads/{id}/fechar-venda`, `GET .../comercial/eventos` (seletor de evento pro Comercial,
+mesmo raciocínio de `vendedores()` — `EventoController` é gated por `Modulo.CONTEUDOS`) e o
+formulário único de venda em `LeadsComercialPage` (substitui o antigo "Plano fechado" na UI;
+`Lead.fechar(Plano)`/`planoFechado` legado continuam existindo no backend, só não são mais o
+caminho da tela). 449/449 testes backend + 9/9 E2E (`comercial-venda-m25.spec.ts` +
+`comercial.spec.ts` atualizado). Suposição 1 (catálogo de produto) **totalmente resolvida em
+18/07/2026** — "Fórmula SAW" (`V27`) e "Formação Profissional" (`V30`) confirmadas como
+categorias próprias de `ProdutoVenda`. Nenhuma Pergunta pendente do catálogo de produto segue em
+aberto.
+
+**Achado ao vivo via E2E, corrigido:** `chk_lead_status` (constraint da V4, nunca atualizada
+quando `StatusLead.DIAGNOSTICO` entrou) estourava "violates check constraint" ao mover um Lead
+pra Diagnóstico — só apareceu testando o fluxo real de ponta a ponta, nenhum teste unitário
+(mockado) passa pelo banco de verdade. Corrigido em `V26__lead_status_diagnostico.sql`.
+
+**Status final: ✅ Concluído** (18/07/2026) — as duas pendências acima (Suposições 6 e 7 do
+Blueprint) foram fechadas nesta leva:
+- **Suposição 7 (split dashboard/ranking):** `RankingComercialService.realizado` e
+  `ComercialDashboardService.novosMentoradosNoMes` agora excluem `ProdutoVenda.INGRESSO_EVENTO`
+  (novas queries `LeadRepository.countByStatusAndDataFechamentoBetweenExcluindoProduto`/
+  `countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto`, produto sempre bind
+  parameter). A taxa de conversão continua contando qualquer FECHADO (incluindo ingresso) —
+  decisão deliberada, é conversão de verdade, só não é "novo mentorado". Nova seção
+  `vendaIngressos` no dashboard: por evento `REALIZADO` no período (`EventoRepository.
+  buscarPorStatusEDataHoraBetween`, usa `dataHora` como proxy de "quando o evento aconteceu" —
+  não existe um campo `dataRealizacao` separado, simplificação aceita), com quantidade
+  vendida/total e valor líquido deduplicado por Lead. Frontend: card "Venda de ingressos por
+  evento" em `DashboardComercialPage`.
+- **Suposição 6 (propagação Lead→Mentorado):** `MentoradoAdminService.criarAPartirDeLead()` agora
+  mapeia `Lead.produtoVenda` → `Mentorado.tipoContrato` (só MENTORIA_CONTINUA/MENTORIA_INDIVIDUAL/
+  CONSULTORIA; INGRESSO_EVENTO/PRODUTO_DIGITAL não geram contrato) e propaga `valorTotalVenda`/
+  `dataFechamento` pra `valorContrato`/`dataFechamentoContrato`, evitando redigitar o mesmo dado.
+
+**`revisor-seguranca` do follow-up (18/07/2026) — achado corrigido:**
+`ComercialDashboardService.resumoVendaIngresso()` lia `venda.getLead().getValorTotalVenda()` fora
+de transação (`dashboard()` não é `@Transactional`, `open-in-view=false`) — `VendaIngresso.lead`
+é `@ManyToOne(LAZY)`, então isso estourava `LazyInitializationException` em produção assim que
+existisse venda de ingresso no período consultado (mock não pegou isso — só apareceu num teste de
+integração real, mesma classe de bug já documentada em `LeadRepositoryTest`). Corrigido trocando
+`VendaIngressoRepository.findByEventoId` por `buscarPorEventoIdComLead` (`LEFT JOIN FETCH v.lead`,
+mesmo padrão de `LeadRepository.buscarComFiltro`), com `VendaIngressoRepositoryTest` novo provando
+o bug (RED, `@DataJpaTest`) e a correção (GREEN). Sem outros achados — propagação Lead→Mentorado,
+PII do dashboard e as novas queries JPQL (produto sempre parâmetro, nunca literal) revisadas e
+aprovadas sem ressalva.
+
+445/445 testes backend + 32 E2E rodados nos specs afetados (27 passaram; os 5 que falharam são o
+self-service do mentorado pausado — `AREA_MENTORADO_PAUSADA` —, não regressão desta leva).
+Achado ao vivo extra: 3 specs E2E (`mentorados.spec.ts`, `mentorados-comercial-import-export.
+spec.ts`, `perfil.spec.ts`) ainda referenciavam o "Plano fechado" removido do fluxo de UI na leva
+anterior — corrigidos pro formulário único de venda.
+
+### `revisor-seguranca` do núcleo (17/07/2026)
+- **Corrigido (médio):** venda de ingresso não chamava `Evento.ocuparVaga()` nem checava
+  `StatusEvento` — dava pra vender ingresso além da capacidade do evento, ou pra um evento já
+  `CANCELADO`/`REALIZADO`. `LeadService.criarVendasIngresso()` agora reaproveita a mesma invariante
+  de `EventoMentoradoService.inscrever()` (H7.2).
+- **Corrigido (baixo):** `valorPagoNoAto` podia ser maior que `valorTotalVenda` sem erro.
+  `LeadService.fecharVenda()` agora valida isso antes de mutar o Lead.
+- **Corrigido (18/07/2026, achado alto):** `LeadService`/`PedidoAdminService`/
+  `PedidoPagamentoService`/`MentoriaService`/`AtaService`/`EventoService` concatenavam nome de
+  lead/mentorado em texto livre não criptografado — `ContaPagarReceber.descricao` e
+  `AtividadeLog.descricao` — legível por perfis RBAC sem `Modulo.COMERCIAL` (ex.: Financeiro,
+  Dashboard), reintroduzindo em claro o mesmo PII já protegido em `Lead.nome`/`Mentorado.nome`
+  (V19). Era sistêmico em ~7 módulos, não um gap introduzido só pelo M25. Corrigido com o mesmo
+  padrão pgcrypto já usado no resto do projeto: `V28__pgcrypto_descricao_conta_atividade.sql` +
+  `@ColumnTransformer` em `ContaPagarReceber.descricao`/`AtividadeLog.descricao`. Confirmado
+  antes de migrar (agente de exploração + `revisor-seguranca`): nenhuma query do projeto filtra/
+  ordena/faz LIKE em `descricao` de nenhuma das duas tabelas, e todo consumidor (`ContaCsvService`,
+  `ContaResponse`, `DashboardAdminService`) lê via getter JPA — descriptografia transparente,
+  sem quebrar CSV export/import nem o feed "atividades recentes". Testes novos contra Postgres
+  real (`@DataJpaTest`, não mock): `ContaPagarReceberRepositoryTest.
+  descricaoSobrevivePgcryptoRoundTripForaDaTransacaoOriginal` e `AtividadeLogRepositoryTest`
+  (arquivo novo — não existia teste de repository pra essa entidade antes).
+  **Lacuna adicional achada pelo `revisor-seguranca` ao confirmar o fix, também corrigida na
+  mesma leva:** `ContaPagarReceberService.liquidar()` copia `descricao` (já decriptado, ex.
+  "Parcela 1 - Maria Souza") pra um `LancamentoFinanceiro` novo, cuja coluna `descricao` não
+  tinha sido tocada — reabria o mesmo buraco numa terceira tabela. Corrigido em
+  `V29__pgcrypto_descricao_lancamento_financeiro.sql` + `LancamentoFinanceiro.descricao`, com
+  `LancamentoFinanceiroRepositoryTest` novo. 449/449 testes backend + 23/23 E2E (financeiro,
+  financeiro-import-export, dashboard-admin, comercial, comercial-venda-m25) confirmando sem
+  regressão, incluindo o teste que exercita `liquidar()` de ponta a ponta.
+
 ## Fórmula de prazo
 
 ```
@@ -2721,9 +3330,15 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ✅ Concluído — backend (300/300 testes) + `revisor-seguranca` (sem achado bloqueante — sexta revisão limpa da esteira) + frontend (sino + `AvisosPage` + `AvisosAdminPage`) + E2E (66/66, `avisos.spec.ts`). Fecha o gap do `avisos` do Dashboard (M08). RBAC reaproveita `Modulo.CONTEUDOS`. Pendência: sem edição/exclusão de aviso nesta leva. Último módulo do pipeline original — MVP completo naquele ponto, ver M18/M19 abaixo (fast-follows achados numa auditoria de cobertura pós-MVP) |
 | 15 | H1.4 · Recuperar senha (fast-follow de E1, achado em auditoria pós-MVP) | — | — | ✅ Concluído — backend (311/311 testes) + `revisor-seguranca` **obrigatório** (achado corrigido: falta de try/catch no envio de e-mail criava oráculo de enumeração de contas) + frontend (`EsqueciSenhaPage`, `RedefinirSenhaPage`) + E2E (73/73, `esqueci-senha.spec.ts`). Verificado ao vivo ponta a ponta com token real (solicitação → log → redefinição → login). Sem SMTP configurado neste ambiente — e-mail logado em WARN, mesma classe de pendência do M06/M07/M14 |
 | 16 | H15.1 · UI de cadastro de colaborador (fast-follow de E15, achado em auditoria pós-MVP) | — | — | ✅ Concluído — frontend puro (backend já existia e já era testado) + E2E (73/73, `team.spec.ts`). Sem achado do `revisor-seguranca` |
+| 17 | M23 · Mentorado — dados de contrato, Diagnóstico Inicial, `TipoContrato`, criar direto, PDF do contrato (change request pós-MVP, reunião 17/07/2026) | Médio-Grande · `revisor-seguranca` obrigatório | 4d | ✅ Concluído — backend (423/423 testes) + `revisor-seguranca` (achado médio de RBAC + achado médio de teto de tamanho de upload, ambos corrigidos) + frontend + E2E (20/25, os 5 que faltam são do self-service pausado) |
+| 18 | M24 · Import bulk-CREATE de mentorados via CSV (change request pós-MVP, mesma reunião) | Médio | 2.5d | ⬜ Blueprint concluído, depende do M23 (usa os mesmos campos) |
+| 19 | M25 · Comercial — formulário único de venda, parcelamento, venda de ingresso, split de comissão (change request pós-MVP, mesma reunião) | Grande · `revisor-seguranca` obrigatório | 6d | ✅ Concluído — backend (449/449 testes) + `revisor-seguranca` em três rodadas (núcleo: achado médio de vagas/status do evento e achado baixo de valor pago no ato, corrigidos; follow-up: achado alto de `LazyInitializationException` no dashboard, corrigido; achado alto de PII em claro em `ContaPagarReceber.descricao`/`AtividadeLog.descricao`, **corrigido em 18/07/2026** via `V28`/`V29` pgcrypto — mais a lacuna irmã em `LancamentoFinanceiro.descricao` achada na confirmação, ver nota acima) + frontend (`LeadsComercialPage` — Diagnóstico, formulário único de venda; `DashboardComercialPage` — venda de ingressos por evento) + E2E (32+23 rodados, sem regressão; os 5 do self-service pausado seguem esperados). Split dashboard/ranking e propagação Lead→Mentorado (Suposições 6-7) fechados. Achados ao vivo: `chk_lead_status` desatualizada (V26), 3 specs E2E ainda com o "Plano fechado" removido. `ProdutoVenda.FORMULA_SAW`/`FORMACAO_PROFISSIONAL` adicionados em 18/07/2026 (`V27`/`V30`) — Suposição 1 (catálogo de produto) totalmente resolvida, nenhuma Pergunta pendente do M25 segue em aberto |
 | — | **Fase 5 · Homologação** (smoke test via Docker, validação humana E2E, revisão final de segurança, deploy Coolify, **pass transversal de `pgcrypto` nas colunas sensíveis** — ver notas em M04 e M05) | — | 2d | ⬜ |
 
-**Total restante (peso somado): ≈ 60 dias de engenharia.** Responsividade mobile fica **fora
+**Total restante (peso somado): ≈ 60 dias de engenharia** (MVP original) **+ 6.5d** (M23+M24,
+change request pós-MVP de 17/07/2026 — ver `docs/reuniao-2026-07-17-atualizacoes.md`; mais itens
+dessa reunião ainda vão virar Blueprint conforme entrarem no pipeline, essa soma cresce).
+Responsividade mobile fica **fora
 deste pipeline** por decisão explícita do cliente (07/07/2026) — retorna como requisito só
 depois do MVP no ar.
 

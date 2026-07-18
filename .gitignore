@@ -19,3 +19,6 @@ build/
 
 # Áudio de ata (M06) salvo em disco local no dev — AUDIO_STORAGE_DIR aponta pra cá por padrão
 backend/data/
+
+# Exports de planilhas/Notion do cliente (dado de mentorado, sigiloso) — nunca versionar
+dados-cliente-notion/

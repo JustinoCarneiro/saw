@@ -56,8 +56,12 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     await linhaLead.getByRole('button', { name: 'Avançar p/ Proposta' }).click();
     await page.getByRole('button', { name: 'Confirmar' }).click();
     await linhaLead.getByRole('button', { name: 'Fechar venda' }).click();
-    await page.getByLabel('Plano fechado').selectOption({ label: 'Básico' });
-    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await page.getByLabel('Produto vendido').selectOption({ label: 'Mentoria contínua' });
+    await page.getByLabel('Origem da venda').selectOption({ label: 'Direta' });
+    await page.getByLabel('Valor total da venda').fill('26000');
+    await page.getByLabel('Valor pago no ato').fill('6000');
+    await page.getByLabel('Forma de pagamento').selectOption({ label: 'Pix' });
+    await page.getByRole('button', { name: 'Confirmar venda' }).click();
     await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
 
     // LoginPage redireciona pra /admin se já houver sessão ativa — precisa limpar cookies antes
@@ -68,7 +72,7 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     await page.goto('/admin/mentorados/lista');
     await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
     await page.getByLabel('Lead').selectOption({ label: `${nome} — ${email}` });
-    await page.getByRole('button', { name: 'Criar mentorado' }).click();
+    await page.getByRole('button', { name: 'Criar mentorado', exact: true }).click();
     await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
     const senhaTemporariaRaw = await page.locator('code').textContent();
     if (!senhaTemporariaRaw) throw new Error('Senha temporária não encontrada na tela de mentorado criado.');
@@ -101,7 +105,9 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     await expect(metaBatida.getByText(/\d{2}\/\d{2}\/\d{4}/)).toBeVisible();
   });
 
-  test('mentorado edita telefone/bio/áreas/foto e vê o cartão atualizado', async ({ page }) => {
+  // areasInteresse removido no M23 (change request pós-MVP, confirmado pelo cliente como não
+  // aplicável) — antes cobria telefone/bio/áreas/foto, agora só telefone/bio/foto.
+  test('mentorado edita telefone/bio/foto e vê o cartão atualizado', async ({ page }) => {
     await loginAs(page, 'fernanda@cantinadafernanda.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
     await page.getByRole('link', { name: 'Perfil' }).click();
@@ -110,15 +116,12 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     const form = page.getByTestId('perfil-form');
     await form.getByLabel('Telefone').fill('(31) 90000-1111');
     await form.getByLabel('Sobre mim').fill('Bio editada pelo teste E2E.');
-    await form.getByLabel(/Áreas de interesse/).fill('Marketing, Processos, Gestão');
     await form.getByLabel(/Foto de perfil/).fill('https://cdn.sawhub.com.br/fernanda.jpg');
     await form.getByRole('button', { name: 'Salvar' }).click();
 
     const cartao = page.getByTestId('perfil-cartao');
     await expect(cartao.getByText('(31) 90000-1111')).toBeVisible();
     await expect(cartao.getByText('Bio editada pelo teste E2E.')).toBeVisible();
-    await expect(cartao.getByText('Marketing')).toBeVisible();
-    await expect(cartao.getByText('Gestão')).toBeVisible();
 
     // PATCH grava valor absoluto (não soma) — reexecuções do teste são idempotentes, sem
     // necessidade de limpeza (diferente do carrinho da Loja/M14, que é uma ação aditiva).
@@ -162,7 +165,7 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     await linha.getByRole('button', { name: 'Editar' }).click();
 
     await page.getByLabel('Vencimento do plano').fill('2026-12-25');
-    await page.getByRole('button', { name: 'Salvar' }).click();
+    await page.getByRole('button', { name: 'Salvar', exact: true }).click();
     await expect(page.getByText('Editar mentorado')).toHaveCount(0);
 
     // Confirma via API (view-only, sessão de Admin — não dá pra logar como Carlos na mesma aba).

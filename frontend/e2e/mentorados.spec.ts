@@ -24,9 +24,15 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await page.getByRole('button', { name: 'Confirmar' }).click();
     await linhaLead.getByRole('button', { name: 'Avançar p/ Proposta' }).click();
     await page.getByRole('button', { name: 'Confirmar' }).click();
+    // M25 — "Fechar venda" abre o formulário único de venda (POST .../fechar-venda), substituindo
+    // o antigo "Plano fechado" na UI.
     await linhaLead.getByRole('button', { name: 'Fechar venda' }).click();
-    await page.getByLabel('Plano fechado').selectOption({ label: 'Básico' });
-    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await page.getByLabel('Produto vendido').selectOption({ label: 'Mentoria contínua' });
+    await page.getByLabel('Origem da venda').selectOption({ label: 'Direta' });
+    await page.getByLabel('Valor total da venda').fill('26000');
+    await page.getByLabel('Valor pago no ato').fill('6000');
+    await page.getByLabel('Forma de pagamento').selectOption({ label: 'Pix' });
+    await page.getByRole('button', { name: 'Confirmar venda' }).click();
     await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
 
     // 3) Fundador cria a conta de mentorado a partir do lead fechado (fecha a pendência do M05).
@@ -38,10 +44,19 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await page.goto('/admin/mentorados/lista');
     await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
     await page.getByLabel('Lead').selectOption({ label: `${nome} — ${email}` });
-    await page.getByRole('button', { name: 'Criar mentorado' }).click();
+    await page.getByRole('button', { name: 'Criar mentorado', exact: true }).click();
     await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
     await expect(page.getByText('Senha temporária:')).toBeVisible();
     await page.getByRole('button', { name: 'Entendi' }).click();
+
+    // M25 (Suposição 6) — produtoVenda/valorTotalVenda/dataFechamento do Lead propagam pro
+    // Mentorado (tipoContrato/valorContrato/dataFechamentoContrato) sem precisar redigitar.
+    const linhaMentoradoCriado = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linhaMentoradoCriado.getByRole('button', { name: 'Editar' }).click();
+    await expect(page.getByText('Dados de contrato', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Tipo de contrato')).toHaveValue('MENTORIA_CONTINUA');
+    await expect(page.getByLabel('Valor do contrato (R$)')).toHaveValue('26000');
+    await page.getByRole('button', { name: 'Cancelar' }).click();
 
     // 4) Cria a mentoria com esse mentorado recém-criado.
     await page.goto('/admin/mentorados/mentorias');
@@ -107,8 +122,12 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await linhaLead.getByRole('button', { name: 'Avançar p/ Proposta' }).click();
     await page.getByRole('button', { name: 'Confirmar' }).click();
     await linhaLead.getByRole('button', { name: 'Fechar venda' }).click();
-    await page.getByLabel('Plano fechado').selectOption({ label: 'Básico' });
-    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await page.getByLabel('Produto vendido').selectOption({ label: 'Mentoria contínua' });
+    await page.getByLabel('Origem da venda').selectOption({ label: 'Direta' });
+    await page.getByLabel('Valor total da venda').fill('26000');
+    await page.getByLabel('Valor pago no ato').fill('6000');
+    await page.getByLabel('Forma de pagamento').selectOption({ label: 'Pix' });
+    await page.getByRole('button', { name: 'Confirmar venda' }).click();
     await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
 
     await page.context().clearCookies();
@@ -117,7 +136,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await page.goto('/admin/mentorados/lista');
     await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
     await page.getByLabel('Lead').selectOption({ label: `${nome} — ${email}` });
-    await page.getByRole('button', { name: 'Criar mentorado' }).click();
+    await page.getByRole('button', { name: 'Criar mentorado', exact: true }).click();
     await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
     await page.getByRole('button', { name: 'Entendi' }).click();
 
@@ -170,10 +189,11 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(page.getByText('Publicada', { exact: true })).toBeVisible();
   });
 
-  // Fase 5 (H11.1) — antes desta feature, telefone/bio/áreas de interesse/foto só podiam ser
-  // preenchidos pelo próprio mentorado logando (H9.1); o Admin não tinha como completar o
-  // cadastro (achado relatado pelo cliente: só nome/e-mail/plano apareciam pra editar).
-  test('Admin preenche telefone/bio/áreas/foto de um mentorado sem depender dele logar', async ({ page }) => {
+  // Fase 5 (H11.1) — antes desta feature, telefone/bio/foto só podiam ser preenchidos pelo
+  // próprio mentorado logando (H9.1); o Admin não tinha como completar o cadastro (achado
+  // relatado pelo cliente: só nome/e-mail/plano apareciam pra editar). areasInteresse removido
+  // no M23 (change request pós-MVP, confirmado pelo cliente como não aplicável).
+  test('Admin preenche telefone/bio/foto de um mentorado sem depender dele logar', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
@@ -186,15 +206,13 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
 
     const foto = `https://exemplo.com/foto-e2e-${Date.now()}.jpg`;
     await page.getByLabel('Telefone').fill('(11) 90000-1234');
-    await page.getByLabel('Áreas de interesse').fill('Delivery, Marketing');
     await page.getByLabel('Foto (URL)').fill(foto);
     await page.getByLabel('Bio').fill('Bio preenchida pelo Admin no teste E2E.');
-    await page.getByRole('button', { name: 'Salvar' }).click();
+    await page.getByRole('button', { name: 'Salvar', exact: true }).click();
 
     await expect(page.getByText('Editar mentorado')).toHaveCount(0);
     await linha.getByRole('button', { name: 'Editar' }).click();
     await expect(page.getByLabel('Telefone')).toHaveValue('(11) 90000-1234');
-    await expect(page.getByLabel('Áreas de interesse')).toHaveValue('Delivery, Marketing');
     await expect(page.getByLabel('Foto (URL)')).toHaveValue(foto);
     await expect(page.getByLabel('Bio')).toHaveValue('Bio preenchida pelo Admin no teste E2E.');
   });

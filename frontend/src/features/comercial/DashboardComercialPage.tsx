@@ -9,6 +9,7 @@ import styles from './DashboardComercialPage.module.css';
 const STATUS_LABEL: Record<StatusLead, string> = {
   SOLICITACAO: 'Solicitação',
   EM_CONTATO: 'Em contato',
+  DIAGNOSTICO: 'Diagnóstico',
   PROPOSTA: 'Proposta',
   FECHADO: 'Fechado',
   PERDIDO: 'Perdido',
@@ -17,6 +18,7 @@ const STATUS_LABEL: Record<StatusLead, string> = {
 const STATUS_COLOR: Record<StatusLead, string> = {
   SOLICITACAO: 'var(--text-faint)',
   EM_CONTATO: 'var(--info)',
+  DIAGNOSTICO: 'var(--info)',
   PROPOSTA: 'var(--gold)',
   FECHADO: 'var(--success)',
   PERDIDO: 'var(--danger)',
@@ -93,6 +95,24 @@ export function DashboardComercialPage() {
               })}
             </div>
           </Card>
+
+          {dashboard.vendaIngressos.length > 0 && (
+            <Card style={{ padding: '20px 22px', marginTop: 16 }}>
+              <div className={styles.sectionTitle}>Venda de ingressos por evento</div>
+              <div className={styles.funilList}>
+                {dashboard.vendaIngressos.map((v) => (
+                  <div key={v.eventoId} className={styles.funilRow}>
+                    <div className={styles.funilHeader}>
+                      <span className={styles.funilLabel}>{v.eventoTitulo}</span>
+                      <span className={styles.funilValue}>
+                        {v.quantidadeVendida}{v.quantidadeTotal != null ? ` / ${v.quantidadeTotal}` : ''} — {formatBRL(v.valorLiquido)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </>
       )}
     </div>

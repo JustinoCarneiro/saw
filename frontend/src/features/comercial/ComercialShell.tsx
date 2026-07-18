@@ -8,8 +8,9 @@ const TABS = [
   { to: '/admin/comercial/dashboard', label: 'Dashboard' },
   { to: '/admin/comercial/leads', label: 'Funil de vendas' },
   { to: '/admin/comercial/ranking', label: 'Metas e ranking' },
-  { to: '/admin/comercial/produtos', label: 'Loja — Produtos' },
-  { to: '/admin/comercial/pedidos', label: 'Loja — Pedidos' },
+  // Loja — Produtos / Loja — Pedidos: pausadas (ver docs/reuniao-2026-07-17-atualizacoes.md),
+  // ficam fora da navegação enquanto LOJA_ADMIN_PAUSADA=true; rotas seguem existindo com tela
+  // de aviso, ver App.tsx.
 ];
 
 export function ComercialShell() {

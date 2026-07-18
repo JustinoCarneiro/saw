@@ -9,6 +9,9 @@ public record DashboardComercialResponse(
         BigDecimal mrr,
         BigDecimal vendasLoja,
         double variacaoMrrPct,
-        List<FunilItem> funil
+        List<FunilItem> funil,
+        // M25 (Suposição 7) — "vendido no mês" (novosMentoradosNoMes) exclui INGRESSO_EVENTO;
+        // essa seção mostra a venda de ingresso à parte, por evento REALIZADO no período.
+        List<VendaIngressoResumo> vendaIngressos
 ) {
 }

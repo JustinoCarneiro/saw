@@ -1,7 +1,9 @@
 package com.sawhub.hub.mentorado;
 
 import com.sawhub.hub.common.dto.ImportResultResponse;
+import com.sawhub.hub.mentorado.dto.AtualizarDiagnosticoInicialRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarMentoradoRequest;
+import com.sawhub.hub.mentorado.dto.DiagnosticoInicialResponse;
 import com.sawhub.hub.mentorado.dto.MentoradoCriadoResponse;
 import com.sawhub.hub.mentorado.dto.MentoradoResponse;
 import com.sawhub.hub.security.RequiresModulo;
@@ -67,6 +69,23 @@ public class MentoradoAdminController {
     public MentoradoCriadoResponse criarAPartirDeLead(@PathVariable UUID leadId) {
         var resultado = mentoradoAdminService.criarAPartirDeLead(leadId);
         return MentoradoCriadoResponse.from(resultado.mentorado(), resultado.senhaTemporaria());
+    }
+
+    // M23 — "/direto" e "/dados-contrato" moveram pra MentoradoContratoController
+    // (Modulo.COMERCIAL, achado MÉDIO do revisor-seguranca: CNPJ/sócios/valor de contrato +
+    // criação de credencial não deveriam ficar sob Modulo.MENTORADOS, que a área Gestão de
+    // Performance também acessa). Diagnóstico Inicial fica aqui — é o trabalho da Leia
+    // ("Sucesso do Gestor"/Gestão de Performance), não do Comercial.
+    @GetMapping("/{id}/diagnostico-inicial")
+    public DiagnosticoInicialResponse buscarDiagnosticoInicial(@PathVariable UUID id) {
+        var diagnostico = mentoradoAdminService.buscarDiagnosticoInicial(id);
+        return diagnostico != null ? DiagnosticoInicialResponse.from(diagnostico) : DiagnosticoInicialResponse.vazio();
+    }
+
+    @PatchMapping("/{id}/diagnostico-inicial")
+    public DiagnosticoInicialResponse atualizarDiagnosticoInicial(
+            @PathVariable UUID id, @Valid @RequestBody AtualizarDiagnosticoInicialRequest request) {
+        return DiagnosticoInicialResponse.from(mentoradoAdminService.atualizarDiagnosticoInicial(id, request));
     }
 
     // M22 — mesmos filtros de GET /mentorados.

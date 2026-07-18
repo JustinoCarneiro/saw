@@ -70,13 +70,6 @@ export function PerfilPage() {
                 <div><dt>Membro desde</dt><dd>{formatarData(perfil.membroDesde)}</dd></div>
               </dl>
               {perfil.bio && <p className={styles.bio}>{perfil.bio}</p>}
-              {perfil.areasInteresse.length > 0 && (
-                <div className={styles.areas}>
-                  {perfil.areasInteresse.map((a) => (
-                    <span key={a} className={styles.areaTag}>{a}</span>
-                  ))}
-                </div>
-              )}
             </Card>
           )}
 
@@ -179,7 +172,6 @@ function PerfilForm({ perfil, onSalvo, onCancelar }: {
 }) {
   const [telefone, setTelefone] = useState(perfil.telefone ?? '');
   const [bio, setBio] = useState(perfil.bio ?? '');
-  const [areasInteresse, setAreasInteresse] = useState(perfil.areasInteresse.join(', '));
   const [fotoUrl, setFotoUrl] = useState(perfil.fotoUrl ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -192,7 +184,6 @@ function PerfilForm({ perfil, onSalvo, onCancelar }: {
       const res = await apiClient.patch<PerfilMentorado>('/mentorado/perfil', {
         telefone: telefone || null,
         bio: bio || null,
-        areasInteresse: areasInteresse.trim() ? areasInteresse.split(',').map((a) => a.trim()).filter(Boolean) : [],
         fotoUrl: fotoUrl || null,
       });
       onSalvo(res.data);
@@ -214,10 +205,6 @@ function PerfilForm({ perfil, onSalvo, onCancelar }: {
         <label className={styles.formField}>
           Sobre mim
           <textarea className={styles.textarea} value={bio} onChange={(e) => setBio(e.target.value)} />
-        </label>
-        <label className={styles.formField}>
-          Áreas de interesse (separadas por vírgula)
-          <input className={styles.textInput} value={areasInteresse} onChange={(e) => setAreasInteresse(e.target.value)} placeholder="Gestão, Finanças, Marketing" />
         </label>
         <label className={styles.formField}>
           Foto de perfil (URL)

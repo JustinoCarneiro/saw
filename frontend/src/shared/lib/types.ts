@@ -155,12 +155,21 @@ export interface ImportResultResponse {
 }
 
 // E13 · Comercial & Vendas
-export type StatusLead = 'SOLICITACAO' | 'EM_CONTATO' | 'PROPOSTA' | 'FECHADO' | 'PERDIDO';
+export type StatusLead = 'SOLICITACAO' | 'EM_CONTATO' | 'DIAGNOSTICO' | 'PROPOSTA' | 'FECHADO' | 'PERDIDO';
 
 export interface VendedorResumo {
   id: string;
   nome: string;
 }
+
+// M25 (change request pós-MVP, 17/07/2026) — "formulário único de venda", aditivo em paralelo a
+// planoFechado (legado). TipoContrato é o mesmo enum do M23 (Mentorado.tipoContrato) — reaproveitado
+// aqui só pra MENTORIA_CONTINUA/MENTORIA_INDIVIDUAL/CONSULTORIA; INGRESSO_EVENTO/PRODUTO_DIGITAL
+// não têm TipoContrato correspondente.
+export type ProdutoVenda = 'MENTORIA_CONTINUA' | 'MENTORIA_INDIVIDUAL' | 'CONSULTORIA' | 'FORMULA_SAW' | 'FORMACAO_PROFISSIONAL' | 'INGRESSO_EVENTO' | 'PRODUTO_DIGITAL';
+export type OrigemVenda = 'DIRETA' | 'HOTMART' | 'CORTESIA' | 'PATROCINIO' | 'PALESTRANTE';
+export type CategoriaIngresso = 'CORTESIA' | 'ESSENCIAL' | 'VIP' | 'ESPECIAL';
+export type FormaPagamento = 'PIX' | 'CARTAO' | 'BOLETO' | 'HOTMART';
 
 export interface Lead {
   id: string;
@@ -172,14 +181,61 @@ export interface Lead {
   status: StatusLead;
   vendedor: VendedorResumo | null;
   planoFechado: Plano | null;
+  tipoContratoFechado: TipoContrato | null;
   motivoPerdido: string | null;
   dataFechamento: string | null;
   criadoEm: string;
+  produtoVenda: ProdutoVenda | null;
+  origemVenda: OrigemVenda | null;
+  valorTotalVenda: number | null;
+  valorPagoNoAto: number | null;
+  formaPagamento: FormaPagamento | null;
+}
+
+export interface ParcelaVendaRequest {
+  numero: number;
+  valor: number;
+  dataPrevista: string;
+}
+
+export interface VendaIngressoRequest {
+  categoriaIngresso: CategoriaIngresso;
+  nomeCredenciado: string;
+  setor: string | null;
+  almoco: boolean;
+}
+
+export interface FecharVendaRequest {
+  produtoVenda: ProdutoVenda;
+  origemVenda: OrigemVenda;
+  valorTotalVenda: number;
+  valorPagoNoAto: number | null;
+  formaPagamento: FormaPagamento;
+  parcelas: ParcelaVendaRequest[] | null;
+  eventoId: string | null;
+  ingressos: VendaIngressoRequest[] | null;
+}
+
+export interface EventoVendaResumo {
+  id: string;
+  titulo: string;
+  dataHora: string;
+  vagasDisponiveis: number | null;
 }
 
 export interface FunilItem {
   status: StatusLead;
   quantidade: number;
+}
+
+// M25 (Suposição 7) — venda de ingresso é contabilizada à parte, por evento REALIZADO no período,
+// separada do "vendido no mês" (novosMentoradosNoMes exclui INGRESSO_EVENTO).
+export interface VendaIngressoResumo {
+  eventoId: string;
+  eventoTitulo: string;
+  quantidadeVendida: number;
+  quantidadeTotal: number | null;
+  valorLiquido: number;
 }
 
 export interface DashboardComercialResponse {
@@ -189,6 +245,7 @@ export interface DashboardComercialResponse {
   vendasLoja: number;
   variacaoMrrPct: number;
   funil: FunilItem[];
+  vendaIngressos: VendaIngressoResumo[];
 }
 
 export interface RankingComercialItem {
@@ -211,9 +268,16 @@ export interface MentoradoAdmin {
   status: StatusMentorado;
   telefone: string | null;
   bio: string | null;
-  areasInteresse: string[];
   fotoUrl: string | null;
   criadoEm: string;
+  nomeFantasia: string | null;
+  cnpj: string | null;
+  socios: string | null;
+  tipoContrato: TipoContrato | null;
+  valorContrato: number | null;
+  dataFechamentoContrato: string | null;
+  vencimentoContrato: string | null;
+  documentoContratoUrl: string | null;
 }
 
 export interface MentoradoCriado {
@@ -221,6 +285,27 @@ export interface MentoradoCriado {
   nome: string;
   email: string;
   senhaTemporaria: string;
+}
+
+// M23 (change request pós-MVP, 17/07/2026) — "não existem planos, mas sim produtos". Conceito
+// novo e aditivo, só pro lado comercial (Mentorado/Lead); Plano continua existindo e gateando
+// conteúdo exatamente como hoje (ver Suposição 1 do Blueprint M23 no ROADMAP.md).
+export type TipoContrato = 'MENTORIA_CONTINUA' | 'MENTORIA_INDIVIDUAL' | 'CONSULTORIA';
+
+export type RespostaSimNao = 'SIM' | 'NAO';
+
+export type EstadoImplementacao = 'SIM' | 'NAO' | 'EM_CONSTRUCAO';
+
+export interface DiagnosticoInicial {
+  faturamentoAnual: number | null;
+  quantidadeColaboradores: number | null;
+  empresaRegularizada: boolean | null;
+  quantidadeLojas: number | null;
+  cmvDefinido: RespostaSimNao | null;
+  cmvDetalhe: string | null;
+  tempoMedioAtendimento: string | null;
+  culturaConstruida: EstadoImplementacao | null;
+  processosDesenhados: EstadoImplementacao | null;
 }
 
 export type TipoMentoria = 'INDIVIDUAL' | 'GRUPO';
@@ -572,7 +657,6 @@ export interface PerfilMentorado {
   email: string;
   telefone: string | null;
   bio: string | null;
-  areasInteresse: string[];
   fotoUrl: string | null;
   plano: Plano;
   vencimentoPlano: string | null;

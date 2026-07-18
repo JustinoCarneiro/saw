@@ -3,6 +3,8 @@ import { AdminShell } from './app/AdminShell';
 import { AdminIndexRedirect } from './app/AdminIndexRedirect';
 import { MentoradoShell } from './app/MentoradoShell';
 import { RequireModulo } from './app/RequireModulo';
+import { PausedScreen } from './shared/components/PausedScreen';
+import { LOJA_ADMIN_PAUSADA } from './shared/lib/featureFlags';
 import { LoginPage } from './features/auth/LoginPage';
 import { SolicitarAcessoPage } from './features/auth/SolicitarAcessoPage';
 import { EsqueciSenhaPage } from './features/auth/EsqueciSenhaPage';
@@ -71,8 +73,32 @@ export default function App() {
           <Route path="dashboard" element={<DashboardComercialPage />} />
           <Route path="leads" element={<LeadsComercialPage />} />
           <Route path="ranking" element={<RankingComercialPage />} />
-          <Route path="produtos" element={<ProdutosPage />} />
-          <Route path="pedidos" element={<PedidosPage />} />
+          <Route
+            path="produtos"
+            element={
+              LOJA_ADMIN_PAUSADA ? (
+                <PausedScreen
+                  title="Loja pausada"
+                  description="A Loja SAW está pausada no momento — foco atual é Comercial, Financeiro e Mentorados."
+                />
+              ) : (
+                <ProdutosPage />
+              )
+            }
+          />
+          <Route
+            path="pedidos"
+            element={
+              LOJA_ADMIN_PAUSADA ? (
+                <PausedScreen
+                  title="Loja pausada"
+                  description="A Loja SAW está pausada no momento — foco atual é Comercial, Financeiro e Mentorados."
+                />
+              ) : (
+                <PedidosPage />
+              )
+            }
+          />
         </Route>
         <Route
           path="financeiro"

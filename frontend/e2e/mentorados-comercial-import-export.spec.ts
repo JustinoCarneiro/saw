@@ -44,8 +44,12 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     await linhaLead.getByRole('button', { name: 'Avançar p/ Proposta' }).click();
     await page.getByRole('button', { name: 'Confirmar' }).click();
     await linhaLead.getByRole('button', { name: 'Fechar venda' }).click();
-    await page.getByLabel('Plano fechado').selectOption({ label: 'Básico' });
-    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await page.getByLabel('Produto vendido').selectOption({ label: 'Mentoria contínua' });
+    await page.getByLabel('Origem da venda').selectOption({ label: 'Direta' });
+    await page.getByLabel('Valor total da venda').fill('26000');
+    await page.getByLabel('Valor pago no ato').fill('6000');
+    await page.getByLabel('Forma de pagamento').selectOption({ label: 'Pix' });
+    await page.getByRole('button', { name: 'Confirmar venda' }).click();
     await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
 
     await page.context().clearCookies();
@@ -55,7 +59,7 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     const main = page.getByRole('main');
     await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
     await page.getByLabel('Lead').selectOption({ label: `${nome} — ${email}` });
-    await page.getByRole('button', { name: 'Criar mentorado' }).click();
+    await page.getByRole('button', { name: 'Criar mentorado', exact: true }).click();
     await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
     await page.getByRole('button', { name: 'Entendi' }).click();
 

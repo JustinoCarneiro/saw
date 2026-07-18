@@ -14,7 +14,6 @@ import com.sawhub.hub.security.Usuario;
 import com.sawhub.hub.security.Perfil;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -51,7 +50,6 @@ class PerfilMentoradoServiceTest {
 
         assertThat(resposta.nome()).isEqualTo("Ana Costa");
         assertThat(resposta.email()).isEqualTo("ana@anacosta.com.br");
-        assertThat(resposta.areasInteresse()).isEmpty();
     }
 
     @Test
@@ -69,12 +67,11 @@ class PerfilMentoradoServiceTest {
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
         var request = new AtualizarPerfilMentoradoRequest(
-                "(11) 90000-0000", "Nova bio", List.of("Gestão", "Finanças"), "https://cdn.sawhub.com.br/foto.jpg");
+                "(11) 90000-0000", "Nova bio", "https://cdn.sawhub.com.br/foto.jpg");
         PerfilMentoradoResponse resposta = service().atualizar(usuarioId, request);
 
         assertThat(resposta.telefone()).isEqualTo("(11) 90000-0000");
         assertThat(resposta.bio()).isEqualTo("Nova bio");
-        assertThat(resposta.areasInteresse()).containsExactly("Gestão", "Finanças");
         assertThat(resposta.fotoUrl()).isEqualTo("https://cdn.sawhub.com.br/foto.jpg");
         // Campos admin-only intocados:
         assertThat(resposta.nome()).isEqualTo("Ana Costa");
