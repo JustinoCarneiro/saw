@@ -305,6 +305,53 @@ Abas mensais (MAR 26, ABR 26, MAI 26, JUN 26, JUL 26 — confirma o pedido de "a
 - **Tabela "Receitas"**: `Data`, `Tipo` (Receita), `Categoria` (Vendas/Eventos/Mentoria/
   Patrocínio), `Subcategoria`, `Natureza` (Fixa/Variável), `Detalhamento` (nome do cliente),
   `Valor`, `Forma de Pagamento`.
+- **Achado novo nos prints (18/07/2026)**: a aba `JUL 26` tem uma tabela de receita renomeada
+  pra `Tabela_1` (era `Receitas_5`) com uma coluna `Parcela` nova (valores tipo `1/10`, `4/11`,
+  `2/6`) — parcelamento estruturado de verdade, diferente do texto livre em "Observações" visto
+  em "Vendas Aline Melo". Ainda não confirmado se é um padrão novo (só a partir de julho) ou só
+  não reparei nas abas anteriores.
+- **"Transferências Entre Contas"/"Transferências Extraordinárias"**: movimentação de dinheiro
+  entre bancos (Itaú ↔ Infinity Pay) — empréstimo, transferência interna. **Não é receita nem
+  despesa**, conceito que `ContaPagarReceber`/`LancamentoFinanceiro` não modelam hoje.
+- Essa planilha está marcada **"Somente ver"** pro Marcos, mas **o raio-x via Apps Script rodou
+  normalmente mesmo assim** — a restrição de "Somente ver" bloqueia `Arquivo → Fazer download`
+  na UI, mas não bloqueia leitura via `SpreadsheetApp.openById()` com a conta que tem acesso de
+  visualização (achado ao vivo, 18/07/2026: chegamos a suspeitar que bloquearia, testamos, não
+  bloqueou). Antes de rodar o script, pedimos pro Gemini integrado ao Sheets uma leitura
+  preliminar — ele errou ao dizer "não é possível ver fórmula" (na real, é uma limitação de como
+  o Gemini processa a planilha, não do acesso em si — a barra de fórmulas do Sheets mostra
+  fórmula normalmente pra quem só visualiza). Os números abaixo são os confirmados pelo raio-x
+  de verdade (substituem a estimativa do Gemini, que tinha pequenas imprecisões):
+  - **Zero células com erro** (`#REF!`/`#N/A`/`#DIV/0!`) em nenhuma tabela, todas as 5 abas —
+    confirmado via varredura completa, não amostra.
+  - **Fórmulas reais confirmadas** (ex.: `=SUMIFS(G:G;B:B;"Despesas";E:E;"Fixa")`,
+    `=SUMIFS(Q:Q;L:L;"Receita";O:O;"Eventos")`) — os totais de Receita/Despesa por categoria são
+    sempre `SUMIFS` sobre a tabela de lançamentos da própria aba, nunca `IMPORTRANGE` (essa
+    planilha não puxa de nenhuma outra, diferente de "Eventos - Despesas e Receitas").
+  - **`Status` (despesas), coluna J, só 2 valores confirmados**: `Pago`, `Falta Pagar` — sem
+    "Parcial". **Diferente** das outras 2 planilhas (`FALTA PAGAR`/`PAGO PARCIAL`/`PAGO` em
+    "Eventos"; `Pago`/`Parcial`/`Pendente` em "Vendas Aline Melo") — confirma que o padrão de "3
+    estados" não é universal entre as planilhas do cliente, cada uma usa granularidade diferente
+    pro mesmo conceito.
+  - **`Categoria` (despesas), coluna C, 7 valores confirmados** (filtrado só em linhas
+    `Tipo = Despesas`, sem ruído de outras tabelas da aba): `Estrutura`, `Eventos`,
+    `Financeiro/Jurídico`, `Marketing`, `Operação`, `Outros`, `Pessoas`.
+  - **`Forma de Pagamento` (despesas), coluna H**: `Pix`, `Boleto`, `Cartão` — sem Hotmart aqui
+    (gasto interno, não venda).
+  - **`Subcategoria` (despesas), coluna D — 48 valores distintos confirmados** (não 44; a conta
+    do Gemini tinha uma pequena imprecisão). **Plano de contas completo, pronto pra virar seed
+    do E14**:
+    Alimentação Administrativa, Alimentação Evento, Almoço Administrativo, Almoço/Jantar de
+    Negócios, Aluguel, Apresentador Evento, Brindes Evento, Cartão de Crédito, Combustível,
+    Comercial, Condomínio, Contabilidade, Coordenador de Projetos, Custos Viagem Evento, Design,
+    Diretor, Doação, Endomarketing, Energia, Equipamentos, Estacionamento, Estadia, Estorno,
+    Estrutura Evento, Financeiro (Mentor), Hotel, Impostos, Internet, Jurídico, Limpeza,
+    Materiais Evento, Mentoria, Midia Evento, Mobiliário, Músico Evento, Outros, Palestras
+    Evento, Passagens, RH (Mentor), Sistemas, Social Media, Sucesso do Gestor, Tráfego Pago,
+    Uber, V.A e V.T, Visita Pré-evento, Visitas mentorados, Água Mineral.
+  - **"Transferências Entre Contas"/"Transferências Extraordinárias" tem vocabulário de status
+    próprio** (`✅ Correspondente`) — é um conceito diferente (conciliação bancária, não status
+    de pagamento), confirma que não é um 3º estado do mesmo enum, é campo de outra tabela.
 
 ### 2. "Vendas Eventos" (E13 — venda de ingresso)
 Uma aba por evento (ex.: "A Receita do Sucesso 4 - Teresina", "A Receita do Sucesso 5 - Maceió",
@@ -314,6 +361,36 @@ dropdown com valores **Cortesia / Essencial / Vip / Especial** (diferente do "In
 VIP" que a reunião tinha citado de memória — **usar esses 4 valores reais**), `Origem da Venda`
 — dropdown com vendedor nomeado (ex.: "Aline Melo Comercial", "Matheus") + `CORTESIA` +
 `HOTMART`, `Nome da Empresa`, `Telefone`, `Email`.
+
+#### Achado grande (18/07/2026): esta é a planilha-fonte do `IMPORTRANGE`
+ID confirmado: `1h8BmrO41_pWW7IIfjJ72OxnWGtRasQfEooJt_BV_jsQ` — **é exatamente o mesmo ID** que
+`ARRAYFORMULA(IMPORTRANGE(...))` importava em todas as abas de "Eventos - Despesas e Receitas"
+(achado anterior, ver seção 5). Mistério resolvido: "Vendas Eventos" é a fonte primária real de
+venda de ingresso; "Eventos - Despesas e Receitas" só consolida um subconjunto dela pro P&L.
+Tem mais abas/eventos do que a consolidada tinha exposto (Recife, Salvador, Portugal, Fortaleza).
+
+#### Confirmado via raio-x (18/07/2026) — 10 abas, zero fórmula, zero erro
+Diferente da DRE/Eventos, esta planilha é 100% dado bruto (nenhuma célula com fórmula em
+nenhuma aba) — é mesmo a "folha de origem" que outras planilhas processam/importam.
+
+- **Zero células com erro** em todas as 10 abas.
+- **`Tipo de ingresso` real, 4 valores confirmados (com volume)**: `Essencial` (165 linhas),
+  `Vip` (60), `Especial` (22), `Black` (3 — raro, mas real, visto só em "A Receita do Sucesso 8
+  - Fortaleza", pode ser categoria de campanha específica, não confirmado se é permanente).
+- **Achado que corrige código já implementado**: `Cortesia` **não é** um `Tipo de ingresso` —
+  toda ocorrência de "CORTESIA" na planilha está na coluna `Origem da Venda`, nunca em `Tipo de
+  ingresso`. O `CategoriaIngresso` do backend (`CORTESIA`/`ESSENCIAL`/`VIP`/`ESPECIAL`,
+  implementado no M25) tem um valor no eixo errado — o real deveria ser
+  `ESSENCIAL`/`VIP`/`ESPECIAL`/`BLACK`, com "cortesia" sendo uma *origem* (por que o ingresso foi
+  emitido de graça), não uma *categoria* de ingresso. Um ingresso de cortesia ainda tem um tipo
+  (Essencial/Vip/Especial/Black), só que com `valorLiquido = 0` e `origemVenda = CORTESIA`.
+  **Pendência de correção, ainda não aplicada no código** — decisão registrada na lista
+  consolidada de gaps.
+- **`Origem da Venda` real, 5 valores confirmados (com volume)**: `Aline Melo Comercial` (103),
+  `CORTESIA` (88), `HOTMART` (70), `Matheus Brayan` (10), `PARCEIRO` (4). Confirma que a coluna
+  mistura nome de vendedora/fundador (`Aline Melo Comercial`, `Matheus Brayan`) com canal/motivo
+  (`CORTESIA`, `HOTMART`, `PARCEIRO`) — mesmo gap de modelagem já registrado (`OrigemVenda` do
+  M25 não tem onde encaixar nome de pessoa).
 
 ### 3. "Vendas [Nome da Vendedora]" — ex. "Vendas Aline Melo" (E13 — venda por fora)
 **Uma planilha por vendedora**, abas mensais (Fevereiro, Março, Abril, Maio, Junho...). Colunas:
@@ -326,9 +403,58 @@ compra (R$)`, `Valor restante a pagar (R$)`, `Status do pagamento` (Pago/Parcial
 (texto livre — ex.: "entrada de 6k + 10 parcelas de 2k", onde o parcelamento vive hoje, sem
 campo estruturado).
 
+#### Confirmado via raio-x ("Vendas Aline Melo", 18/07/2026) — 23 linhas de venda reais, 5 abas mensais
+- **Zero fórmulas em toda a planilha** (não só zero erro — zero fórmula, ponto) — diferente de
+  "Eventos - Despesas e Receitas" (que tinha `SUM`/`SUMIF` reais), aqui todo campo é digitado à
+  mão, inclusive "Valor restante a pagar". Isso quer dizer que a consistência aritmética
+  (Total − Pago = Restante) **não é garantida pela planilha**, precisa ser validada/recalculada
+  no import, não só copiada.
+- **`Produto` real, 3 valores confirmados nas linhas preenchidas**: `Mentoria Contínua`,
+  `Formação Profissional`, **`Ficha técnica Lucrativa`** — esse terceiro não está em nenhum
+  levantamento anterior nem no `ProdutoVenda` do M25 (que já tem MENTORIA_CONTINUA/
+  MENTORIA_INDIVIDUAL/CONSULTORIA/FORMULA_SAW/FORMACAO_PROFISSIONAL/INGRESSO_EVENTO/
+  PRODUTO_DIGITAL) — precisa de decisão: novo valor de enum, ou cai no catch-all
+  `PRODUTO_DIGITAL`?
+- **`Forma de pagamento` real, 3 valores**: `Pix`, `Pix Recorrente`, `Hotmart` — `FormaPagamento`
+  do SAW HUB hoje só tem `PIX`/`CARTAO`/`BOLETO`/`HOTMART`, sem distinguir Pix avulso de Pix
+  recorrente (assinatura). Pode ser relevante pro MRR (H14.3), já que "recorrente" é
+  informação de negócio, não só forma de pagamento.
+- **`Status do pagamento` real, 3 valores**: `Pago`, `Parcial`, `Pendente` — mesmo gap de 3
+  estados já achado em "Eventos - Despesas e Receitas" (lá os literais eram
+  `PAGO`/`PAGO PARCIAL`/`FALTA PAGAR`) — **confirma que é um padrão real de negócio, não
+  peculiaridade de uma planilha**, mas os literais usados não são nem consistentes entre
+  planilhas diferentes (⚠️ um motivo a mais pro formulário único do M25 já ter resolvido isso
+  com enum próprio, em vez de replicar texto livre de planilha).
+- **Achado de negócio, não só de schema — vendas via Hotmart têm "Valor pago no ato" menor que
+  "Valor total", com "Valor restante a pagar" = 0 mesmo assim** (ex.: total R$597, pago
+  R$540,35, restante R$0 — 11 das 23 linhas têm essa mesma assinatura, ~87-91% do total). A
+  leitura mais provável: "Valor pago no ato" pro Hotmart é o **valor líquido que a SAW recebe
+  depois da taxa da plataforma**, não o valor bruto pago pelo cliente — e "Restante = 0" está
+  certo porque o cliente já pagou tudo (a diferença é taxa de plataforma, não dívida do
+  cliente). **Se confirmado**, o `FecharVendaRequest`/`Lead.fecharVenda()` do M25 (que hoje
+  valida só `valorPagoNoAto ≤ valorTotalVenda`, sem separar taxa de plataforma) precisa de um
+  terceiro conceito — taxa/comissão retida —, senão toda venda Hotmart vai parecer "faltando
+  pagar" quando na verdade está 100% quitada pelo cliente.
+
 ### 4. "CREDENCIAMENTO [Evento]" — ex. "CREDENCIAMENTO A RECEITA 7 - Salvador" (E13/E7 — evento)
 Uma planilha por evento. Colunas: `Nome`, `Telefone`, `Email`, `Nome do Negócio`, `Categoria`
 (Comum/Vip), `Almoço` (Sim/vazio), `Check-in`, `Compra` (Hotmart/Venda Direta Comercial).
+
+#### Confirmado via raio-x (18/07/2026) — 1 aba ("NOMES"), 39 credenciados, zero fórmula, zero erro
+- **`Categoria` real: só 2 valores** — `Comum` (33) e `Vip` (6, com espaço sobrando no fim do
+  literal — `"Vip "`, mesma classe de sujeira de dado das outras planilhas). **Diferente** de
+  "Vendas Eventos" (`Essencial`/`Vip`/`Especial`/`Black`, 4 valores) — hipótese: pra fins de
+  credenciamento físico (fila/checagem no dia), a equipe só precisa saber "é VIP ou não", não a
+  granularidade comercial completa. Se confirmado, `Comum` provavelmente é um agregado de
+  Essencial+Especial (não-VIP), não um 5º tipo de ingresso novo — precisa perguntar ao cliente
+  antes de mapear.
+- **`Check-in` não tem nenhum valor preenchido** (0 de 39 linhas) — a coluna existe no schema
+  mas não está sendo usada de fato neste evento. `VendaIngresso.checkIn` (booleano, já
+  implementado) mapeia direto pra essa coluna, mas o dado real mostra que raramente é marcado.
+- **`Compra` real: 2 valores** — `HOTMART` (21), `VENDA DIRETA COMERCIAL` (18) — mais genérico
+  que "Origem da Venda" de "Vendas Eventos" (que nomeia a vendedora específica). Mesma pergunta
+  do item acima: é uma simplificação só pra esta tela, ou uma origem de dado genuinamente
+  diferente?
 
 ### 5. "Eventos - Despesas e Receitas" (E13+E14 — P&L por evento)
 Confirma o pedido de "separar despesas e receitas por evento, independente do mês" — uma aba por
@@ -348,6 +474,64 @@ aba:
 - **Ingressos Vendidos**: mesma estrutura da planilha "Vendas Eventos" (item 2) — Nome do Aluno,
   Quantidade, Valor Líquido, Tipo de ingresso, Origem da Venda, Nome da Empresa, Telefone, Email.
 
+#### Confirmado via raio-x (`docs/raio-x-planilhas.gs`, 18/07/2026) — valor + fórmula + dropdown reais, não só print
+Rodado contra a planilha real (ID em `dados-cliente-notion/`, 6 abas — 5 eventos + 1 template).
+Achados que substituem/reforçam a descrição acima com confirmação de fórmula, não só leitura
+visual:
+- **Zero células com erro de fórmula** (`#REF!`/`#N/A`/etc.) em nenhuma das 6 abas — apesar de
+  "todas terem fórmula" (preocupação do Marcos), o dado está limpo.
+- **Aba "Base Modelo Evendo"** é o template real (confirma "duplicar aba-modelo" acima) — schema
+  limpo, sem dado de evento misturado, boa referência de shape pro import.
+- **Totais são fórmula de verdade sobre tabelas nomeadas** (recurso nativo "Tabelas" do Sheets,
+  não Named Range clássico — `getNamedRanges()` não enxerga, mas a fórmula mostra o nome): ex.
+  `=SUM(Despesas_4[Falta Pagar (R$)])`, `=SUM(Receitas_4[[Valor Recebido 1]:[Valor Recebido 3]])`,
+  `=SUMIF(D40:D141;"Vip";B40:B141)` pra somar ingresso por categoria. Confirma que "Falta Pagar"/
+  "Falta Receber" são sempre calculados (Total − Parcelas recebidas), nunca digitados à mão.
+  Uma linha por evento pesado (ex. Maceió) tem só ~64 células com fórmula de um total de ~1200
+  células ocupadas — a maior parte do volume é dado de linha (nome/telefone/valor), não fórmula.
+- **"Status do Pagamento" tem 3 estados reais** (dropdown confirmado via `getDataValidations`):
+  `FALTA PAGAR`, `PAGO PARCIAL`, `PAGO` — **diferente do `StatusConta` do SAW HUB hoje**
+  (`PENDENTE`/`PAGO`/`RECEBIDO`/`VENCIDO`, sem um estado "parcial" explícito). Gap real de
+  modelagem a resolver antes do E14 importar esse dado.
+- **"Origem da Venda" é nome de vendedora, não canal** (confirmado nos valores reais de célula:
+  `"Aline Melo Comercial"`, `"HOTMART"`) — o enum `OrigemVenda` do M25
+  (`DIRETA`/`HOTMART`/`CORTESIA`/`PATROCINIO`/`PALESTRANTE`) não tem onde encaixar um nome de
+  pessoa. Precisa decisão: vira um catálogo de vendedoras (like `Colaborador`), ou o enum ganha
+  granularidade nova.
+- **`VendaIngresso` (já implementada no M25) está incompleta**: a planilha real guarda
+  **Nome da Empresa, Telefone e E-mail** do comprador — a entidade atual só tem
+  nomeCredenciado/setor/almoco/categoriaIngresso/checkIn. Falta estender.
+- **Achado novo, muda o entendimento da fonte de dado**: todas as 6 abas têm uma fórmula
+  `=ARRAYFORMULA(IMPORTRANGE("...spreadsheets/d/1h8BmrO41_pWW7IIfjJ72OxnWGtRasQfEooJt_BV_jsQ/edit"; "NomeDaAba!A2:H"))`
+  — ou seja, **"Eventos - Despesas e Receitas" não é a planilha onde o dado nasce**, é um
+  consolidado/dashboard que importa de outra planilha (ID acima) com abas de mesmo nome. Ainda
+  não confirmado o que aquela planilha-fonte contém de diferente/adicional — próximo raio-x.
+
+### Relacionamento real entre as 5 planilhas (confirmado 19/07/2026, cruzando os 5 raio-x)
+Depois de ter os 5 arquivos `.json` do raio-x, cruzei nome/valor entre eles pra testar de
+verdade se as planilhas "se falam" ou só parecem relacionadas pela descrição. Resultado: **só
+uma relação é automática** (fórmula), **todo o resto é a mesma venda/pessoa redigitada à mão em
+arquivos diferentes**:
+
+- **Automática (fórmula)**: `Eventos - Despesas e Receitas` ← `IMPORTRANGE` ←
+  `Vendas Eventos` — já documentado acima, confirmado por ID de planilha idêntico na fórmula.
+- **Mesmo evento, digitado 2x, sem fórmula nenhuma ligando**: "Vendas Eventos" (aba Salvador,
+  26 compradores) × "CREDENCIAMENTO A RECEITA 7 - Salvador" (39 credenciados) — **18 nomes batem
+  exatamente** entre as duas listas (a diferença de 39 vs 26 é provavelmente
+  cortesia/acompanhante, que só entra no credenciamento). Duas planilhas, dois preenchimentos
+  manuais independentes, mesmo evento real.
+- **Mesma venda, digitada 2x, sem fórmula nenhuma ligando**: a venda de "Luan - O casarão"
+  (Formação Profissional, R$1.000, Pix) em "Vendas Aline Melo" (aba Maio) **reaparece na
+  "DRE Financeira Saw"** (aba ABR 26) como duas linhas — `"1ª Parte Fórmula Luan Lucas"` e
+  `"2ª Parte Fórmula Luan Lucas"`. `DRE Financeira Saw` não tem nenhuma fórmula de
+  `IMPORTRANGE`/referência cruzada em nenhuma das 5 abas (confirmado via raio-x) — é 100%
+  preenchida manualmente, mesmo quando o conteúdo repete outra planilha.
+
+**Por que isso importa pro M25**: não é só a descrição verbal da reunião ("a vendedora preenche
+2-3 planilhas por venda") — agora tem prova de dado real, com nome e valor batendo, de que a
+mesma venda/pessoa é retrabalho manual em pelo menos 2 sistemas diferentes hoje. Reforça (com
+evidência, não só relato) por que o "formulário único de venda" era o pedido nº 1 do Comercial.
+
 ### Implicações pro desenho (E13/E14)
 - O **plano de contas já existe** (Estrutura/Pessoas/Operação/Financeiro + subcategorias) — não
   precisa inventar, só replicar essa lista como seed do E14.
@@ -363,6 +547,55 @@ aba:
   (venda de ingresso, venda por fora, credenciamento) — mas vivem em arquivos e ferramentas
   diferentes hoje (Sheets vs. Notion), reforçando por que o formulário único é o pedido nº 1 do
   Comercial.
+- **Gaps achados via raio-x (18/07/2026) — status em 19/07/2026: 6 de 8 implementados** (1, 2, 3,
+  5, 6, 8 — todos confirmados pelo Marcos direto, sem precisar do Victor, sob a filosofia "vamos
+  sempre trabalhar com gerais e se depois o cliente quiser tirar, tiramos"). Gap 4 já estava
+  resolvido (mapeamento do IMPORTRANGE). Gap 7 segue **deliberadamente fora desta leva** — é uma
+  pergunta sobre o que um número significa (não uma categoria a incluir), continua precisando de
+  confirmação real do cliente antes de qualquer mudança de código.
+  1. ✅ **Resolvido** (19/07/2026) — `StatusConta` ganhou `PARCIAL`, alcançado por
+     `ContaPagarReceber#liquidarParcial(valorPagoAdicional, dataPagamento)`: acumula pagamento
+     parcial num novo campo `valorPago`, vira liquidação completa (`PAGO`/`RECEBIDO`) quando o
+     acumulado cobre o valor total. Endpoint `PATCH /admin/financeiro/contas/{id}/liquidar-parcial`,
+     tela "Parcial" em Contas (Financeiro). Não gera `LancamentoFinanceiro` automático por
+     pagamento parcial (só a liquidação total gera, mesmo comportamento de antes) — decisão de
+     escopo, não há ainda modelo de "parcelamento de conta" definido (distinto do
+     `ParcelaVenda` do E13, que é de venda, não de conta a pagar/receber). Migration
+     `V31__conta_status_parcial.sql`.
+  2. ✅ **Resolvido** (19/07/2026) — `OrigemVenda` ganhou `PARCEIRO`, categoria própria e
+     diferente de `CORTESIA` (confirmado pelo Marcos: "são categorias diferentes"). Venda direta
+     comercial **não** precisou de valor de enum novo — já é `OrigemVenda.DIRETA` +
+     `Lead.getVendedor()` (nome da vendedora), confirmado como o mesmo dado só com nomenclatura
+     mais genérica na planilha. Migration `V32__origem_venda_parceiro.sql`.
+  3. ✅ **Resolvido** (19/07/2026) — `VendaIngresso` ganhou `nomeEmpresa` (texto simples, mesmo
+     critério de `Mentorado.nomeFantasia` — não é PII de indivíduo), `telefone` e `email`
+     (criptografados via pgcrypto, mesmo critério de `Lead.telefone`/`Lead.email`). Todos
+     opcionais — nem toda venda real na planilha tem os 3 preenchidos. Migration
+     `V36__venda_ingresso_empresa_contato.sql`.
+  4. A planilha "Eventos - Despesas e Receitas" é um consolidado via `IMPORTRANGE` da planilha
+     "Vendas Eventos" (ID `1h8BmrO41_pWW7IIfjJ72OxnWGtRasQfEooJt_BV_jsQ`) — **mapeada em
+     18/07/2026**, ver seção 2.
+  5. ✅ **Resolvido** (19/07/2026) — **"Ficha técnica Lucrativa"** confirmado como categoria
+     própria de `ProdutoVenda` (`FICHA_TECNICA_LUCRATIVA`), mesmo nível de Fórmula SAW/Formação
+     Profissional — não vira `TipoContrato` (mesmo tratamento dos outros produtos "avulsos").
+     Migration `V33__produto_venda_ficha_tecnica_lucrativa.sql`.
+  6. ✅ **Resolvido** (19/07/2026) — `FormaPagamento` ganhou `PIX_RECORRENTE`, distinto de `PIX`
+     avulso. Ainda não conectado ao cálculo de MRR (H14.3) — só o catálogo foi resolvido nesta
+     leva, o dashboard de faturamento continua sem diferenciar as duas formas na composição de
+     receita recorrente. Migration `V34__forma_pagamento_pix_recorrente.sql`.
+  7. **Ainda não resolvido, fora de escopo desta leva.** Vendas via Hotmart parecem registrar o
+     valor líquido (pós-taxa da plataforma) como "Valor pago no ato", não o valor bruto —
+     hipótese fundamentada em 11/23 linhas reais de "Vendas Aline Melo" com o mesmo padrão
+     (~87-91% do total, restante sempre R$0 mesmo com total ≠ pago). Se confirmado,
+     `Lead.fecharVenda()` precisa de um terceiro conceito (taxa/comissão de plataforma retida),
+     senão toda venda Hotmart aparenta ficar "devendo" quando na verdade está quitada pelo
+     cliente.
+  8. ✅ **Resolvido** (19/07/2026) — `CategoriaIngresso` corrigido: `CORTESIA` saiu do enum
+     (confirmado sem nenhuma linha em produção usando esse valor, verificado via grep antes da
+     migration), `BLACK` entrou como quarta categoria real, tratada como **permanente**
+     (confirmado pelo Marcos: "trate o black como permanente"), não como campanha específica de
+     um evento só. Enum final: `ESSENCIAL`/`VIP`/`ESPECIAL`/`BLACK`. Migration
+     `V35__categoria_ingresso_black.sql`.
 
 ## 🔒 Pausado nesta leva (implementado em 17/07/2026)
 
@@ -396,10 +629,13 @@ código nem dado:
   cliente achou "interessante" mas não confirmou como prioridade.
 - Rename "Mentorados" → "Gestão de Performance" (ver E5 acima) — registrado, não implementado.
 
-## Perguntas pendentes pro Victor — todas resolvidas em 18/07/2026 (respondidas pelo Marcos direto, sem precisar perguntar ao Victor)
+## Perguntas pendentes pro Victor
 
-Únicos itens que tinham sobrado em aberto depois de cruzar reunião + Notion + as 5 planilhas —
-todo o resto já tinha sido respondido/confirmado ao longo deste documento:
+As 4 perguntas desta lista foram todas resolvidas pelo Marcos direto, sem precisar perguntar ao
+Victor (a 4ª, que veio do raio-x do "CREDENCIAMENTO", foi resolvida em 19/07/2026 — ver abaixo).
+Nenhuma pergunta em aberto no momento; a única decisão real ainda pendente de terceiro é o gap 7
+(hipótese Hotmart líquido/bruto), que precisa do cliente mesmo — ver "Implicações pro desenho"
+abaixo.
 
 1. **"Fórmula SAW"** (aba do CRM Saw) — **resolvido:** é produto vendável à parte, categoria
    própria de `ProdutoVenda` (mesmo nível de Mentoria Contínua/Individual/Consultoria). Não é o
@@ -414,6 +650,23 @@ todo o resto já tinha sido respondido/confirmado ao longo deste documento:
    Notion, não computar a partir de `TipoContrato.calcularVencimento()` (regra de 12 meses fixos,
    pode divergir de contrato renegociado/estendido na base real). Ainda não implementado — M24
    segue bloqueado esperando o export do Notion, mas a regra de mapeamento já está definida.
+4. **`Comum`/`Vip` (planilha "CREDENCIAMENTO") é uma simplificação de
+   `Essencial`/`Vip`/`Especial`/`Black` (planilha "Vendas Eventos"), ou uma categorização
+   genuinamente diferente?** — achado em 18/07/2026, **resolvido pelo Marcos em 19/07/2026,
+   direto (sem precisar do Victor):** são categorias diferentes, `Comum` não é sinônimo/
+   simplificação de nenhum dos 4 tipos comerciais — é um rótulo próprio do credenciamento físico,
+   sem mapeamento 1:1 forçado pro `CategoriaIngresso` do backend. Sem mudança de código por causa
+   disso: não existe hoje um campo "categoria de credenciamento" separado da `CategoriaIngresso`
+   comercial, e nada nesta leva pediu criar um. Mesma dúvida sobre `Compra`
+   (`HOTMART`/`VENDA DIRETA COMERCIAL`) vs. `Origem da Venda` também resolvida: **venda direta
+   comercial é o mesmo dado que nome de vendedora** (já coberto por `OrigemVenda.DIRETA` +
+   `Lead.vendedor`, sem precisar de valor de enum novo pra isso), e **`Cortesia`/`Parceiro` são
+   categorias diferentes entre si** — `OrigemVenda` ganhou `PARCEIRO` como valor próprio (gap 2,
+   `V32__origem_venda_parceiro.sql`). Filosofia de trabalho confirmada pelo Marcos pra essas
+   decisões de catálogo daqui pra frente: "vamos sempre trabalhar com gerais e se depois o
+   cliente quiser tirar, tiramos" — inclui/generaliza categoria quando o dado real mostra que
+   existe, sem esperar confirmação do Victor pra decisões que são só de nomenclatura/catálogo
+   (reservado pro Victor só o que é regra de negócio real, ex.: item 3 acima).
 
 ## Plano pra migrar o "Diagnóstico Inicial" do Notion (decidido em 17/07/2026)
 
@@ -431,6 +684,27 @@ dezembro: 600k"*) e popula os campos estruturados automaticamente; (3) registros
 no padrão esperado (rótulo faltando, formatação diferente) ficam sinalizados pra alguém do time
 completar só aquele campo, não o cadastro inteiro. Fica pendente até o export completo (~40
 páginas de mentorado) estar disponível — sem bloquear o resto da implementação.
+
+### 🔒 Pendência bloqueada (19/07/2026): Marcos não tem permissão de export no Notion
+O Marcos acessa esse workspace como **Guest** (convidado), não como Membro — o menu `···` da
+página "CRM Saw" mostra a opção **"Export" desativada** (cinza, não clicável). Diferente do
+bloqueio equivalente no Google Sheets (planilha "Somente ver"), aqui **não existe workaround
+técnico**: sem ferramenta de automação de navegador nesta sessão, sem sessão logada do Marcos
+pra usar (não deve ser compartilhada), URL é `app.notion.com` (autenticada, `WebFetch` não
+funciona), e o Notion não tem um endpoint de leitura pública equivalente ao CSV export de link
+público do Sheets. Testado (19/07/2026): confirmado que não há alternativa viável do lado do
+Marcos.
+
+**Só desbloqueia com ação do Matheus** (dono do workspace, aparece como "Notion de Matheus
+Br..." no topo da página) — uma das três:
+1. Ele mesmo faz o export (`···` → `Export` → `Markdown & CSV`, com subpáginas) e compartilha o
+   arquivo.
+2. Promove o Marcos de Guest pra Membro nesse workspace (mesmo que temporário).
+3. Cria uma integração do Notion (Settings → Connections) e compartilha "CRM Saw" com ela — só
+   vale a pena se isso virar necessidade recorrente, não pra um export único.
+
+**Bloqueia**: a parte do M24 que depende do "Diagnóstico Inicial" (texto livre, só existe no
+Notion). O resto do M24 (contato/produto/valor via planilhas) não depende disso.
 
 ## Nota de segurança
 A transcrição colada nesta conversa trazia credenciais em texto puro (login de demo mentorado e

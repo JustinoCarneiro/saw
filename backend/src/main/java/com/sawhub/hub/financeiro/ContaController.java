@@ -4,6 +4,7 @@ import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.financeiro.dto.ContaResponse;
 import com.sawhub.hub.financeiro.dto.CriarContaRequest;
 import com.sawhub.hub.financeiro.dto.LiquidarContaRequest;
+import com.sawhub.hub.financeiro.dto.LiquidarParcialContaRequest;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;
 import jakarta.validation.Valid;
@@ -53,6 +54,11 @@ public class ContaController {
     @PatchMapping("/{id}/liquidar")
     public ContaResponse liquidar(@PathVariable UUID id, @Valid @RequestBody LiquidarContaRequest request) {
         return ContaResponse.from(contaService.liquidar(id, request));
+    }
+
+    @PatchMapping("/{id}/liquidar-parcial")
+    public ContaResponse liquidarParcial(@PathVariable UUID id, @Valid @RequestBody LiquidarParcialContaRequest request) {
+        return ContaResponse.from(contaService.liquidarParcial(id, request));
     }
 
     // M21 — mesmos filtros de GET /contas.

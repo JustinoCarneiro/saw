@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.financeiro.dto.CriarContaRequest;
 import com.sawhub.hub.financeiro.dto.LiquidarContaRequest;
+import com.sawhub.hub.financeiro.dto.LiquidarParcialContaRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -125,6 +126,67 @@ class ContaPagarReceberServiceTest {
         when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
 
         assertThatThrownBy(() -> service().liquidar(contaId, new LiquidarContaRequest(LocalDate.now(), false)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    // Gap 1 (raio-x, 18/07/2026) — StatusConta.PARCIAL.
+    @Test
+    void liquidarParcialAbaixoDoValorTotalFicaParcial() {
+        UUID contaId = UUID.randomUUID();
+        CategoriaFinanceira categoria = new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
+        ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_RECEBER, "Mensalidade João Silva",
+                new BigDecimal("1000.00"), LocalDate.of(2026, 8, 5), categoria);
+        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new LiquidarParcialContaRequest(new BigDecimal("400.00"), LocalDate.of(2026, 7, 19));
+        ContaPagarReceber parcial = service().liquidarParcial(contaId, request);
+
+        assertThat(parcial.getStatus()).isEqualTo(StatusConta.PARCIAL);
+        assertThat(parcial.getValorPago()).isEqualByComparingTo("400.00");
+        verifyNoInteractions(lancamentoRepository);
+    }
+
+    @Test
+    void liquidarParcialAcumulaAteCobrirOValorTotalEViraLiquidadaPorCompleto() {
+        UUID contaId = UUID.randomUUID();
+        CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
+        ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor Hostinger",
+                new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), categoria);
+        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service().liquidarParcial(contaId, new LiquidarParcialContaRequest(new BigDecimal("100.00"), LocalDate.of(2026, 7, 15)));
+        ContaPagarReceber liquidada = service().liquidarParcial(contaId, new LiquidarParcialContaRequest(new BigDecimal("80.00"), LocalDate.of(2026, 7, 20)));
+
+        assertThat(liquidada.getStatus()).isEqualTo(StatusConta.PAGO);
+        assertThat(liquidada.getValorPago()).isEqualByComparingTo("180.00");
+    }
+
+    @Test
+    void liquidarParcialAcimaDoValorRestanteLancaErro() {
+        UUID contaId = UUID.randomUUID();
+        CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
+        ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor", new BigDecimal("180.00"),
+                LocalDate.of(2026, 7, 10), categoria);
+        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+
+        assertThatThrownBy(() -> service().liquidarParcial(contaId,
+                new LiquidarParcialContaRequest(new BigDecimal("200.00"), LocalDate.now())))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void liquidarParcialDeContaJaLiquidadaLancaErro() {
+        UUID contaId = UUID.randomUUID();
+        CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
+        ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor", new BigDecimal("180.00"),
+                LocalDate.of(2026, 7, 10), categoria);
+        conta.liquidar(LocalDate.of(2026, 7, 9), null);
+        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+
+        assertThatThrownBy(() -> service().liquidarParcial(contaId,
+                new LiquidarParcialContaRequest(new BigDecimal("10.00"), LocalDate.now())))
                 .isInstanceOf(IllegalStateException.class);
     }
 }

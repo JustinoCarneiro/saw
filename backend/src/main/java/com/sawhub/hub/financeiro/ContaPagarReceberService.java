@@ -2,6 +2,7 @@ package com.sawhub.hub.financeiro;
 
 import com.sawhub.hub.financeiro.dto.CriarContaRequest;
 import com.sawhub.hub.financeiro.dto.LiquidarContaRequest;
+import com.sawhub.hub.financeiro.dto.LiquidarParcialContaRequest;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -65,6 +66,14 @@ public class ContaPagarReceberService {
         }
 
         conta.liquidar(request.dataPagamento(), lancamentoGerado);
+        return contaRepository.save(conta);
+    }
+
+    @Transactional
+    public ContaPagarReceber liquidarParcial(UUID contaId, LiquidarParcialContaRequest request) {
+        ContaPagarReceber conta = contaRepository.findById(contaId)
+                .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
+        conta.liquidarParcial(request.valorPago(), request.dataPagamento());
         return contaRepository.save(conta);
     }
 }

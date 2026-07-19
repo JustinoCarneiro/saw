@@ -15,6 +15,7 @@ const TIPO_LABEL: Record<TipoConta, string> = { A_PAGAR: 'A pagar', A_RECEBER: '
 
 const STATUS_LABEL: Record<StatusConta, { label: string; bg: string; color: string }> = {
   PENDENTE: { label: 'Pendente', bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  PARCIAL: { label: 'Parcial', bg: 'var(--warning-bg)', color: 'var(--warning)' },
   PAGO: { label: 'Pago', bg: 'var(--success-bg)', color: 'var(--success)' },
   RECEBIDO: { label: 'Recebido', bg: 'var(--success-bg)', color: 'var(--success)' },
   VENCIDO: { label: 'Vencido', bg: 'var(--danger-bg)', color: 'var(--danger)' },
@@ -28,6 +29,7 @@ export function ContasPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [liquidando, setLiquidando] = useState<Conta | null>(null);
+  const [liquidandoParcial, setLiquidandoParcial] = useState<Conta | null>(null);
 
   const carregar = () => {
     setContas(null);
@@ -57,6 +59,7 @@ export function ContasPage() {
           <select className={styles.select} value={status} onChange={(e) => setStatus(e.target.value as StatusConta | '')}>
             <option value="">Todos os status</option>
             <option value="PENDENTE">Pendente</option>
+            <option value="PARCIAL">Parcial</option>
             <option value="PAGO">Pago</option>
             <option value="RECEBIDO">Recebido</option>
             <option value="VENCIDO">Vencido</option>
@@ -92,6 +95,14 @@ export function ContasPage() {
         />
       )}
 
+      {liquidandoParcial && (
+        <LiquidarParcialContaForm
+          conta={liquidandoParcial}
+          onLiquidado={() => { setLiquidandoParcial(null); carregar(); }}
+          onCancelar={() => setLiquidandoParcial(null)}
+        />
+      )}
+
       {error && <div className={styles.error}>{error}</div>}
 
       <DataGrid columns={COLUMNS} headers={['Tipo', 'Descrição', 'Valor', 'Vencimento', 'Status', 'Ações']}>
@@ -99,21 +110,31 @@ export function ContasPage() {
         {contas?.length === 0 && <div className={styles.loading}>Nenhuma conta encontrada.</div>}
         {contas?.map((c) => {
           const st = STATUS_LABEL[c.status];
-          const podeLiquidar = c.status === 'PENDENTE' || c.status === 'VENCIDO';
+          const podeLiquidar = c.status === 'PENDENTE' || c.status === 'VENCIDO' || c.status === 'PARCIAL';
           return (
             <DataGridRow key={c.id} columns={COLUMNS}>
               <div className={styles.muted}>{TIPO_LABEL[c.tipo]}</div>
               <div className={styles.strong}>{c.descricao}</div>
-              <div className={styles.valor}>{formatBRL(c.valor)}</div>
+              <div className={styles.valor}>
+                {formatBRL(c.valor)}
+                {c.status === 'PARCIAL' && c.valorPago != null && (
+                  <div className={styles.muted}>pago: {formatBRL(c.valorPago)}</div>
+                )}
+              </div>
               <div className={styles.muted}>{new Date(c.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
               <div>
                 <Pill bg={st.bg} color={st.color}>{st.label}</Pill>
               </div>
               <div>
                 {podeLiquidar ? (
-                  <button className={styles.liquidarButton} onClick={() => setLiquidando(c)}>
-                    Liquidar
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className={styles.liquidarButton} onClick={() => setLiquidando(c)}>
+                      Liquidar
+                    </button>
+                    <button className={styles.liquidarButton} onClick={() => setLiquidandoParcial(c)}>
+                      Parcial
+                    </button>
+                  </div>
                 ) : (
                   <span className={styles.muted}>—</span>
                 )}
@@ -254,6 +275,65 @@ function LiquidarContaForm({ conta, onLiquidado, onCancelar }: {
           <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
           <button type="submit" className={styles.newButton} disabled={submitting}>
             {submitting ? 'Liquidando…' : 'Confirmar liquidação'}
+          </button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+// Gap 1 (raio-x, 18/07/2026) — pagamento parcial, acumulativo (ver
+// ContaPagarReceber#liquidarParcial no backend). Não oferece "Gerar lançamento": diferente da
+// liquidação total, o valor de um pagamento parcial não corresponde ao valor cheio da conta.
+function LiquidarParcialContaForm({ conta, onLiquidado, onCancelar }: {
+  conta: Conta;
+  onLiquidado: () => void;
+  onCancelar: () => void;
+}) {
+  const valorRestante = conta.valor - (conta.valorPago ?? 0);
+  const [valorPago, setValorPago] = useState('');
+  const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().slice(0, 10));
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiClient.patch(`/admin/financeiro/contas/${conta.id}/liquidar-parcial`, { valorPago: Number(valorPago), dataPagamento });
+      onLiquidado();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível registrar o pagamento parcial. Tente novamente.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }}>
+      <div className={styles.liquidarTitle}>
+        Pagamento parcial: {conta.descricao} — falta {formatBRL(valorRestante)} de {formatBRL(conta.valor)}
+      </div>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.formRow}>
+          <label className={styles.formField}>
+            Valor pago agora (R$)
+            <input className={styles.textInput} type="number" min="0.01" max={valorRestante} step="0.01"
+                   value={valorPago} onChange={(e) => setValorPago(e.target.value)} required />
+          </label>
+          <label className={styles.formField}>
+            Data do {conta.tipo === 'A_PAGAR' ? 'pagamento' : 'recebimento'}
+            <input className={styles.textInput} type="date" value={dataPagamento} onChange={(e) => setDataPagamento(e.target.value)} required />
+          </label>
+        </div>
+
+        {error && <div className={styles.error}>{error}</div>}
+
+        <div className={styles.formActions}>
+          <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
+          <button type="submit" className={styles.newButton} disabled={submitting}>
+            {submitting ? 'Salvando…' : 'Registrar pagamento parcial'}
           </button>
         </div>
       </form>

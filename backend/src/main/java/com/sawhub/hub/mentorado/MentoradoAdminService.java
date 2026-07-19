@@ -130,11 +130,11 @@ public class MentoradoAdminService {
             case MENTORIA_CONTINUA -> TipoContrato.MENTORIA_CONTINUA;
             case MENTORIA_INDIVIDUAL -> TipoContrato.MENTORIA_INDIVIDUAL;
             case CONSULTORIA -> TipoContrato.CONSULTORIA;
-            // FORMULA_SAW/FORMACAO_PROFISSIONAL são categoria própria de ProdutoVenda
-            // (18/07/2026), mas ainda sem confirmação de que viram contrato de Mentorado com
-            // vencimento — ficam sem mapear pra TipoContrato por enquanto, mesmo tratamento de
-            // INGRESSO_EVENTO/PRODUTO_DIGITAL.
-            case FORMULA_SAW, FORMACAO_PROFISSIONAL, INGRESSO_EVENTO, PRODUTO_DIGITAL -> null;
+            // FORMULA_SAW/FORMACAO_PROFISSIONAL/FICHA_TECNICA_LUCRATIVA são categoria própria de
+            // ProdutoVenda (18-19/07/2026), mas ainda sem confirmação de que viram contrato de
+            // Mentorado com vencimento — ficam sem mapear pra TipoContrato por enquanto, mesmo
+            // tratamento de INGRESSO_EVENTO/PRODUTO_DIGITAL.
+            case FORMULA_SAW, FORMACAO_PROFISSIONAL, FICHA_TECNICA_LUCRATIVA, INGRESSO_EVENTO, PRODUTO_DIGITAL -> null;
         };
     }
 

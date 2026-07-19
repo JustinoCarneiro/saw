@@ -40,14 +40,14 @@ const PLANO_LABEL: Record<Plano, string> = {
   PROFISSIONAL: 'Profissional',
 };
 
-// M25 — catálogo confirmado no Blueprint (Suposição 1); "Fórmula SAW"/"Formação Profissional"
-// ficam de fora até confirmação do cliente.
+// M25 — catálogo confirmado via raio-x nas planilhas reais (docs/reuniao-2026-07-17-atualizacoes.md).
 const PRODUTO_VENDA_LABEL: Record<ProdutoVenda, string> = {
   MENTORIA_CONTINUA: 'Mentoria contínua',
   MENTORIA_INDIVIDUAL: 'Mentoria individual',
   CONSULTORIA: 'Consultoria',
   FORMULA_SAW: 'Fórmula SAW',
   FORMACAO_PROFISSIONAL: 'Formação Profissional',
+  FICHA_TECNICA_LUCRATIVA: 'Ficha técnica Lucrativa',
   INGRESSO_EVENTO: 'Ingresso de evento',
   PRODUTO_DIGITAL: 'Produto digital (planilha, aula avulsa etc.)',
 };
@@ -58,17 +58,21 @@ const ORIGEM_VENDA_LABEL: Record<OrigemVenda, string> = {
   CORTESIA: 'Cortesia',
   PATROCINIO: 'Patrocínio',
   PALESTRANTE: 'Palestrante',
+  PARCEIRO: 'Parceiro',
 };
 
+// Gap 8 (raio-x, 19/07/2026) — CORTESIA saiu do eixo errado (é OrigemVenda, não tipo de
+// ingresso); BLACK é a categoria real que faltava.
 const CATEGORIA_INGRESSO_LABEL: Record<CategoriaIngresso, string> = {
-  CORTESIA: 'Cortesia',
   ESSENCIAL: 'Essencial',
   VIP: 'VIP',
   ESPECIAL: 'Especial',
+  BLACK: 'Black',
 };
 
 const FORMA_PAGAMENTO_LABEL: Record<FormaPagamento, string> = {
   PIX: 'Pix',
+  PIX_RECORRENTE: 'Pix recorrente (assinatura)',
   CARTAO: 'Cartão',
   BOLETO: 'Boleto',
   HOTMART: 'Hotmart',
@@ -408,8 +412,16 @@ function AvancarLeadForm({ acao, vendedores, onAvancado, onCancelar }: {
 // separadas — venda por fora, venda de ingresso, credenciamento — por um único formulário que já
 // distribui o dado pro financeiro/credenciamento).
 const PARCELA_VAZIA = { valor: '', dataPrevista: '' };
-const INGRESSO_VAZIO: { categoriaIngresso: CategoriaIngresso | ''; nomeCredenciado: string; setor: string; almoco: boolean } = {
-  categoriaIngresso: '', nomeCredenciado: '', setor: '', almoco: false,
+const INGRESSO_VAZIO: {
+  categoriaIngresso: CategoriaIngresso | '';
+  nomeCredenciado: string;
+  setor: string;
+  almoco: boolean;
+  nomeEmpresa: string;
+  telefone: string;
+  email: string;
+} = {
+  categoriaIngresso: '', nomeCredenciado: '', setor: '', almoco: false, nomeEmpresa: '', telefone: '', email: '',
 };
 
 function FecharVendaForm({ lead, onFechado, onCancelar }: {
@@ -494,6 +506,9 @@ function FecharVendaForm({ lead, onFechado, onCancelar }: {
               nomeCredenciado: ing.nomeCredenciado,
               setor: ing.setor || null,
               almoco: ing.almoco,
+              nomeEmpresa: ing.nomeEmpresa || null,
+              telefone: ing.telefone || null,
+              email: ing.email || null,
             }))
           : null,
       };
@@ -571,32 +586,51 @@ function FecharVendaForm({ lead, onFechado, onCancelar }: {
             </label>
 
             {ingressos.map((ing, i) => (
-              <div key={i} className={styles.formRow}>
-                <label className={styles.formField}>
-                  Categoria
-                  <select className={styles.select} value={ing.categoriaIngresso}
-                          onChange={(e) => atualizarIngresso(i, 'categoriaIngresso', e.target.value as CategoriaIngresso)} required>
-                    <option value="">Selecione</option>
-                    {(Object.keys(CATEGORIA_INGRESSO_LABEL) as CategoriaIngresso[]).map((c) => (
-                      <option key={c} value={c}>{CATEGORIA_INGRESSO_LABEL[c]}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className={styles.formField}>
-                  Nome do credenciado
-                  <input className={styles.textInput} value={ing.nomeCredenciado}
-                         onChange={(e) => atualizarIngresso(i, 'nomeCredenciado', e.target.value)} required maxLength={120} />
-                </label>
-                <label className={styles.formField}>
-                  Setor
-                  <input className={styles.textInput} value={ing.setor}
-                         onChange={(e) => atualizarIngresso(i, 'setor', e.target.value)} maxLength={100} />
-                </label>
-                <label className={styles.formField} style={{ flex: '0 0 auto', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <input type="checkbox" checked={ing.almoco} onChange={(e) => atualizarIngresso(i, 'almoco', e.target.checked)} />
-                  Almoço
-                </label>
-                <button type="button" className={styles.actionButtonDanger} onClick={() => removerIngresso(i)}>Remover</button>
+              <div key={i} className={styles.formRow} style={{ flexDirection: 'column', gap: 8 }}>
+                <div className={styles.formRow}>
+                  <label className={styles.formField}>
+                    Categoria
+                    <select className={styles.select} value={ing.categoriaIngresso}
+                            onChange={(e) => atualizarIngresso(i, 'categoriaIngresso', e.target.value as CategoriaIngresso)} required>
+                      <option value="">Selecione</option>
+                      {(Object.keys(CATEGORIA_INGRESSO_LABEL) as CategoriaIngresso[]).map((c) => (
+                        <option key={c} value={c}>{CATEGORIA_INGRESSO_LABEL[c]}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.formField}>
+                    Nome do credenciado
+                    <input className={styles.textInput} value={ing.nomeCredenciado}
+                           onChange={(e) => atualizarIngresso(i, 'nomeCredenciado', e.target.value)} required maxLength={120} />
+                  </label>
+                  <label className={styles.formField}>
+                    Setor
+                    <input className={styles.textInput} value={ing.setor}
+                           onChange={(e) => atualizarIngresso(i, 'setor', e.target.value)} maxLength={100} />
+                  </label>
+                  <label className={styles.formField} style={{ flex: '0 0 auto', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <input type="checkbox" checked={ing.almoco} onChange={(e) => atualizarIngresso(i, 'almoco', e.target.checked)} />
+                    Almoço
+                  </label>
+                  <button type="button" className={styles.actionButtonDanger} onClick={() => removerIngresso(i)}>Remover</button>
+                </div>
+                <div className={styles.formRow}>
+                  <label className={styles.formField}>
+                    Empresa (opcional)
+                    <input className={styles.textInput} value={ing.nomeEmpresa}
+                           onChange={(e) => atualizarIngresso(i, 'nomeEmpresa', e.target.value)} maxLength={255} />
+                  </label>
+                  <label className={styles.formField}>
+                    Telefone (opcional)
+                    <input className={styles.textInput} value={ing.telefone}
+                           onChange={(e) => atualizarIngresso(i, 'telefone', e.target.value)} maxLength={20} />
+                  </label>
+                  <label className={styles.formField}>
+                    E-mail (opcional)
+                    <input className={styles.textInput} type="email" value={ing.email}
+                           onChange={(e) => atualizarIngresso(i, 'email', e.target.value)} maxLength={255} />
+                  </label>
+                </div>
               </div>
             ))}
             <button type="button" className={styles.cancelButton} onClick={adicionarIngresso} style={{ alignSelf: 'flex-start' }}>

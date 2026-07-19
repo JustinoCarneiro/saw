@@ -170,8 +170,10 @@ class ComercialDashboardServiceTest {
         lead.moverParaProposta();
         lead.fecharVenda(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA, new BigDecimal("600.00"),
                 new BigDecimal("600.00"), FormaPagamento.PIX);
-        VendaIngresso ingresso1 = new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "João Comprador", null, true);
-        VendaIngresso ingresso2 = new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "Ana Sócia", null, false);
+        VendaIngresso ingresso1 = new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "João Comprador", null, true,
+                null, null, null);
+        VendaIngresso ingresso2 = new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "Ana Sócia", null, false,
+                null, null, null);
         when(vendaIngressoRepository.buscarPorEventoIdComLead(eventoId)).thenReturn(List.of(ingresso1, ingresso2));
 
         DashboardComercialResponse dashboard = service().dashboard(2026, 7);

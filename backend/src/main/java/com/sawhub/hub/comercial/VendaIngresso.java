@@ -43,6 +43,26 @@ public class VendaIngresso extends BaseEntity {
     @Column(length = 100)
     private String setor;
 
+    // Gap 3 (raio-x em "Vendas Eventos"/"CREDENCIAMENTO", confirmado 19/07/2026): planilha real
+    // guarda empresa/telefone/e-mail do comprador, entidade original (M25) só tinha o
+    // credenciado. Todos opcionais — nem toda venda real tem os 3 preenchidos. nomeEmpresa segue
+    // o critério do Mentorado.nomeFantasia (não é PII de indivíduo, fica de fora do pgcrypto);
+    // telefone/email são PII, mesmo tratamento de Lead/Mentorado.
+    @Column(name = "nome_empresa", length = 255)
+    private String nomeEmpresa;
+
+    @Column(columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(telefone, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
+    private String telefone;
+
+    @Column(columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(email, current_setting('app.encryption_key'))",
+            write = "pgp_sym_encrypt(?, current_setting('app.encryption_key'))")
+    private String email;
+
     @Column(nullable = false)
     private boolean almoco;
 
@@ -53,13 +73,16 @@ public class VendaIngresso extends BaseEntity {
     }
 
     public VendaIngresso(Lead lead, Evento evento, CategoriaIngresso categoriaIngresso, String nomeCredenciado,
-                          String setor, boolean almoco) {
+                          String setor, boolean almoco, String nomeEmpresa, String telefone, String email) {
         this.lead = lead;
         this.evento = evento;
         this.categoriaIngresso = categoriaIngresso;
         this.nomeCredenciado = nomeCredenciado;
         this.setor = setor;
         this.almoco = almoco;
+        this.nomeEmpresa = nomeEmpresa;
+        this.telefone = telefone;
+        this.email = email;
         this.checkIn = false;
     }
 
@@ -85,6 +108,18 @@ public class VendaIngresso extends BaseEntity {
 
     public String getSetor() {
         return setor;
+    }
+
+    public String getNomeEmpresa() {
+        return nomeEmpresa;
+    }
+
+    public String getTelefone() {
+        return telefone;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     public boolean isAlmoco() {

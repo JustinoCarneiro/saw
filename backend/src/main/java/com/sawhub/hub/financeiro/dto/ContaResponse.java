@@ -15,10 +15,12 @@ public record ContaResponse(
         LocalDate dataVencimento,
         LocalDate dataPagamento,
         StatusConta status,
+        BigDecimal valorPago,
         UUID lancamentoId
 ) {
     public static ContaResponse from(ContaPagarReceber c) {
         return new ContaResponse(c.getId(), c.getTipo(), c.getDescricao(), c.getValor(), c.getDataVencimento(),
-                c.getDataPagamento(), c.getStatus(), c.getLancamento() == null ? null : c.getLancamento().getId());
+                c.getDataPagamento(), c.getStatus(), c.getValorPago(),
+                c.getLancamento() == null ? null : c.getLancamento().getId());
     }
 }

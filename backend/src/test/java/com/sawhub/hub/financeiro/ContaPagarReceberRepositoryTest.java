@@ -100,4 +100,24 @@ class ContaPagarReceberRepositoryTest {
 
         assertThat(recarregada.getDescricao()).isEqualTo("Parcela 1 - Maria Souza");
     }
+
+    // Gap 1 (raio-x, 18/07/2026) — contra banco real de propósito: só isso prova que a migração
+    // V31 realmente trocou o CHECK constraint chk_conta_status pra aceitar PARCIAL (mesmo tipo de
+    // bug já achado ao vivo com chk_lead_status na V26 — um mock nunca estoura violação de CHECK).
+    @Test
+    void liquidarParcialSobreviveCheckConstraintForaDaTransacaoOriginal() {
+        CategoriaFinanceira categoria = criarCategoria();
+        ContaPagarReceber salva = contaRepository.save(new ContaPagarReceber(TipoConta.A_RECEBER,
+                "Mensalidade parcial", new BigDecimal("1000.00"), LocalDate.of(2026, 8, 20), categoria));
+        salva.liquidarParcial(new BigDecimal("400.00"), LocalDate.of(2026, 7, 19));
+        contaRepository.save(salva);
+        entityManager.flush();
+        entityManager.clear();
+
+        ContaPagarReceber recarregada = contaRepository.findById(salva.getId()).orElseThrow();
+        entityManager.clear();
+
+        assertThat(recarregada.getStatus()).isEqualTo(StatusConta.PARCIAL);
+        assertThat(recarregada.getValorPago()).isEqualByComparingTo("400.00");
+    }
 }

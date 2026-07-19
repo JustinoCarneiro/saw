@@ -63,7 +63,8 @@ class VendaIngressoRepositoryTest {
         Evento evento = eventoRepository.save(new Evento("Evento E2E", TipoEvento.PRESENCIAL, null,
                 Instant.now(), "Recife", null, 100));
         Lead lead = leadFechadoComIngresso("1");
-        vendaIngressoRepository.save(new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "Convidado", null, false));
+        vendaIngressoRepository.save(new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "Convidado", null, false,
+                null, null, null));
         entityManager.flush();
         entityManager.clear();
 
@@ -79,7 +80,8 @@ class VendaIngressoRepositoryTest {
         Evento evento = eventoRepository.save(new Evento("Evento E2E", TipoEvento.PRESENCIAL, null,
                 Instant.now(), "Recife", null, 100));
         Lead lead = leadFechadoComIngresso("2");
-        vendaIngressoRepository.save(new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "Convidado", null, false));
+        vendaIngressoRepository.save(new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "Convidado", null, false,
+                "Restaurante Convidado Ltda", "81988887777", "convidado@restaurante.com"));
         entityManager.flush();
         entityManager.clear();
 
@@ -88,5 +90,25 @@ class VendaIngressoRepositoryTest {
 
         assertThat(vendas).hasSize(1);
         assertThat(vendas.get(0).getLead().getValorTotalVenda()).isEqualByComparingTo("300.00");
+    }
+
+    // Gap 3 (raio-x, 19/07/2026) — contra banco real de propósito: só isso prova que
+    // telefone/email sobrevivem o round-trip pgcrypto (@ColumnTransformer) igual Lead/Mentorado.
+    @Test
+    void nomeEmpresaTelefoneEEmailSobrevivemPgcryptoRoundTripForaDaTransacaoOriginal() {
+        Evento evento = eventoRepository.save(new Evento("Evento E2E", TipoEvento.PRESENCIAL, null,
+                Instant.now(), "Recife", null, 100));
+        Lead lead = leadFechadoComIngresso("3");
+        VendaIngresso salva = vendaIngressoRepository.save(new VendaIngresso(lead, evento, CategoriaIngresso.ESSENCIAL,
+                "Convidado", null, false, "Restaurante Pgcrypto Ltda", "81977776666", "pgcrypto@restaurante.com"));
+        entityManager.flush();
+        entityManager.clear();
+
+        VendaIngresso recarregada = vendaIngressoRepository.findById(salva.getId()).orElseThrow();
+        entityManager.clear();
+
+        assertThat(recarregada.getNomeEmpresa()).isEqualTo("Restaurante Pgcrypto Ltda");
+        assertThat(recarregada.getTelefone()).isEqualTo("81977776666");
+        assertThat(recarregada.getEmail()).isEqualTo("pgcrypto@restaurante.com");
     }
 }

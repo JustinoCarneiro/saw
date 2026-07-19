@@ -139,7 +139,8 @@ public class LeadService {
             // comercial vende ingresso além da capacidade do evento sem qualquer aviso.
             evento.ocuparVaga();
             vendaIngressoRepository.save(new VendaIngresso(lead, evento, ingresso.categoriaIngresso(),
-                    ingresso.nomeCredenciado(), ingresso.setor(), ingresso.almoco()));
+                    ingresso.nomeCredenciado(), ingresso.setor(), ingresso.almoco(),
+                    ingresso.nomeEmpresa(), ingresso.telefone(), ingresso.email()));
         }
         eventoRepository.save(evento);
     }

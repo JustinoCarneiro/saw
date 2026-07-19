@@ -48,6 +48,12 @@ public class ContaPagarReceber extends BaseEntity {
     @Column(nullable = false)
     private StatusConta status;
 
+    // Gap 1 (raio-x, 18/07/2026): quanto já foi pago/recebido enquanto a conta está PARCIAL.
+    // Null enquanto PENDENTE/VENCIDO (nunca recebeu pagamento nenhum); igual a `valor` quando
+    // liquidada por completo (PAGO/RECEBIDO) — ver liquidarParcial().
+    @Column(name = "valor_pago")
+    private BigDecimal valorPago;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id")
     private CategoriaFinanceira categoria;
@@ -87,6 +93,33 @@ public class ContaPagarReceber extends BaseEntity {
         }
     }
 
+    /** Gap 1 (raio-x, 18/07/2026) — pagamento parcial, acumulativo: pode ser chamado várias vezes
+     * (ex.: cliente paga em pedaços fora de um parcelamento estruturado). Se o total acumulado
+     * cobrir o valor da conta, liquida por completo (mesmo destino de {@link #liquidar}) — não dá
+     * pra ficar PARCIAL tendo pago 100%. Não gera {@link LancamentoFinanceiro}: diferente da
+     * liquidação total, um pagamento parcial não corresponde ao valor cheio da conta, e ainda não
+     * há decisão de produto sobre lançar cada parcela avulsa (ver nota no Blueprint). */
+    public void liquidarParcial(BigDecimal valorPagoAdicional, LocalDate dataPagamento) {
+        if (status == StatusConta.PAGO || status == StatusConta.RECEBIDO) {
+            throw new IllegalStateException("Esta conta já foi liquidada.");
+        }
+        if (valorPagoAdicional == null || valorPagoAdicional.signum() <= 0) {
+            throw new IllegalArgumentException("Valor pago deve ser positivo.");
+        }
+        BigDecimal totalPago = (this.valorPago == null ? BigDecimal.ZERO : this.valorPago).add(valorPagoAdicional);
+        if (totalPago.compareTo(valor) > 0) {
+            throw new IllegalArgumentException("Valor pago não pode ultrapassar o valor da conta.");
+        }
+        this.dataPagamento = dataPagamento;
+        if (totalPago.compareTo(valor) == 0) {
+            this.valorPago = totalPago;
+            this.status = tipo == TipoConta.A_PAGAR ? StatusConta.PAGO : StatusConta.RECEBIDO;
+        } else {
+            this.valorPago = totalPago;
+            this.status = StatusConta.PARCIAL;
+        }
+    }
+
     public TipoConta getTipo() {
         return tipo;
     }
@@ -109,6 +142,10 @@ public class ContaPagarReceber extends BaseEntity {
 
     public StatusConta getStatus() {
         return status;
+    }
+
+    public BigDecimal getValorPago() {
+        return valorPago;
     }
 
     public LancamentoFinanceiro getLancamento() {

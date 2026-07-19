@@ -118,4 +118,25 @@ class LeadRepositoryTest {
         assertThat(total).isEqualTo(3);
         assertThat(semIngresso).isEqualTo(2);
     }
+
+    // Gap 2 (raio-x, confirmado 19/07/2026) — contra banco real de propósito: só isso prova que a
+    // migração V32 realmente trocou o CHECK constraint chk_lead_origem_venda pra aceitar PARCEIRO
+    // (mesmo tipo de bug já achado ao vivo com chk_lead_status na V26).
+    @Test
+    void origemVendaParceiroSobreviveCheckConstraintForaDaTransacaoOriginal() {
+        Colaborador vendedor = criarVendedor("4");
+        Lead lead = new Lead("Parceiro", "parceiro@restaurante.com", null, null, null);
+        lead.moverParaEmContato(vendedor);
+        lead.moverParaProposta();
+        lead.fecharVenda(ProdutoVenda.CONSULTORIA, OrigemVenda.PARCEIRO, new BigDecimal("5000.00"),
+                new BigDecimal("5000.00"), FormaPagamento.PIX);
+        Lead salvo = leadRepository.save(lead);
+        entityManager.flush();
+        entityManager.clear();
+
+        Lead recarregado = leadRepository.findById(salvo.getId()).orElseThrow();
+        entityManager.clear();
+
+        assertThat(recarregado.getOrigemVenda()).isEqualTo(OrigemVenda.PARCEIRO);
+    }
 }

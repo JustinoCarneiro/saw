@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -334,14 +335,23 @@ class LeadServiceTest {
         when(vendaIngressoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var ingressos = List.of(
-                new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true),
-                new VendaIngressoRequest(CategoriaIngresso.ESSENCIAL, "Ana Sócia", "Financeiro", false));
+                new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true,
+                        "Restaurante do João Ltda", "81999998888", "joao@restaurante.com"),
+                new VendaIngressoRequest(CategoriaIngresso.ESSENCIAL, "Ana Sócia", "Financeiro", false,
+                        null, null, null));
         var request = new FecharVendaRequest(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA,
                 new BigDecimal("600.00"), new BigDecimal("600.00"), FormaPagamento.PIX, null, eventoId, ingressos);
 
         service().fecharVenda(leadId, request);
 
-        verify(vendaIngressoRepository, times(2)).save(any());
+        // Gap 3 (raio-x, 19/07/2026) — nomeEmpresa/telefone/email precisam chegar até a
+        // VendaIngresso persistida, não só existir no request.
+        ArgumentCaptor<VendaIngresso> captor = ArgumentCaptor.forClass(VendaIngresso.class);
+        verify(vendaIngressoRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(0).getNomeEmpresa()).isEqualTo("Restaurante do João Ltda");
+        assertThat(captor.getAllValues().get(0).getTelefone()).isEqualTo("81999998888");
+        assertThat(captor.getAllValues().get(0).getEmail()).isEqualTo("joao@restaurante.com");
+        assertThat(captor.getAllValues().get(1).getNomeEmpresa()).isNull();
         // Achado M2 da revisão de segurança: venda de ingresso precisa ocupar vaga de verdade
         // (mesma invariante já usada em EventoMentoradoService.inscrever(), H7.2) — senão o
         // funil comercial vende ingresso além da capacidade do evento sem qualquer aviso.
@@ -359,8 +369,8 @@ class LeadServiceTest {
         when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento));
 
         var ingressos = List.of(
-                new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true),
-                new VendaIngressoRequest(CategoriaIngresso.ESSENCIAL, "Ana Sócia", "Financeiro", false));
+                new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true, null, null, null),
+                new VendaIngressoRequest(CategoriaIngresso.ESSENCIAL, "Ana Sócia", "Financeiro", false, null, null, null));
         var request = new FecharVendaRequest(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA,
                 new BigDecimal("600.00"), new BigDecimal("600.00"), FormaPagamento.PIX, null, eventoId, ingressos);
 
@@ -381,7 +391,7 @@ class LeadServiceTest {
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento));
 
-        var ingressos = List.of(new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true));
+        var ingressos = List.of(new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true, null, null, null));
         var request = new FecharVendaRequest(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA,
                 new BigDecimal("300.00"), new BigDecimal("300.00"), FormaPagamento.PIX, null, eventoId, ingressos);
 

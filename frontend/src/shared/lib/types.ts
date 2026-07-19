@@ -81,7 +81,7 @@ export type StatusLancamento = 'PREVISTO' | 'REALIZADO';
 export type GrupoDre = 'RECEITA_BRUTA' | 'DEDUCOES' | 'CUSTOS' | 'DESPESA_OPERACIONAL';
 export type OrigemReceita = 'ASSINATURA' | 'LOJA' | 'EVENTO' | 'OUTRA';
 export type TipoConta = 'A_PAGAR' | 'A_RECEBER';
-export type StatusConta = 'PENDENTE' | 'PAGO' | 'RECEBIDO' | 'VENCIDO';
+export type StatusConta = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'RECEBIDO' | 'VENCIDO';
 export type Plano = 'GRATUITO' | 'BASICO' | 'ESSENCIAL' | 'PROFISSIONAL';
 
 export interface CategoriaFinanceira {
@@ -111,6 +111,7 @@ export interface Conta {
   dataVencimento: string;
   dataPagamento: string | null;
   status: StatusConta;
+  valorPago: number | null;
   lancamentoId: string | null;
 }
 
@@ -166,10 +167,10 @@ export interface VendedorResumo {
 // planoFechado (legado). TipoContrato é o mesmo enum do M23 (Mentorado.tipoContrato) — reaproveitado
 // aqui só pra MENTORIA_CONTINUA/MENTORIA_INDIVIDUAL/CONSULTORIA; INGRESSO_EVENTO/PRODUTO_DIGITAL
 // não têm TipoContrato correspondente.
-export type ProdutoVenda = 'MENTORIA_CONTINUA' | 'MENTORIA_INDIVIDUAL' | 'CONSULTORIA' | 'FORMULA_SAW' | 'FORMACAO_PROFISSIONAL' | 'INGRESSO_EVENTO' | 'PRODUTO_DIGITAL';
-export type OrigemVenda = 'DIRETA' | 'HOTMART' | 'CORTESIA' | 'PATROCINIO' | 'PALESTRANTE';
-export type CategoriaIngresso = 'CORTESIA' | 'ESSENCIAL' | 'VIP' | 'ESPECIAL';
-export type FormaPagamento = 'PIX' | 'CARTAO' | 'BOLETO' | 'HOTMART';
+export type ProdutoVenda = 'MENTORIA_CONTINUA' | 'MENTORIA_INDIVIDUAL' | 'CONSULTORIA' | 'FORMULA_SAW' | 'FORMACAO_PROFISSIONAL' | 'FICHA_TECNICA_LUCRATIVA' | 'INGRESSO_EVENTO' | 'PRODUTO_DIGITAL';
+export type OrigemVenda = 'DIRETA' | 'HOTMART' | 'CORTESIA' | 'PATROCINIO' | 'PALESTRANTE' | 'PARCEIRO';
+export type CategoriaIngresso = 'ESSENCIAL' | 'VIP' | 'ESPECIAL' | 'BLACK';
+export type FormaPagamento = 'PIX' | 'PIX_RECORRENTE' | 'CARTAO' | 'BOLETO' | 'HOTMART';
 
 export interface Lead {
   id: string;
@@ -203,6 +204,9 @@ export interface VendaIngressoRequest {
   nomeCredenciado: string;
   setor: string | null;
   almoco: boolean;
+  nomeEmpresa: string | null;
+  telefone: string | null;
+  email: string | null;
 }
 
 export interface FecharVendaRequest {
