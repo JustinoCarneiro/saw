@@ -56,4 +56,10 @@ public interface LeadRepository extends JpaRepository<Lead, UUID> {
     long countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(@Param("vendedorId") UUID vendedorId,
             @Param("status") StatusLead status, @Param("de") Instant de, @Param("ate") Instant ate,
             @Param("produtoExcluido") ProdutoVenda produtoExcluido);
+
+    /** Change request 17/07/2026 ("conciliação") — toda venda fechada via {@link Lead#fecharVenda}
+     * (nunca via {@link Lead#fechar} legado, que não seta valorTotalVenda). IS NOT NULL numa
+     * coluna pgcrypto funciona normal — criptografia não afeta nulidade, só o conteúdo. */
+    @Query("SELECT l FROM Lead l WHERE l.valorTotalVenda IS NOT NULL ORDER BY l.dataFechamento DESC")
+    List<Lead> buscarComVendaFechada();
 }

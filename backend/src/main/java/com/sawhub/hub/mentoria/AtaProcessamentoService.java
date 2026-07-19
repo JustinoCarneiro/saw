@@ -55,7 +55,7 @@ public class AtaProcessamentoService {
     void concluir(UUID ataId, String transcricao, RascunhoAta rascunho) {
         Ata ata = ataRepository.findById(ataId)
                 .orElseThrow(() -> new IllegalArgumentException("Ata não encontrada."));
-        ata.concluirProcessamento(transcricao, rascunho.resumo());
+        ata.concluirProcessamento(transcricao, rascunho.resumo(), rascunho.decisoes());
         ataRepository.save(ata);
         for (RascunhoAta.EncaminhamentoSugerido sugestao : rascunho.encaminhamentos()) {
             sugeridoRepository.save(new AtaEncaminhamentoSugerido(ata, sugestao.titulo(), sugestao.peso(), true));

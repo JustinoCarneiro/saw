@@ -4,6 +4,7 @@ import { Card } from '../../shared/components/Card';
 import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
+import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
 import type { CategoriaFinanceira, Conta, StatusConta, TipoConta } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
@@ -24,6 +25,12 @@ const STATUS_LABEL: Record<StatusConta, { label: string; bg: string; color: stri
 export function ContasPage() {
   const [tipo, setTipo] = useState<TipoConta | ''>('');
   const [status, setStatus] = useState<StatusConta | ''>('');
+  // Change request 17/07/2026 ("filtro mensal") — desligado por padrão (mantém o comportamento
+  // de sempre listar tudo); ano/mes só vão pro request quando o filtro está ligado.
+  const now = new Date();
+  const [filtroMesLigado, setFiltroMesLigado] = useState(false);
+  const [ano, setAno] = useState(now.getFullYear());
+  const [mes, setMes] = useState(now.getMonth() + 1);
   const [contas, setContas] = useState<Conta[] | null>(null);
   const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -31,15 +38,17 @@ export function ContasPage() {
   const [liquidando, setLiquidando] = useState<Conta | null>(null);
   const [liquidandoParcial, setLiquidandoParcial] = useState<Conta | null>(null);
 
+  const periodoParams = filtroMesLigado ? { ano, mes } : { ano: undefined, mes: undefined };
+
   const carregar = () => {
     setContas(null);
     apiClient
-      .get<Conta[]>('/admin/financeiro/contas', { params: { tipo: tipo || undefined, status: status || undefined } })
+      .get<Conta[]>('/admin/financeiro/contas', { params: { tipo: tipo || undefined, status: status || undefined, ...periodoParams } })
       .then((res) => setContas(res.data))
       .catch(() => setError('Não foi possível carregar as contas.'));
   };
 
-  useEffect(carregar, [tipo, status]);
+  useEffect(carregar, [tipo, status, filtroMesLigado, ano, mes]);
 
   useEffect(() => {
     apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias')
@@ -64,11 +73,23 @@ export function ContasPage() {
             <option value="RECEBIDO">Recebido</option>
             <option value="VENCIDO">Vencido</option>
           </select>
+          <label className={styles.checkboxField}>
+            <input type="checkbox" checked={filtroMesLigado} onChange={(e) => setFiltroMesLigado(e.target.checked)} />
+            Filtrar por mês
+          </label>
+          {filtroMesLigado && (
+            <PeriodoPicker ano={ano} mes={mes} onChange={(a, m) => { setAno(a); setMes(m); }} />
+          )}
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           <CsvImportExport
             exportUrl="/admin/financeiro/contas/export"
-            exportParams={{ tipo: tipo || undefined, status: status || undefined }}
+            exportParams={{
+              tipo: tipo || undefined,
+              status: status || undefined,
+              ano: filtroMesLigado ? String(ano) : undefined,
+              mes: filtroMesLigado ? String(mes) : undefined,
+            }}
             exportFilename="contas.csv"
             importUrl="/admin/financeiro/contas/import"
             onImportado={carregar}

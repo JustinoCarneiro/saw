@@ -13,6 +13,7 @@ public record AtaResponse(
         UUID mentoriaId,
         String transcricao,
         String resumo,
+        String decisoes,
         StatusProcessamentoAta statusProcessamento,
         StatusAta status,
         String erroProcessamento,
@@ -21,7 +22,7 @@ public record AtaResponse(
 ) {
     public static AtaResponse from(Ata ata, List<AtaEncaminhamentoSugerido> sugestoes) {
         return new AtaResponse(ata.getId(), ata.getMentoria().getId(), ata.getTranscricao(), ata.getResumo(),
-                ata.getStatusProcessamento(), ata.getStatus(), ata.getErroProcessamento(), ata.getPublicadaEm(),
-                sugestoes.stream().map(SugestaoResponse::from).toList());
+                ata.getDecisoes(), ata.getStatusProcessamento(), ata.getStatus(), ata.getErroProcessamento(),
+                ata.getPublicadaEm(), sugestoes.stream().map(SugestaoResponse::from).toList());
     }
 }

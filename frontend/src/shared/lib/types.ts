@@ -120,6 +120,17 @@ export interface ComparativoMes {
   variacaoPct: number;
 }
 
+// Change request 17/07/2026 ("conciliação") — valorRecebido soma valorPagoNoAto + taxaPlataformaRetida
+// (gap 7) + parcelas já liquidadas; valorPendente = valorTotalVenda - valorRecebido.
+export interface ConciliacaoVenda {
+  leadId: string;
+  nome: string;
+  valorTotalVenda: number;
+  valorRecebido: number;
+  valorPendente: number;
+  percentualRecebido: number;
+}
+
 export interface DreResponse {
   periodo: string;
   receitaBruta: number;
@@ -371,6 +382,8 @@ export interface Ata {
   mentoriaId: string;
   transcricao: string | null;
   resumo: string | null;
+  // Change request 17/07/2026 ("campo Decisões na ata") — distinto do resumo livre.
+  decisoes: string | null;
   statusProcessamento: StatusProcessamentoAta;
   status: StatusAta;
   erroProcessamento: string | null;

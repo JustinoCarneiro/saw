@@ -17,6 +17,7 @@ import { DashboardFaturamentoPage } from './features/financeiro/DashboardFaturam
 import { DrePage } from './features/financeiro/DrePage';
 import { LancamentosPage } from './features/financeiro/LancamentosPage';
 import { ContasPage } from './features/financeiro/ContasPage';
+import { ConciliacaoPage } from './features/financeiro/ConciliacaoPage';
 import { ComercialShell } from './features/comercial/ComercialShell';
 import { DashboardComercialPage } from './features/comercial/DashboardComercialPage';
 import { LeadsComercialPage } from './features/comercial/LeadsComercialPage';
@@ -113,6 +114,7 @@ export default function App() {
           <Route path="dre" element={<DrePage />} />
           <Route path="lancamentos" element={<LancamentosPage />} />
           <Route path="contas" element={<ContasPage />} />
+          <Route path="conciliacao" element={<ConciliacaoPage />} />
         </Route>
         <Route
           path="mentorados"

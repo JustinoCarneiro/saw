@@ -5,10 +5,11 @@ import { areaLabel } from '../../shared/components/Pill';
 import styles from './FinanceiroShell.module.css';
 
 const TABS = [
-  { to: '/admin/financeiro/dashboard', label: 'Faturamento' },
+  { to: '/admin/financeiro/dashboard', label: 'Dashboard' },
   { to: '/admin/financeiro/dre', label: 'DRE' },
   { to: '/admin/financeiro/lancamentos', label: 'Lançamentos' },
   { to: '/admin/financeiro/contas', label: 'Contas a pagar/receber' },
+  { to: '/admin/financeiro/conciliacao', label: 'Conciliação' },
 ];
 
 export function FinanceiroShell() {

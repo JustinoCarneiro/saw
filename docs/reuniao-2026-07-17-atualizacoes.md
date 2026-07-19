@@ -112,22 +112,32 @@ retrabalho no MVP atual — tratar como o item técnico mais delicado da leva.
   ingresso. *"Vamos focar na gente e nos mentorados que já estão"* — não implementar agora.
 
 ### E14 · Financeiro & DRE — M04, concluído
-- **[NOVO]** Filtro/aba mensal para contas a pagar/receber.
-- **[NOVO]** Despesas fixas vs. variáveis, com subcategorias (eventos, pessoal, estrutura,
-  operação, financeiro, jurídico) permitindo comparativo — afeta o modelo de
-  `CategoriaFinanceira` do M04.
-- **[NOVO]** Merge entre "lançamentos" e "contas a pagar/receber" — hoje são conceitos separados
-  (`POST /lancamentos` vs `POST /contas`). Precisa desenho técnico antes de mexer em schema já em
-  produção — pode ser resolvido como visão/relatório unificado em vez de merge de entidade.
-- **[NOVO]** Renomear a aba "Faturamento" para "Dashboard" (mudança de tela, o endpoint
-  `dashboard-faturamento` pode manter o nome).
-- **[NOVO]** Dados do mentorado (forma de pagamento, mensalidade, data de início) alimentando
-  contas a receber automaticamente — depende do parcelamento capturado no formulário de venda
-  do E13.
-- **[NOVO]** Conciliação entre valor total do contrato e valor efetivamente recebido
-  (parcela a parcela) — importante pra declaração de imposto.
-- **[NOVO]** Receita/despesa de evento rastreada por evento específico, independente do mês do
-  gasto — conecta E13 (venda de ingresso) ao financeiro.
+
+**Status em 19/07/2026 (auditado item a item contra o código, não só a ata da reunião):**
+- ✅ **Filtro/aba mensal para contas a pagar/receber** — implementado. `GET/export
+  /admin/financeiro/contas` ganharam `ano`/`mes` opcionais (janela `[1º dia do mês, 1º dia do mês
+  seguinte)` sobre `dataVencimento`); frontend com checkbox "Filtrar por mês" + `PeriodoPicker`.
+- ✅ **Renomear a aba "Faturamento" pra "Dashboard"** — implementado (só o label da aba mudou,
+  `dashboard-faturamento` continua o nome do endpoint, como já estava previsto).
+- ✅ **Conciliação entre valor total do contrato e valor efetivamente recebido** — implementado.
+  Nova tela "Conciliação" no Financeiro (`GET /admin/financeiro/conciliacao`): soma
+  `valorPagoNoAto` + `taxaPlataformaRetida` (gap 7) + parcelas já liquidadas (integral se
+  PAGO/RECEBIDO, só o `valorPago` se PARCIAL) e compara com `valorTotalVenda` de cada venda
+  fechada.
+- ✅ **Dados do mentorado alimentando contas a receber automaticamente** — já estava implementado
+  desde o M25 (`LeadService.criarParcelas`: cada parcela do formulário único de venda já gera um
+  `ContaPagarReceber` A_RECEBER automaticamente), só não estava marcado como resolvido aqui.
+- ❌ **Ainda não implementado — Despesas fixas vs. variáveis com subcategorias** (eventos,
+  pessoal, estrutura, operação, financeiro, jurídico). `CategoriaFinanceira` continua um modelo
+  plano (nome/tipo/grupoDre/origemReceita, sem hierarquia nem fixo/variável) — schema novo,
+  precisa decisão de produto sobre a taxonomia exata antes de implementar (afeta DRE/dashboard
+  existentes, maior risco que os itens acima).
+- ❌ **Ainda não implementado — Merge entre "lançamentos" e "contas a pagar/receber"** — mesmo
+  status de antes, precisa desenho técnico (pode virar visão/relatório unificado em vez de merge
+  de entidade, mas isso ainda não foi decidido).
+- ❌ **Ainda não implementado — Receita/despesa de evento rastreada por evento específico** —
+  `ContaPagarReceber`/`LancamentoFinanceiro` não têm vínculo com `Evento`; venda de ingresso hoje
+  só aparece agregada em `ComercialDashboardService`, não no financeiro por evento.
 - **[PARCIALMENTE RESPONDIDO]** DRE precisa de "mais gráficos e detalhe que estão nas planilhas
   do financeiro" — direção confirmada, mas o detalhe exato depende da planilha real que o Victor
   vai compartilhar (ver seção "Como me passar a estrutura" no fim deste documento).
@@ -136,17 +146,29 @@ retrabalho no MVP atual — tratar como o item técnico mais delicado da leva.
   abaixo). Retomar esse alinhamento com o time quando a Loja for reativada.
 
 ### E17 · Painel Consolidado & Ranking — M03 (implementado sem Blueprint formal)
-- **[NOVO]** Gamificação anual com dois modelos de premiação: (a) por faixa de faturamento
-  (R$100k a R$1M) e (b) por "liberdade"/organização — implementação de manual de processos,
-  cultura, CMV e DRE estruturada.
-- **[NOVO]** Lista de "ferramentas obrigatórias" com nomes confirmados: **DRE, manual de cultura,
-  ficha técnica, manual de processos** — resolve a Suposição #8 do `spec.md` (antes só 3 itens
-  citados, agora são 4).
-- **[NOVO]** Dashboard consolidado com aba por mentorado + visão global (pro Mateus), com filtro
-  por mentorado e por área (Gestão de Performance) — validar se o M03 atual já tem esse nível de
-  filtro/navegação.
+
+**Status em 19/07/2026:** nenhum dos itens abaixo estava implementado (auditado contra o código).
+- ❌ **Ainda não implementado — Gamificação anual com dois modelos de premiação**: (a) por faixa
+  de faturamento (R$100k a R$1M) e (b) por "liberdade"/organização (manual de processos, cultura,
+  CMV e DRE estruturada). Precisa desenho de produto (regras de premiação) antes de implementar.
+- ❌ **Ainda não implementado — Lista de "ferramentas obrigatórias" nomeadas** (DRE, manual de
+  cultura, ficha técnica, manual de processos — resolve a Suposição #8 do `spec.md`). O ranking
+  hoje ainda usa o contador genérico antigo `Mentorado.ferramentasConcluidas`/`ferramentasTotal`
+  (dois inteiros soltos), não os 4 itens nomeados — substituir isso muda o cálculo do ranking já
+  em produção, maior risco que os itens do E14 implementados nesta leva.
+- ❌ **Ainda não implementado — controle de presença em mentoria/aula** (achado na auditoria: nem
+  estava explícito nesta lista original, mas é pré-requisito de fato pra "% de execução"
+  aparecer certo em mentoria coletiva). `StatusMentoria` só tem status da sessão inteira
+  (AGENDADA/CONFIRMADA/REALIZADA/CANCELADA), não presença por mentorado participante.
+- ❌ **Ainda não implementado — dois eixos de acompanhamento** (Nível de engajamento:
+  Alto/Médio/Baixo + Risco de churn: Não/Atenção/Alto, achado na página "PADRONIZAÇÕES") em vez
+  do status único atual (`EM_DIA`/`ATENCAO`/`ATRASADO`, calculado só a partir de um número de
+  progresso em `ConsolidatedService`).
+- ❌ **Ainda não implementado — Dashboard consolidado com filtro por mentorado e por área** —
+  não validado se o `ConsolidatedPage` atual já cobre esse nível de filtro/navegação.
 - **[CONFIRMADO indireto]** Indicadores mostrados no modelo Canva usado hoje (caso "J Crocs"):
-  faturamento, número de pedidos, % de execução de tarefas/encaminhamentos.
+  faturamento, número de pedidos, % de execução de tarefas/encaminhamentos — informativo, não
+  gera item de implementação novo por si só.
 
 ### E9 · Perfil & Gamificação — M15, concluído
 - Diretamente afetado pela decisão crítica de Planos vs. Tipos de contrato (H9.3 hoje mostra
@@ -202,6 +224,15 @@ Dentro do card de cada mentorado, dois blocos de texto estruturado:
 **Ata real conferida** (PDF "ATA DE REUNIÃO 07/06/2026"): estrutura é **Participantes** (lista),
 **Pauta** (lista), **Encaminhamentos** (lista) — confirma que falta mesmo a seção "Decisões" que
 já tínhamos identificado como novo requisito.
+
+**✅ Resolvido (19/07/2026):** `Ata` ganhou o campo `decisoes` (texto livre, mesmo tratamento de
+`resumo` — sem pgcrypto, mesmo critério já usado nos outros campos de texto da entidade), editável
+manualmente (`PATCH .../ata/decisoes`, mesma janela de RASCUNHO de `editarResumo`) e também
+extraído automaticamente pelo pipeline de IA (`ClaudeAtaRascunhoService` — o prompt/schema de
+tool-use da Claude API ganharam "decisoes" ao lado de "resumo"/"encaminhamentos", com a mesma
+instrução de não inventar informação que não esteja na transcrição). Participantes/Pauta
+continuam sem campo próprio — não foram pedidos explicitamente como requisito de produto nesta
+leva, só Decisões.
 
 **As 16 propriedades restantes do card** (expandidas em "Menu Caseirinho novo", quase todas
 `Empty` neste registro): `Dono e sócio`, `Fechamento`, `Valor contrato`, `Origem de contato`,
@@ -733,16 +764,23 @@ por precaução.
 O cliente confirmou a prioridade "comercial, financeiro e mentorado são os três pontos
 principais, marketing e conteúdo ficam pra depois" — mesma ordem que o `CLAUDE.md` já usa pro
 MVP. Como todo o MVP já está implementado, o trabalho agora é *change request* em módulos em
-produção:
-1. Confirmar duração/vencimento da Mentoria Individual (12 meses, como a Contínua?) antes de
-   mexer no schema de `Plano`→`TipoContrato` — é o item de maior risco de retrabalho.
-2. **Comercial (E13):** formulário único de venda + campos condicionais de ingresso + separação
-   ingresso/comissão no dashboard — é o que mais desbloqueia o trabalho manual da vendedora hoje.
-3. **Financeiro (E14):** filtro mensal + fixo/variável + subcategorias + alimentação automática
-   via venda do mentorado — depende parcialmente do item 2 (parcelamento capturado na venda).
-4. **Mentorado/E17:** campo Decisões na ata, controle de presença em aula, gamificação/ranking
-   com a lista de 4 ferramentas obrigatórias.
-5. **Notion → sistema:** aguardar o cliente enviar a lista de recursos antes de migrar Materiais.
+produção. **Status por item, atualizado em 19/07/2026** (auditado direto contra o código, ver
+seções "E14"/"E17" acima pro detalhe item a item):
+1. ✅ Confirmar duração/vencimento da Mentoria Individual — resolvido no M23
+   (`TipoContrato.calcularVencimento` já trata Contínua/Individual igual, 12 meses fixos).
+2. ✅ **Comercial (E13)** — resolvido (M25 + 8/8 gaps do raio-x fechados em 19/07/2026, ver seção
+   "Implicações pro desenho" acima).
+3. **Financeiro (E14)** — 4 de 7 itens resolvidos em 19/07/2026 (filtro mensal, rename da aba,
+   conciliação, alimentação automática de contas via parcela — este último já vinha do M25).
+   Ainda faltam: subcategorias/fixo-variável em `CategoriaFinanceira`, merge lançamentos/contas
+   (precisa desenho técnico), e evento rastreado no financeiro.
+4. **Mentorado/E17** — 1 de 4 itens resolvido em 19/07/2026 (campo Decisões na ata, manual e via
+   IA). Ainda faltam: controle de presença em aula, ranking com as 4 ferramentas nomeadas, dois
+   eixos de acompanhamento (engajamento + risco de churn) — os 3 substituem lógica de ranking/
+   status já em produção, maior risco que os itens já fechados, merecem confirmação de produto
+   antes de implementar.
+5. **Notion → sistema:** ainda bloqueado — aguardando o cliente enviar a lista de recursos antes
+   de migrar Materiais, e o export do Notion (Matheus) pro resto da migração de dados.
 
 ## Como passar a estrutura de planilhas/Notion recebida
 

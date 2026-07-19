@@ -36,6 +36,13 @@ public class Ata extends BaseEntity {
     @Column(columnDefinition = "text")
     private String resumo;
 
+    // Change request 17/07/2026 ("campo Decisões na ata") — a ata real da operação
+    // (PDF "ATA DE REUNIÃO 07/06/2026") tem Participantes/Pauta/Encaminhamentos, mas faltava uma
+    // seção própria de Decisões, distinta do resumo livre. Mesmo tratamento de `resumo` (texto
+    // simples, sem pgcrypto — mesmo critério já usado nesta entidade).
+    @Column(columnDefinition = "text")
+    private String decisoes;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status_processamento", nullable = false)
     private StatusProcessamentoAta statusProcessamento = StatusProcessamentoAta.SEM_AUDIO;
@@ -69,9 +76,16 @@ public class Ata extends BaseEntity {
         this.statusProcessamento = StatusProcessamentoAta.PROCESSANDO;
     }
 
+    /** Overload sem decisões — chamador que não conhece o campo novo continua funcionando sem
+     * mudar nada (ex.: DemoDataSeeder, testes já existentes). */
     public void concluirProcessamento(String transcricao, String resumo) {
+        concluirProcessamento(transcricao, resumo, null);
+    }
+
+    public void concluirProcessamento(String transcricao, String resumo, String decisoes) {
         this.transcricao = transcricao;
         this.resumo = resumo;
+        this.decisoes = decisoes;
         this.statusProcessamento = StatusProcessamentoAta.CONCLUIDO;
     }
 
@@ -84,6 +98,12 @@ public class Ata extends BaseEntity {
     public void editarResumo(String resumo) {
         exigirRascunho();
         this.resumo = resumo;
+    }
+
+    /** Edição manual das decisões (revisão humana) — mesma janela de {@link #editarResumo}. */
+    public void editarDecisoes(String decisoes) {
+        exigirRascunho();
+        this.decisoes = decisoes;
     }
 
     public void publicar() {
@@ -118,6 +138,10 @@ public class Ata extends BaseEntity {
 
     public String getResumo() {
         return resumo;
+    }
+
+    public String getDecisoes() {
+        return decisoes;
     }
 
     public StatusProcessamentoAta getStatusProcessamento() {

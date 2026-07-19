@@ -39,8 +39,8 @@ public class ContaCsvService {
         this.categoriaRepository = categoriaRepository;
     }
 
-    public String exportar(TipoConta tipo, StatusConta status) {
-        List<ContaPagarReceber> contas = contaService.listar(tipo, status);
+    public String exportar(TipoConta tipo, StatusConta status, Integer ano, Integer mes) {
+        List<ContaPagarReceber> contas = contaService.listar(tipo, status, ano, mes);
         StringWriter destino = new StringWriter();
         CSVFormat formato = CSVFormat.Builder.create().setDelimiter(';').setHeader(CABECALHO).build();
         try (CSVPrinter printer = new CSVPrinter(destino, formato)) {

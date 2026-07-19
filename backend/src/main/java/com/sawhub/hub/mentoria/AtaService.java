@@ -92,6 +92,13 @@ public class AtaService {
     }
 
     @Transactional
+    public Ata editarDecisoes(UUID mentoriaId, String decisoes) {
+        Ata ata = buscarPorMentoria(mentoriaId);
+        ata.editarDecisoes(decisoes);
+        return ataRepository.save(ata);
+    }
+
+    @Transactional
     public AtaEncaminhamentoSugerido editarSugestao(UUID mentoriaId, UUID sugestaoId, String titulo,
                                                      Integer pesoSugerido, boolean aceito) {
         Ata ata = buscarPorMentoria(mentoriaId);

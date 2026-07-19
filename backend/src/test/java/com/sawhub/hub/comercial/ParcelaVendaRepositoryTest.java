@@ -1,0 +1,119 @@
+package com.sawhub.hub.comercial;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.sawhub.hub.financeiro.CategoriaFinanceira;
+import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
+import com.sawhub.hub.financeiro.ContaPagarReceber;
+import com.sawhub.hub.financeiro.ContaPagarReceberRepository;
+import com.sawhub.hub.financeiro.GrupoDre;
+import com.sawhub.hub.financeiro.TipoConta;
+import com.sawhub.hub.financeiro.TipoLancamento;
+import com.sawhub.hub.security.Perfil;
+import com.sawhub.hub.security.Usuario;
+import com.sawhub.hub.security.UsuarioRepository;
+import com.sawhub.hub.team.Area;
+import com.sawhub.hub.team.Colaborador;
+import com.sawhub.hub.team.ColaboradorRepository;
+import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import org.hibernate.LazyInitializationException;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
+
+/** Change request 17/07/2026 ("conciliação") — {@code buscarPorLeadIdComConta} precisa de
+ * LEFT JOIN FETCH em {@code contaPagarReceber} porque {@link ConciliacaoService} lê
+ * {@code conta.getStatus()} fora da transação original. @DataJpaTest de propósito (sessão real do
+ * Hibernate) — mesmo raciocínio do {@code LeadRepositoryTest} (M05): um mock nunca reproduz um
+ * proxy LAZY não inicializado. */
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ActiveProfiles("test")
+class ParcelaVendaRepositoryTest {
+
+    @Autowired
+    private ParcelaVendaRepository parcelaVendaRepository;
+    @Autowired
+    private LeadRepository leadRepository;
+    @Autowired
+    private ColaboradorRepository colaboradorRepository;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    @Autowired
+    private CategoriaFinanceiraRepository categoriaRepository;
+    @Autowired
+    private ContaPagarReceberRepository contaRepository;
+    @Autowired
+    private EntityManager entityManager;
+
+    private Lead criarLeadFechado(String sufixo) {
+        Usuario usuario = usuarioRepository.save(new Usuario("vendedor" + sufixo + "@sawhub.com.br", "hash", Perfil.ADMIN));
+        Colaborador vendedor = colaboradorRepository.save(new Colaborador(usuario, "Paula" + sufixo, Area.COMERCIAL));
+        Lead lead = new Lead("Comprador " + sufixo, "comprador" + sufixo + "@example.com", null, null, null);
+        lead.moverParaEmContato(vendedor);
+        lead.moverParaProposta();
+        lead.fecharVenda(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA, new BigDecimal("10000.00"),
+                new BigDecimal("2000.00"), FormaPagamento.PIX);
+        return leadRepository.save(lead);
+    }
+
+    @Test
+    void findByLeadIdPuroMantemContaComoProxyLazyNaoInicializado() {
+        // RED — documenta o bug: findByLeadId() (derivado, sem JOIN FETCH) é a causa raiz.
+        Lead lead = criarLeadFechado("1");
+        CategoriaFinanceira categoria = categoriaRepository.save(
+                new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
+        ContaPagarReceber conta = contaRepository.save(new ContaPagarReceber(TipoConta.A_RECEBER, "Parcela 1",
+                new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17), categoria));
+        ParcelaVenda parcela = new ParcelaVenda(lead, 1, new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17));
+        parcela.vincularConta(conta);
+        parcelaVendaRepository.save(parcela);
+        entityManager.flush();
+        entityManager.clear();
+
+        ParcelaVenda recarregada = parcelaVendaRepository.findByLeadId(lead.getId()).get(0);
+        entityManager.clear();
+
+        assertThatThrownBy(() -> recarregada.getContaPagarReceber().getStatus())
+                .isInstanceOf(LazyInitializationException.class);
+    }
+
+    @Test
+    void buscarPorLeadIdComContaInicializaContaMesmoForaDaTransacaoOriginal() {
+        Lead lead = criarLeadFechado("2");
+        CategoriaFinanceira categoria = categoriaRepository.save(
+                new CategoriaFinanceira("Assinaturas2", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
+        ContaPagarReceber conta = contaRepository.save(new ContaPagarReceber(TipoConta.A_RECEBER, "Parcela 1",
+                new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17), categoria));
+        ParcelaVenda parcela = new ParcelaVenda(lead, 1, new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17));
+        parcela.vincularConta(conta);
+        parcelaVendaRepository.save(parcela);
+        entityManager.flush();
+        entityManager.clear();
+
+        ParcelaVenda recarregada = parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId()).get(0);
+        entityManager.clear();
+
+        assertThat(recarregada.getContaPagarReceber().getStatus()).isNotNull();
+    }
+
+    @Test
+    void buscarPorLeadIdComContaFuncionaQuandoParcelaAindaNaoTemContaVinculada() {
+        Lead lead = criarLeadFechado("3");
+        ParcelaVenda semConta = new ParcelaVenda(lead, 1, new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17));
+        parcelaVendaRepository.save(semConta);
+        entityManager.flush();
+        entityManager.clear();
+
+        var resultado = parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId());
+        entityManager.clear();
+
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getContaPagarReceber()).isNull();
+    }
+}

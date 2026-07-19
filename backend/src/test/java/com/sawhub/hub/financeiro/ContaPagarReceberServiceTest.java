@@ -12,6 +12,7 @@ import com.sawhub.hub.financeiro.dto.LiquidarContaRequest;
 import com.sawhub.hub.financeiro.dto.LiquidarParcialContaRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,42 @@ class ContaPagarReceberServiceTest {
         assertThat(conta.getStatus()).isEqualTo(StatusConta.PENDENTE);
         assertThat(conta.getTipo()).isEqualTo(TipoConta.A_PAGAR);
         assertThat(conta.getValor()).isEqualByComparingTo("180.00");
+    }
+
+    // Change request 17/07/2026 ("filtro mensal") — SEM_FILTRO_INICIO/FIM: janela sentinela
+    // sempre tipada que substitui "sem filtro" (ver ContaPagarReceberRepository.buscarComFiltro).
+    private static final LocalDate SEM_FILTRO_INICIO = LocalDate.of(1900, 1, 1);
+    private static final LocalDate SEM_FILTRO_FIM = LocalDate.of(2999, 12, 31);
+
+    @Test
+    void listarSemAnoMesNaoAplicaFiltroDePeriodo() {
+        when(contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM)).thenReturn(List.of());
+
+        service().listar(null, null);
+
+        verify(contaRepository).buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM);
+    }
+
+    @Test
+    void listarComAnoEMesConvertePraJanelaDoMes() {
+        when(contaRepository.buscarComFiltro(TipoConta.A_PAGAR, null,
+                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1))).thenReturn(List.of());
+
+        service().listar(TipoConta.A_PAGAR, null, 2026, 7);
+
+        verify(contaRepository).buscarComFiltro(TipoConta.A_PAGAR, null,
+                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1));
+    }
+
+    @Test
+    void listarComSoAnoOuSoMesIgnoraFiltroDePeriodo() {
+        when(contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM)).thenReturn(List.of());
+
+        service().listar(null, null, 2026, null);
+        service().listar(null, null, null, 7);
+
+        verify(contaRepository, org.mockito.Mockito.times(2))
+                .buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM);
     }
 
     @Test

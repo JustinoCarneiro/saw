@@ -79,6 +79,8 @@ export function AtaDetalhePage() {
 
       <ResumoCard mentoriaId={mentoriaId} ata={ata} onSalvo={carregar} />
 
+      <DecisoesCard mentoriaId={mentoriaId} ata={ata} onSalvo={carregar} />
+
       <MateriaisCard mentoriaId={mentoriaId} mentoria={mentoria} podeEditar={!publicada} onSalvo={carregar} />
 
       {ata.sugestoes.length > 0 && (
@@ -186,6 +188,52 @@ function ResumoCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: Ata
         <div className={styles.formActions}>
           <button className={styles.actionButton} onClick={salvar} disabled={salvando || resumo === (ata.resumo ?? '')}>
             {salvando ? 'Salvando…' : 'Salvar resumo'}
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// Change request 17/07/2026 ("campo Decisões na ata") — mesmo padrão de ResumoCard, campo
+// distinto e independente (edição de um não mexe no outro).
+function DecisoesCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: Ata; onSalvo: () => void }) {
+  const [decisoes, setDecisoes] = useState(ata.decisoes ?? '');
+  const [error, setError] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const publicada = ata.status === 'PUBLICADA';
+
+  useEffect(() => setDecisoes(ata.decisoes ?? ''), [ata.decisoes]);
+
+  async function salvar() {
+    setError(null);
+    setSalvando(true);
+    try {
+      await apiClient.patch(`/admin/mentorias/${mentoriaId}/ata/decisoes`, { decisoes });
+      onSalvo();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível salvar as decisões.'));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }}>
+      <div className={styles.sectionTitle}>Decisões</div>
+      <textarea
+        className={styles.textarea}
+        rows={4}
+        value={decisoes}
+        onChange={(e) => setDecisoes(e.target.value)}
+        disabled={publicada}
+        placeholder="Registre as decisões tomadas na mentoria (ou aguarde o rascunho da IA)…"
+      />
+      {error && <div className={styles.error}>{error}</div>}
+      {!publicada && (
+        <div className={styles.formActions}>
+          <button className={styles.actionButton} onClick={salvar} disabled={salvando || decisoes === (ata.decisoes ?? '')}>
+            {salvando ? 'Salvando…' : 'Salvar decisões'}
           </button>
         </div>
       )}

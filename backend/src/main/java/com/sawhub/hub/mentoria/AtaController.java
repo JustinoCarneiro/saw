@@ -1,6 +1,7 @@
 package com.sawhub.hub.mentoria;
 
 import com.sawhub.hub.mentoria.dto.AtaResponse;
+import com.sawhub.hub.mentoria.dto.AtualizarDecisoesRequest;
 import com.sawhub.hub.mentoria.dto.AtualizarResumoRequest;
 import com.sawhub.hub.mentoria.dto.AtualizarSugestaoRequest;
 import com.sawhub.hub.security.RequiresModulo;
@@ -47,6 +48,14 @@ public class AtaController {
     @PatchMapping
     public AtaResponse editarResumo(@PathVariable UUID mentoriaId, @Valid @RequestBody AtualizarResumoRequest request) {
         Ata ata = ataService.editarResumo(mentoriaId, request.resumo());
+        return AtaResponse.from(ata, ataService.listarSugestoes(mentoriaId));
+    }
+
+    // Change request 17/07/2026 ("campo Decisões na ata") — sub-path próprio pra não colidir com
+    // o PATCH sem sufixo (editarResumo).
+    @PatchMapping("/decisoes")
+    public AtaResponse editarDecisoes(@PathVariable UUID mentoriaId, @Valid @RequestBody AtualizarDecisoesRequest request) {
+        Ata ata = ataService.editarDecisoes(mentoriaId, request.decisoes());
         return AtaResponse.from(ata, ataService.listarSugestoes(mentoriaId));
     }
 

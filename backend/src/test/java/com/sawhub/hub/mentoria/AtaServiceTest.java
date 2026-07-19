@@ -144,6 +144,34 @@ class AtaServiceTest {
                 .isInstanceOf(IllegalStateException.class);
     }
 
+    // Change request 17/07/2026 ("campo Decisões na ata").
+    @Test
+    void editarDecisoesAtualizaTexto() {
+        UUID mentoriaId = UUID.randomUUID();
+        Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
+        mentoria.realizar();
+        Ata ata = new Ata(mentoria);
+        when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ata));
+        when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Ata editada = service().editarDecisoes(mentoriaId, "Decisão escrita manualmente.");
+
+        assertThat(editada.getDecisoes()).isEqualTo("Decisão escrita manualmente.");
+    }
+
+    @Test
+    void editarDecisoesDeAtaJaPublicadaLancaErro() {
+        UUID mentoriaId = UUID.randomUUID();
+        Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
+        mentoria.realizar();
+        Ata ata = new Ata(mentoria);
+        ata.publicar();
+        when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ata));
+
+        assertThatThrownBy(() -> service().editarDecisoes(mentoriaId, "Nova decisão"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
     @Test
     void publicarMaterializaSugestoesAceitasEmEncaminhamentoPorMentorado() {
         UUID mentoriaId = UUID.randomUUID();

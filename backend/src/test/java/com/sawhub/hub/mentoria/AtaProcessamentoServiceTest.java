@@ -60,7 +60,7 @@ class AtaProcessamentoServiceTest {
         when(audioStorageService.resolver("audio.mp3")).thenReturn(Path.of("/tmp/audio.mp3"));
         when(transcricaoService.transcrever(any())).thenReturn("transcrição da mentoria");
         when(ataRascunhoService.gerarRascunho("transcrição da mentoria")).thenReturn(
-                new RascunhoAta("Resumo gerado pela IA", List.of(
+                new RascunhoAta("Resumo gerado pela IA", "Decisões geradas pela IA", List.of(
                         new RascunhoAta.EncaminhamentoSugerido("Atualizar ficha técnica", 2))));
         when(ataRepository.findById(ata.getId())).thenReturn(Optional.of(ata));
         when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -69,6 +69,7 @@ class AtaProcessamentoServiceTest {
 
         assertThat(ata.getStatusProcessamento()).isEqualTo(StatusProcessamentoAta.CONCLUIDO);
         assertThat(ata.getResumo()).isEqualTo("Resumo gerado pela IA");
+        assertThat(ata.getDecisoes()).isEqualTo("Decisões geradas pela IA");
     }
 
     @Test

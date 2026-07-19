@@ -37,15 +37,22 @@ class ContaPagarReceberRepositoryTest {
                 TipoLancamento.DESPESA, GrupoDre.CUSTOS, null));
     }
 
+    // Sentinela pro filtro de período "desligado" — mesma faixa usada por
+    // ContaPagarReceberService.listar (SEM_FILTRO_INICIO/FIM), nunca null: Postgres não consegue
+    // inferir o tipo de um parâmetro LocalDate nulo nesta query (muita coluna bytea de pgcrypto
+    // ao redor, ver comentário em ContaPagarReceberRepository.buscarComFiltro).
+    private static final LocalDate SEM_FILTRO_INICIO = LocalDate.of(1900, 1, 1);
+    private static final LocalDate SEM_FILTRO_FIM = LocalDate.of(2999, 12, 31);
+
     @Test
-    void findAllInicializaCategoriaMesmoForaDaTransacaoOriginal() {
+    void buscarComFiltroSemFiltroNenhumInicializaCategoriaMesmoForaDaTransacaoOriginal() {
         CategoriaFinanceira categoria = criarCategoria();
         ContaPagarReceber salva = contaRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor",
                 new BigDecimal("180.00"), LocalDate.of(2026, 7, 20), categoria));
         entityManager.flush();
         entityManager.clear();
 
-        ContaPagarReceber recarregada = contaRepository.findAllByOrderByDataVencimentoAsc().stream()
+        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM).stream()
                 .filter(c -> c.getId().equals(salva.getId())).findFirst().orElseThrow();
         entityManager.clear();
 
@@ -53,14 +60,14 @@ class ContaPagarReceberRepositoryTest {
     }
 
     @Test
-    void findByTipoInicializaCategoriaMesmoForaDaTransacaoOriginal() {
+    void buscarComFiltroPorTipoInicializaCategoriaMesmoForaDaTransacaoOriginal() {
         CategoriaFinanceira categoria = criarCategoria();
         ContaPagarReceber salva = contaRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor",
                 new BigDecimal("180.00"), LocalDate.of(2026, 7, 20), categoria));
         entityManager.flush();
         entityManager.clear();
 
-        ContaPagarReceber recarregada = contaRepository.findByTipoOrderByDataVencimentoAsc(TipoConta.A_PAGAR).stream()
+        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(TipoConta.A_PAGAR, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM).stream()
                 .filter(c -> c.getId().equals(salva.getId())).findFirst().orElseThrow();
         entityManager.clear();
 
@@ -68,18 +75,38 @@ class ContaPagarReceberRepositoryTest {
     }
 
     @Test
-    void findByStatusInicializaCategoriaMesmoForaDaTransacaoOriginal() {
+    void buscarComFiltroPorStatusInicializaCategoriaMesmoForaDaTransacaoOriginal() {
         CategoriaFinanceira categoria = criarCategoria();
         ContaPagarReceber salva = contaRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor",
                 new BigDecimal("180.00"), LocalDate.of(2026, 7, 20), categoria));
         entityManager.flush();
         entityManager.clear();
 
-        ContaPagarReceber recarregada = contaRepository.findByStatusOrderByDataVencimentoAsc(StatusConta.PENDENTE).stream()
+        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(null, StatusConta.PENDENTE, SEM_FILTRO_INICIO, SEM_FILTRO_FIM).stream()
                 .filter(c -> c.getId().equals(salva.getId())).findFirst().orElseThrow();
         entityManager.clear();
 
         assertThat(recarregada.getCategoria().getNome()).isEqualTo(categoria.getNome());
+    }
+
+    // Change request 17/07/2026 ("filtro mensal") — contra banco real de propósito: prova que o
+    // filtro [inicio, fim) sobre dataVencimento realmente inclui/exclui a linha certa, não só que
+    // a query compila.
+    @Test
+    void buscarComFiltroPorPeriodoIncluiSoContasDentroDaJanela() {
+        CategoriaFinanceira categoria = criarCategoria();
+        ContaPagarReceber dentroDoMes = contaRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Dentro",
+                new BigDecimal("100.00"), LocalDate.of(2026, 7, 15), categoria));
+        ContaPagarReceber foraDoMes = contaRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Fora",
+                new BigDecimal("100.00"), LocalDate.of(2026, 8, 1), categoria));
+        entityManager.flush();
+        entityManager.clear();
+
+        var resultado = contaRepository.buscarComFiltro(null, null, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1));
+        entityManager.clear();
+
+        assertThat(resultado).extracting(ContaPagarReceber::getId).contains(dentroDoMes.getId());
+        assertThat(resultado).extracting(ContaPagarReceber::getId).doesNotContain(foraDoMes.getId());
     }
 
     // M25 — achado alto do revisor-seguranca: descricao costuma conter nome de lead/mentorado

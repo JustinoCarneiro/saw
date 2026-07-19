@@ -47,8 +47,10 @@ public class ContaController {
 
     @GetMapping
     public List<ContaResponse> listar(@RequestParam(required = false) TipoConta tipo,
-                                       @RequestParam(required = false) StatusConta status) {
-        return contaService.listar(tipo, status).stream().map(ContaResponse::from).toList();
+                                       @RequestParam(required = false) StatusConta status,
+                                       @RequestParam(required = false) Integer ano,
+                                       @RequestParam(required = false) Integer mes) {
+        return contaService.listar(tipo, status, ano, mes).stream().map(ContaResponse::from).toList();
     }
 
     @PatchMapping("/{id}/liquidar")
@@ -64,8 +66,10 @@ public class ContaController {
     // M21 — mesmos filtros de GET /contas.
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportar(@RequestParam(required = false) TipoConta tipo,
-                                            @RequestParam(required = false) StatusConta status) {
-        String csv = contaCsvService.exportar(tipo, status);
+                                            @RequestParam(required = false) StatusConta status,
+                                            @RequestParam(required = false) Integer ano,
+                                            @RequestParam(required = false) Integer mes) {
+        String csv = contaCsvService.exportar(tipo, status, ano, mes);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"contas.csv\"")

@@ -86,21 +86,27 @@ public class ClaudeAtaRascunhoService implements AtaRascunhoService {
     @SuppressWarnings("unchecked")
     private RascunhoAta converterParaRascunho(Map<String, Object> input) {
         String resumo = (String) input.get("resumo");
+        // Change request 17/07/2026 ("campo Decisões na ata") — aditivo: se o modelo não
+        // devolver "decisoes" (schema antigo em cache, resposta inesperada), o Ata nasce só sem
+        // essa seção em vez de quebrar o processamento inteiro.
+        String decisoes = (String) input.get("decisoes");
         List<Map<String, Object>> encaminhamentosRaw = (List<Map<String, Object>>) input.getOrDefault("encaminhamentos", List.of());
         List<RascunhoAta.EncaminhamentoSugerido> encaminhamentos = encaminhamentosRaw.stream()
                 .map(e -> new RascunhoAta.EncaminhamentoSugerido((String) e.get("titulo"), ((Number) e.get("peso")).intValue()))
                 .toList();
-        return new RascunhoAta(resumo, encaminhamentos);
+        return new RascunhoAta(resumo, decisoes, encaminhamentos);
     }
 
     private static String prompt(String transcricao) {
         return """
                 Você é assistente de um mentor de restaurantes (SAW). Leia a transcrição de uma \
                 sessão de mentoria e registre, usando a ferramenta disponível: um resumo objetivo \
-                (3-6 frases, em português, cobrindo os principais pontos discutidos) e uma lista \
-                de encaminhamentos sugeridos (ações concretas que o mentorado deveria fazer até a \
-                próxima mentoria). Para cada encaminhamento, defina peso 2 se for prioritário/urgente \
-                ou peso 1 caso contrário. Não invente informação que não esteja na transcrição.
+                (3-6 frases, em português, cobrindo os principais pontos discutidos), as decisões \
+                tomadas na reunião (frases objetivas, uma por decisão — deixe em branco/vazio se \
+                nenhuma decisão explícita foi tomada, não invente) e uma lista de encaminhamentos \
+                sugeridos (ações concretas que o mentorado deveria fazer até a próxima mentoria). \
+                Para cada encaminhamento, defina peso 2 se for prioritário/urgente ou peso 1 caso \
+                contrário. Não invente informação que não esteja na transcrição.
 
                 Transcrição:
                 %s
@@ -110,11 +116,12 @@ public class ClaudeAtaRascunhoService implements AtaRascunhoService {
     private static Map<String, Object> ferramentaRegistrarRascunho() {
         return Map.of(
                 "name", NOME_FERRAMENTA,
-                "description", "Registra o resumo da mentoria e os encaminhamentos sugeridos.",
+                "description", "Registra o resumo, as decisões e os encaminhamentos sugeridos da mentoria.",
                 "input_schema", Map.of(
                         "type", "object",
                         "properties", Map.of(
                                 "resumo", Map.of("type", "string"),
+                                "decisoes", Map.of("type", "string"),
                                 "encaminhamentos", Map.of(
                                         "type", "array",
                                         "items", Map.of(
@@ -127,7 +134,7 @@ public class ClaudeAtaRascunhoService implements AtaRascunhoService {
                                         )
                                 )
                         ),
-                        "required", List.of("resumo", "encaminhamentos")
+                        "required", List.of("resumo", "decisoes", "encaminhamentos")
                 )
         );
     }
