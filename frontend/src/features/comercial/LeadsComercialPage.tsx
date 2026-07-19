@@ -433,6 +433,7 @@ function FecharVendaForm({ lead, onFechado, onCancelar }: {
   const [origemVenda, setOrigemVenda] = useState<OrigemVenda | ''>('');
   const [valorTotalVenda, setValorTotalVenda] = useState('');
   const [valorPagoNoAto, setValorPagoNoAto] = useState('');
+  const [taxaPlataformaRetida, setTaxaPlataformaRetida] = useState('');
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | ''>('');
   const [parcelas, setParcelas] = useState<{ valor: string; dataPrevista: string }[]>([]);
   const [eventoId, setEventoId] = useState('');
@@ -442,6 +443,9 @@ function FecharVendaForm({ lead, onFechado, onCancelar }: {
   const [submitting, setSubmitting] = useState(false);
 
   const isIngresso = produtoVenda === 'INGRESSO_EVENTO';
+  // Gap 7 (raio-x + pesquisa da taxa real da Hotmart, confirmado 19/07/2026) — a Hotmart deduz a
+  // taxa antes de repassar pra SAW, então "valor pago no ato" sozinho não bate com o total.
+  const mostraTaxaPlataforma = formaPagamento === 'HOTMART';
 
   useEffect(() => {
     if (!isIngresso || eventos.length > 0) return;
@@ -495,6 +499,11 @@ function FecharVendaForm({ lead, onFechado, onCancelar }: {
         origemVenda: origemVenda as OrigemVenda,
         valorTotalVenda: Number(valorTotalVenda),
         valorPagoNoAto: valorPagoNoAto ? Number(valorPagoNoAto) : null,
+        // Achado do revisor-seguranca: se a vendedora digitar a taxa com HOTMART selecionado e
+        // depois trocar a forma de pagamento, o campo some da UI mas o valor antigo ficava no
+        // state e ainda era mandado — gated em mostraTaxaPlataforma pra não vazar taxa residual
+        // pra um tipo de venda que não deveria ter.
+        taxaPlataformaRetida: mostraTaxaPlataforma && taxaPlataformaRetida ? Number(taxaPlataformaRetida) : null,
         formaPagamento: formaPagamento as FormaPagamento,
         parcelas: parcelas.length > 0
           ? parcelas.map((p, i): ParcelaVendaRequest => ({ numero: i + 1, valor: Number(p.valor), dataPrevista: p.dataPrevista }))
@@ -570,6 +579,20 @@ function FecharVendaForm({ lead, onFechado, onCancelar }: {
             </select>
           </label>
         </div>
+
+        {mostraTaxaPlataforma && (
+          <div className={styles.formRow}>
+            <label className={styles.formField}>
+              Taxa de plataforma retida (R$)
+              <input className={styles.textInput} type="number" min="0" step="0.01"
+                     value={taxaPlataformaRetida} onChange={(e) => setTaxaPlataformaRetida(e.target.value)} />
+            </label>
+            <div className={styles.muted} style={{ alignSelf: 'flex-end', paddingBottom: 10 }}>
+              A Hotmart desconta a taxa dela antes de repassar — "Valor pago no ato" + esta taxa
+              deve bater com o valor total, mesmo quando o cliente pagou 100%.
+            </div>
+          </div>
+        )}
 
         {isIngresso && (
           <>

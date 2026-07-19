@@ -417,4 +417,56 @@ class LeadServiceTest {
                 .hasMessageContaining("pago no ato");
         verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, contaPagarReceberRepository);
     }
+
+    // Gap 7 (raio-x + pesquisa da taxa real da Hotmart, confirmado 19/07/2026).
+    @Test
+    void fecharVendaComTaxaPlataformaRetidaGravaOTerceiroConceito() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new FecharVendaRequest(ProdutoVenda.PRODUTO_DIGITAL, OrigemVenda.HOTMART,
+                new BigDecimal("1000.00"), new BigDecimal("890.00"), FormaPagamento.HOTMART, null, null, null,
+                new BigDecimal("110.00"));
+        Lead fechado = service().fecharVenda(leadId, request);
+
+        assertThat(fechado.getTaxaPlataformaRetida()).isEqualByComparingTo("110.00");
+        assertThat(fechado.getValorPagoNoAto()).isEqualByComparingTo("890.00");
+    }
+
+    @Test
+    void fecharVendaComPagoMaisTaxaMaiorQueOTotalLancaErro() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+
+        // 890 (pago) + 200 (taxa) = 1090 > 1000 (total) — mesma invariante de antes, agora com o
+        // terceiro conceito somado.
+        var request = new FecharVendaRequest(ProdutoVenda.PRODUTO_DIGITAL, OrigemVenda.HOTMART,
+                new BigDecimal("1000.00"), new BigDecimal("890.00"), FormaPagamento.HOTMART, null, null, null,
+                new BigDecimal("200.00"));
+
+        assertThatThrownBy(() -> service().fecharVenda(leadId, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("pago no ato")
+                .hasMessageContaining("taxa de plataforma");
+        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, contaPagarReceberRepository);
+    }
+
+    @Test
+    void fecharVendaComPagoMaisTaxaIgualAoTotalNaoLancaErro() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new FecharVendaRequest(ProdutoVenda.PRODUTO_DIGITAL, OrigemVenda.HOTMART,
+                new BigDecimal("1000.00"), new BigDecimal("890.00"), FormaPagamento.HOTMART, null, null, null,
+                new BigDecimal("110.00"));
+
+        Lead fechado = service().fecharVenda(leadId, request);
+
+        assertThat(fechado.getStatus()).isEqualTo(StatusLead.FECHADO);
+    }
 }

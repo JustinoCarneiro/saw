@@ -139,4 +139,25 @@ class LeadRepositoryTest {
 
         assertThat(recarregado.getOrigemVenda()).isEqualTo(OrigemVenda.PARCEIRO);
     }
+
+    // Gap 7 (raio-x + pesquisa da taxa real da Hotmart, confirmado 19/07/2026) — contra banco
+    // real de propósito: só isso prova que taxaPlataformaRetida sobrevive o round-trip pgcrypto
+    // (@ColumnTransformer) igual valorTotalVenda/valorPagoNoAto.
+    @Test
+    void taxaPlataformaRetidaSobrevivePgcryptoRoundTripForaDaTransacaoOriginal() {
+        Colaborador vendedor = criarVendedor("5");
+        Lead lead = new Lead("Hotmart", "hotmart@restaurante.com", null, null, null);
+        lead.moverParaEmContato(vendedor);
+        lead.moverParaProposta();
+        lead.fecharVenda(ProdutoVenda.PRODUTO_DIGITAL, OrigemVenda.HOTMART, new BigDecimal("1000.00"),
+                new BigDecimal("890.00"), FormaPagamento.HOTMART, new BigDecimal("110.00"));
+        Lead salvo = leadRepository.save(lead);
+        entityManager.flush();
+        entityManager.clear();
+
+        Lead recarregado = leadRepository.findById(salvo.getId()).orElseThrow();
+        entityManager.clear();
+
+        assertThat(recarregado.getTaxaPlataformaRetida()).isEqualByComparingTo("110.00");
+    }
 }

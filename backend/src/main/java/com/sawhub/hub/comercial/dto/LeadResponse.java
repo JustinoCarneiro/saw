@@ -33,13 +33,14 @@ public record LeadResponse(
         OrigemVenda origemVenda,
         BigDecimal valorTotalVenda,
         BigDecimal valorPagoNoAto,
-        FormaPagamento formaPagamento
+        FormaPagamento formaPagamento,
+        BigDecimal taxaPlataformaRetida
 ) {
     public static LeadResponse from(Lead l) {
         return new LeadResponse(l.getId(), l.getNome(), l.getEmail(), l.getTelefone(), l.getMensagem(),
                 l.getPlanoInteresse(), l.getStatus(), VendedorResumo.from(l.getVendedor()), l.getPlanoFechado(),
                 l.getTipoContratoFechado(), l.getMotivoPerdido(), l.getDataFechamento(), l.getCriadoEm(),
                 l.getProdutoVenda(), l.getOrigemVenda(), l.getValorTotalVenda(), l.getValorPagoNoAto(),
-                l.getFormaPagamento());
+                l.getFormaPagamento(), l.getTaxaPlataformaRetida());
     }
 }

@@ -14,6 +14,7 @@ import com.sawhub.hub.financeiro.ContaPagarReceberRepository;
 import com.sawhub.hub.financeiro.TipoConta;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -99,14 +100,19 @@ public class LeadService {
         Lead lead = leadRepository.buscarPorIdComVendedor(leadId)
                 .orElseThrow(() -> new IllegalArgumentException("Lead não encontrado."));
 
-        // Achado B3 da revisão de segurança (M25): sem esta checagem dá pra registrar valor pago
-        // no ato maior que o valor total da venda, corrompendo o financeiro silenciosamente.
-        if (request.valorPagoNoAto() != null && request.valorPagoNoAto().compareTo(request.valorTotalVenda()) > 0) {
-            throw new IllegalArgumentException("Valor pago no ato não pode ser maior que o valor total da venda.");
+        // Achado B3 da revisão de segurança (M25), estendido pelo gap 7 (19/07/2026): sem esta
+        // checagem dá pra registrar valor pago no ato (+ taxa de plataforma retida) maior que o
+        // valor total da venda, corrompendo o financeiro silenciosamente. taxaPlataformaRetida
+        // entra na mesma soma porque as duas juntas nunca podem passar do total — é a mesma
+        // invariante de antes, só que agora com um terceiro conceito (ver Lead#fecharVenda).
+        BigDecimal recebidoMaisTaxa = zeroSeNulo(request.valorPagoNoAto()).add(zeroSeNulo(request.taxaPlataformaRetida()));
+        if (recebidoMaisTaxa.compareTo(request.valorTotalVenda()) > 0) {
+            throw new IllegalArgumentException(
+                    "Valor pago no ato mais taxa de plataforma retida não pode ultrapassar o valor total da venda.");
         }
 
         lead.fecharVenda(request.produtoVenda(), request.origemVenda(), request.valorTotalVenda(),
-                request.valorPagoNoAto(), request.formaPagamento());
+                request.valorPagoNoAto(), request.formaPagamento(), request.taxaPlataformaRetida());
         lead = leadRepository.save(lead);
 
         if (request.produtoVenda() == ProdutoVenda.INGRESSO_EVENTO) {
@@ -161,5 +167,9 @@ public class LeadService {
         }
         return colaboradorRepository.findById(vendedorId)
                 .orElseThrow(() -> new IllegalArgumentException("Vendedor não encontrado."));
+    }
+
+    private static BigDecimal zeroSeNulo(BigDecimal valor) {
+        return valor == null ? BigDecimal.ZERO : valor;
     }
 }

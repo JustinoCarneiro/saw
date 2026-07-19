@@ -23,6 +23,15 @@ public record FecharVendaRequest(
         @NotNull FormaPagamento formaPagamento,
         List<@Valid ParcelaVendaRequest> parcelas,
         UUID eventoId,
-        List<@Valid VendaIngressoRequest> ingressos
+        List<@Valid VendaIngressoRequest> ingressos,
+        // Gap 7 (confirmado 19/07/2026) — valor retido pelo gateway (Hotmart etc.) antes de
+        // repassar pra SAW. Construtor de 8 args abaixo mantém todo chamador anterior compilando.
+        @PositiveOrZero BigDecimal taxaPlataformaRetida
 ) {
+    public FecharVendaRequest(ProdutoVenda produtoVenda, OrigemVenda origemVenda, BigDecimal valorTotalVenda,
+                               BigDecimal valorPagoNoAto, FormaPagamento formaPagamento,
+                               List<ParcelaVendaRequest> parcelas, UUID eventoId, List<VendaIngressoRequest> ingressos) {
+        this(produtoVenda, origemVenda, valorTotalVenda, valorPagoNoAto, formaPagamento, parcelas, eventoId,
+                ingressos, null);
+    }
 }

@@ -98,4 +98,33 @@ class LeadTest {
                 BigDecimal.TEN, BigDecimal.ONE, FormaPagamento.PIX))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    // Gap 7 (raio-x + pesquisa da taxa real da Hotmart, confirmado 19/07/2026) — taxa de
+    // plataforma retida é um terceiro conceito, distinto de valorPagoNoAto.
+    @Test
+    void fecharVendaComTaxaPlataformaRetidaGravaOTerceiroConceito() {
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
+        lead.moverParaProposta();
+
+        lead.fecharVenda(ProdutoVenda.PRODUTO_DIGITAL, OrigemVenda.HOTMART,
+                new BigDecimal("1000.00"), new BigDecimal("890.00"), FormaPagamento.HOTMART,
+                new BigDecimal("110.00"));
+
+        assertThat(lead.getValorTotalVenda()).isEqualByComparingTo("1000.00");
+        assertThat(lead.getValorPagoNoAto()).isEqualByComparingTo("890.00");
+        assertThat(lead.getTaxaPlataformaRetida()).isEqualByComparingTo("110.00");
+    }
+
+    @Test
+    void fecharVendaSemTaxaPlataformaRetidaFicaNula() {
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
+        lead.moverParaProposta();
+
+        lead.fecharVenda(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA,
+                new BigDecimal("26000.00"), new BigDecimal("6000.00"), FormaPagamento.PIX);
+
+        assertThat(lead.getTaxaPlataformaRetida()).isNull();
+    }
 }

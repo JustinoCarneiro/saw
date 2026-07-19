@@ -191,6 +191,7 @@ export interface Lead {
   valorTotalVenda: number | null;
   valorPagoNoAto: number | null;
   formaPagamento: FormaPagamento | null;
+  taxaPlataformaRetida: number | null;
 }
 
 export interface ParcelaVendaRequest {
@@ -218,6 +219,9 @@ export interface FecharVendaRequest {
   parcelas: ParcelaVendaRequest[] | null;
   eventoId: string | null;
   ingressos: VendaIngressoRequest[] | null;
+  // Gap 7 (raio-x + pesquisa da taxa real da Hotmart, confirmado 19/07/2026) — valor retido pelo
+  // gateway (Hotmart etc.) antes de repassar pra SAW, distinto de valorPagoNoAto.
+  taxaPlataformaRetida: number | null;
 }
 
 export interface EventoVendaResumo {

@@ -118,6 +118,17 @@ public class Lead extends BaseEntity {
     @Column(name = "forma_pagamento")
     private FormaPagamento formaPagamento;
 
+    // Gap 7 (raio-x em "Vendas Aline Melo" + pesquisa da taxa real da Hotmart, confirmado
+    // 19/07/2026): gateways de pagamento (Hotmart: ~9,9%+R$1, mais taxa de antecipação opcional)
+    // retêm uma fatia antes de repassar pra SAW. Sem esse conceito, valorPagoNoAto < valorTotalVenda
+    // parecia dívida do cliente quando na verdade ele pagou 100% — a diferença é taxa de
+    // plataforma, não parcela em aberto. Mesmo critério pgcrypto de valorTotalVenda/valorPagoNoAto.
+    @Column(name = "taxa_plataforma_retida", columnDefinition = "bytea")
+    @ColumnTransformer(
+            read = "pgp_sym_decrypt(taxa_plataforma_retida, current_setting('app.encryption_key'))::numeric",
+            write = "pgp_sym_encrypt(?::text, current_setting('app.encryption_key'))")
+    private BigDecimal taxaPlataformaRetida;
+
     protected Lead() {
     }
 
@@ -178,9 +189,21 @@ public class Lead extends BaseEntity {
 
     /** M25 — "formulário único de venda". Só a partir de PROPOSTA, mesma guarda de
      * {@link #fechar(Plano)} — os dois convivem, nenhum lead-fechamento existente precisa migrar
-     * pra este caminho. */
+     * pra este caminho. Overload sem taxaPlataformaRetida (gap 7) — todo chamador que não conhece
+     * taxa de plataforma continua funcionando sem mudar nada. */
     public void fecharVenda(ProdutoVenda produtoVenda, OrigemVenda origemVenda, BigDecimal valorTotalVenda,
                              BigDecimal valorPagoNoAto, FormaPagamento formaPagamento) {
+        fecharVenda(produtoVenda, origemVenda, valorTotalVenda, valorPagoNoAto, formaPagamento, null);
+    }
+
+    /** Gap 7 (raio-x + pesquisa da taxa real da Hotmart, confirmado 19/07/2026) —
+     * taxaPlataformaRetida é o valor retido pelo gateway antes de repassar pra SAW. A soma
+     * valorPagoNoAto + taxaPlataformaRetida representa o total efetivamente contabilizado da
+     * venda (o restante, se houver, vira parcela de verdade); a garantia de que essa soma não
+     * ultrapassa valorTotalVenda vive em {@code LeadService.fecharVenda} (mesmo critério de
+     * validação B3 já usado pra valorPagoNoAto sozinho, não duplicado aqui na entidade). */
+    public void fecharVenda(ProdutoVenda produtoVenda, OrigemVenda origemVenda, BigDecimal valorTotalVenda,
+                             BigDecimal valorPagoNoAto, FormaPagamento formaPagamento, BigDecimal taxaPlataformaRetida) {
         exigirStatus(StatusLead.PROPOSTA);
         this.status = StatusLead.FECHADO;
         this.produtoVenda = produtoVenda;
@@ -188,6 +211,7 @@ public class Lead extends BaseEntity {
         this.valorTotalVenda = valorTotalVenda;
         this.valorPagoNoAto = valorPagoNoAto;
         this.formaPagamento = formaPagamento;
+        this.taxaPlataformaRetida = taxaPlataformaRetida;
         this.dataFechamento = Instant.now();
     }
 
@@ -286,5 +310,9 @@ public class Lead extends BaseEntity {
 
     public FormaPagamento getFormaPagamento() {
         return formaPagamento;
+    }
+
+    public BigDecimal getTaxaPlataformaRetida() {
+        return taxaPlataformaRetida;
     }
 }

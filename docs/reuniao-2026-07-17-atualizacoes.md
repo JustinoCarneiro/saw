@@ -547,12 +547,13 @@ evidência, não só relato) por que o "formulário único de venda" era o pedid
   (venda de ingresso, venda por fora, credenciamento) — mas vivem em arquivos e ferramentas
   diferentes hoje (Sheets vs. Notion), reforçando por que o formulário único é o pedido nº 1 do
   Comercial.
-- **Gaps achados via raio-x (18/07/2026) — status em 19/07/2026: 6 de 8 implementados** (1, 2, 3,
-  5, 6, 8 — todos confirmados pelo Marcos direto, sem precisar do Victor, sob a filosofia "vamos
-  sempre trabalhar com gerais e se depois o cliente quiser tirar, tiramos"). Gap 4 já estava
-  resolvido (mapeamento do IMPORTRANGE). Gap 7 segue **deliberadamente fora desta leva** — é uma
-  pergunta sobre o que um número significa (não uma categoria a incluir), continua precisando de
-  confirmação real do cliente antes de qualquer mudança de código.
+- **Gaps achados via raio-x (18/07/2026) — status em 19/07/2026: 8 de 8 implementados.** 1, 2, 3,
+  5, 6, 8 confirmados pelo Marcos direto, sem precisar do Victor, sob a filosofia "vamos sempre
+  trabalhar com gerais e se depois o cliente quiser tirar, tiramos". Gap 4 já estava resolvido
+  (mapeamento do IMPORTRANGE). Gap 7 — a única pergunta sobre o que um número significa, não uma
+  categoria a incluir — ficou de fora da primeira leva por precisar de confirmação real antes de
+  mudar código financeiro; resolvida depois via pesquisa da taxa real da Hotmart (fonte oficial,
+  grau de confiança alto — não é o extrato real da conta da SAW, então não é 100% absoluto).
   1. ✅ **Resolvido** (19/07/2026) — `StatusConta` ganhou `PARCIAL`, alcançado por
      `ContaPagarReceber#liquidarParcial(valorPagoAdicional, dataPagamento)`: acumula pagamento
      parcial num novo campo `valorPago`, vira liquidação completa (`PAGO`/`RECEBIDO`) quando o
@@ -583,13 +584,22 @@ evidência, não só relato) por que o "formulário único de venda" era o pedid
      avulso. Ainda não conectado ao cálculo de MRR (H14.3) — só o catálogo foi resolvido nesta
      leva, o dashboard de faturamento continua sem diferenciar as duas formas na composição de
      receita recorrente. Migration `V34__forma_pagamento_pix_recorrente.sql`.
-  7. **Ainda não resolvido, fora de escopo desta leva.** Vendas via Hotmart parecem registrar o
-     valor líquido (pós-taxa da plataforma) como "Valor pago no ato", não o valor bruto —
-     hipótese fundamentada em 11/23 linhas reais de "Vendas Aline Melo" com o mesmo padrão
-     (~87-91% do total, restante sempre R$0 mesmo com total ≠ pago). Se confirmado,
-     `Lead.fecharVenda()` precisa de um terceiro conceito (taxa/comissão de plataforma retida),
-     senão toda venda Hotmart aparenta ficar "devendo" quando na verdade está quitada pelo
-     cliente.
+  7. ✅ **Resolvido** (19/07/2026) — hipótese confirmada por pesquisa (fonte: Central de Ajuda
+     oficial da Hotmart, não o extrato real da conta da SAW — grau de confiança alto, não 100%
+     absoluto). Taxa real da Hotmart no Brasil: **9,9% + R$1,00** por venda, mais taxa de
+     antecipação opcional (**+2,19%** em 14 dias, **+3,59%** em 2 dias), descontada
+     automaticamente do saldo do produtor antes do repasse — faixa resultante **9,9% a ~13,5%**,
+     batendo quase exatamente com o padrão observado (~9-13%, 11/23 linhas de "Vendas Aline
+     Melo") e reforçado pelo "Falta Receber" sempre R$0 nessas linhas (assinatura de "confundiu
+     líquido com bruto", não de venda genuinamente parcial). `Lead` ganhou o terceiro conceito:
+     campo `taxaPlataformaRetida` (pgcrypto, mesmo critério de `valorTotalVenda`/
+     `valorPagoNoAto`), `valorPagoNoAto + taxaPlataformaRetida` não pode ultrapassar
+     `valorTotalVenda` (mesma invariante do Achado B3, estendida). Campo aditivo — overload de
+     `Lead.fecharVenda()`/construtor secundário de `FecharVendaRequest` mantêm todo chamador
+     existente compilando sem mudança. Frontend: campo "Taxa de plataforma retida" só aparece no
+     formulário quando `formaPagamento = HOTMART`. Migration `V37__lead_taxa_plataforma_retida.sql`.
+     Não conectado a nenhum cálculo de DRE/MRR ainda — só o registro correto do dado nesta leva,
+     mesma decisão de escopo do gap 6 (Pix Recorrente).
   8. ✅ **Resolvido** (19/07/2026) — `CategoriaIngresso` corrigido: `CORTESIA` saiu do enum
      (confirmado sem nenhuma linha em produção usando esse valor, verificado via grep antes da
      migration), `BLACK` entrou como quarta categoria real, tratada como **permanente**
