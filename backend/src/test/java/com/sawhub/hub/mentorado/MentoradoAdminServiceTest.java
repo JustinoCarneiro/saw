@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.comercial.FormaPagamento;
@@ -15,6 +17,7 @@ import com.sawhub.hub.mentorado.dto.AtualizarDadosContratoRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarDiagnosticoInicialRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarMentoradoRequest;
 import com.sawhub.hub.mentorado.dto.CriarMentoradoDiretoRequest;
+import com.sawhub.hub.mentorado.dto.ImportarMentoradoDiretoLinha;
 import com.sawhub.hub.security.Usuario;
 import com.sawhub.hub.security.UsuarioRepository;
 import java.math.BigDecimal;
@@ -23,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -247,6 +251,69 @@ class MentoradoAdminServiceTest {
         assertThatThrownBy(() -> service().criarDireto(request))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Já existe uma conta");
+    }
+
+    // M23 item 4 (bulk-CREATE import, 19/07/2026) — mesma lógica de criarDireto, mas com o
+    // conjunto completo de dados que a migração real do Notion carrega.
+    @Test
+    void criarDiretoDeImportacaoCriaTudoComNomeFantasiaCnpjESocios() {
+        when(usuarioRepository.findByEmail("dono@restaurante.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("hash");
+        when(usuarioRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var linha = new ImportarMentoradoDiretoLinha("dono@restaurante.com", "Maria Souza", "Menu Caseirinho",
+                "11999998888", TipoContrato.MENTORIA_CONTINUA, new BigDecimal("26000.00"),
+                LocalDate.of(2026, 7, 17), "Menu Caseirinho Ltda", "42.521.899/0001-38",
+                "Girlandia Aragão de Sousa; Jaene Oliveira de Araujo", null, null, null, null, null, null, null,
+                null, null);
+        var resultado = service().criarDiretoDeImportacao(linha);
+
+        assertThat(resultado.mentorado().getNome()).isEqualTo("Maria Souza");
+        assertThat(resultado.mentorado().getNomeFantasia()).isEqualTo("Menu Caseirinho Ltda");
+        assertThat(resultado.mentorado().getCnpj()).isEqualTo("42.521.899/0001-38");
+        assertThat(resultado.mentorado().getSocios()).contains("Girlandia", "Jaene");
+        assertThat(resultado.mentorado().getTipoContrato()).isEqualTo(TipoContrato.MENTORIA_CONTINUA);
+        assertThat(resultado.senhaTemporaria()).isNotBlank();
+        verifyNoInteractions(diagnosticoInicialRepository);
+    }
+
+    @Test
+    void criarDiretoDeImportacaoComDadosDeDiagnosticoTambemCriaDiagnosticoInicial() {
+        when(usuarioRepository.findByEmail("dono@restaurante.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("hash");
+        when(usuarioRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(diagnosticoInicialRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var linha = new ImportarMentoradoDiretoLinha("dono@restaurante.com", "Maria Souza", null, null,
+                TipoContrato.CONSULTORIA, null, null, null, null, null,
+                new BigDecimal("600000"), 6, true, 1, RespostaSimNao.SIM, "margem apertada", "5 a 10 minutos",
+                EstadoImplementacao.EM_CONSTRUCAO, EstadoImplementacao.SIM);
+        var resultado = service().criarDiretoDeImportacao(linha);
+
+        ArgumentCaptor<MentoradoDiagnosticoInicial> captor = ArgumentCaptor.forClass(MentoradoDiagnosticoInicial.class);
+        verify(diagnosticoInicialRepository).save(captor.capture());
+        assertThat(captor.getValue().getMentorado()).isEqualTo(resultado.mentorado());
+        assertThat(captor.getValue().getFaturamentoAnual()).isEqualByComparingTo("600000");
+        assertThat(captor.getValue().getCulturaConstruida()).isEqualTo(EstadoImplementacao.EM_CONSTRUCAO);
+    }
+
+    @Test
+    void criarDiretoDeImportacaoComEmailJaCadastradoLancaErro() {
+        when(usuarioRepository.findByEmail("dono@restaurante.com"))
+                .thenReturn(Optional.of(new Usuario("dono@restaurante.com", "hash", com.sawhub.hub.security.Perfil.MENTORADO)));
+
+        var linha = new ImportarMentoradoDiretoLinha("dono@restaurante.com", "Maria Souza", null, null,
+                TipoContrato.CONSULTORIA, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null);
+
+        assertThatThrownBy(() -> service().criarDiretoDeImportacao(linha))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Já existe uma conta");
+        verifyNoInteractions(leadRepository, mentoradoRepository);
     }
 
     @Test

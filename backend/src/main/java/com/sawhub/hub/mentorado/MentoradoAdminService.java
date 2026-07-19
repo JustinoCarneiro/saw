@@ -8,6 +8,7 @@ import com.sawhub.hub.mentorado.dto.AtualizarDadosContratoRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarDiagnosticoInicialRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarMentoradoRequest;
 import com.sawhub.hub.mentorado.dto.CriarMentoradoDiretoRequest;
+import com.sawhub.hub.mentorado.dto.ImportarMentoradoDiretoLinha;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
 import com.sawhub.hub.security.UsuarioRepository;
@@ -162,6 +163,45 @@ public class MentoradoAdminService {
 
         lead.vincularMentorado(mentorado);
         leadRepository.save(lead);
+
+        return new MentoradoCriado(mentorado, senhaTemporaria);
+    }
+
+    /** M23 item 4 (bulk-CREATE import, 19/07/2026) — mesma lógica de {@link #criarDireto}, mas
+     * com o conjunto completo de dados que a migração real de ~40 empresas do Notion carrega
+     * (nomeFantasia/cnpj/sócios + Diagnóstico Inicial, que {@link CriarMentoradoDiretoRequest} do
+     * formulário único do Admin não pede). Chamado uma vez por linha já validada do CSV — quem
+     * garante "tudo-ou-nada" entre várias linhas é o {@code @Transactional} de quem chama em
+     * loop (mesmo padrão de {@code TeamCsvService}), não este método isoladamente. */
+    @Transactional
+    public MentoradoCriado criarDiretoDeImportacao(ImportarMentoradoDiretoLinha linha) {
+        if (usuarioRepository.findByEmail(linha.email()).isPresent()) {
+            throw new IllegalStateException("Já existe uma conta com este e-mail.");
+        }
+
+        Lead lead = leadRepository.save(
+                Lead.criarJaFechado(linha.nome(), linha.email(), linha.telefone(), linha.tipoContrato()));
+
+        String senhaTemporaria = gerarSenhaTemporaria();
+        Usuario usuario = usuarioRepository.save(
+                new Usuario(linha.email(), passwordEncoder.encode(senhaTemporaria), Perfil.MENTORADO));
+        Mentorado mentorado = new Mentorado(usuario, linha.nome(), linha.negocio(), Plano.GRATUITO,
+                BigDecimal.ZERO, 0, 0);
+        mentorado.atualizarPerfil(linha.telefone(), null, null);
+        mentorado.atualizarDadosContrato(linha.nomeFantasia(), linha.cnpj(), linha.socios(), linha.tipoContrato(),
+                linha.valorContrato(), linha.dataFechamentoContrato());
+        mentorado = mentoradoRepository.save(mentorado);
+
+        lead.vincularMentorado(mentorado);
+        leadRepository.save(lead);
+
+        if (linha.temDadosDeDiagnostico()) {
+            MentoradoDiagnosticoInicial diagnostico = new MentoradoDiagnosticoInicial(mentorado);
+            diagnostico.atualizar(linha.faturamentoAnual(), linha.quantidadeColaboradores(),
+                    linha.empresaRegularizada(), linha.quantidadeLojas(), linha.cmvDefinido(), linha.cmvDetalhe(),
+                    linha.tempoMedioAtendimento(), linha.culturaConstruida(), linha.processosDesenhados());
+            diagnosticoInicialRepository.save(diagnostico);
+        }
 
         return new MentoradoCriado(mentorado, senhaTemporaria);
     }

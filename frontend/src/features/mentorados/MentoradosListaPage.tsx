@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { apiClient } from '../../shared/lib/apiClient';
 import { useAuth } from '../auth/AuthContext';
 import { Card } from '../../shared/components/Card';
@@ -10,6 +11,7 @@ import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type {
   DiagnosticoInicial,
   EstadoImplementacao,
+  ImportMentoradoDiretoResultResponse,
   Lead,
   MentoradoAdmin,
   MentoradoCriado,
@@ -69,6 +71,8 @@ export function MentoradosListaPage() {
   const [criando, setCriando] = useState(false);
   const [criandoDireto, setCriandoDireto] = useState(false);
   const [criado, setCriado] = useState<MentoradoCriado | null>(null);
+  const [importandoDireto, setImportandoDireto] = useState(false);
+  const [resultadoImportDireto, setResultadoImportDireto] = useState<ImportMentoradoDiretoResultResponse | null>(null);
 
   const carregar = () => {
     setMentorados(null);
@@ -103,6 +107,11 @@ export function MentoradosListaPage() {
               <span style={{ fontSize: 16 }}>+</span>Criar mentorado direto
             </button>
           )}
+          {podeVerContrato && (
+            <button className={styles.newButton} onClick={() => setImportandoDireto(true)}>
+              <span style={{ fontSize: 16 }}>+</span>Importar mentorados em massa
+            </button>
+          )}
           <button className={styles.newButton} onClick={() => setCriando(true)}>
             <span style={{ fontSize: 16 }}>+</span>Criar a partir de um lead
           </button>
@@ -132,6 +141,33 @@ export function MentoradosListaPage() {
           onCriado={(res) => { setCriandoDireto(false); setCriado(res); carregar(); }}
           onCancelar={() => setCriandoDireto(false)}
         />
+      )}
+
+      {importandoDireto && (
+        <ImportarMentoradosDiretoForm
+          onImportado={(res) => { setImportandoDireto(false); setResultadoImportDireto(res); carregar(); }}
+          onCancelar={() => setImportandoDireto(false)}
+        />
+      )}
+
+      {resultadoImportDireto && (
+        <Card style={{ padding: 20, marginBottom: 16, borderColor: 'var(--gold)' }}>
+          <div className={styles.formTitle}>{resultadoImportDireto.importados} mentorado(s) importado(s)</div>
+          <p className={styles.muted}>
+            Ainda não há envio automático de e-mail — repasse cada senha temporária manualmente. Elas não
+            podem ser recuperadas depois de fechar esta tela.
+          </p>
+          <div className={styles.credenciais}>
+            {resultadoImportDireto.criados.map((c) => (
+              <div key={c.id}>
+                <strong>{c.nome}</strong> — {c.email} — <code>{c.senhaTemporaria}</code>
+              </div>
+            ))}
+          </div>
+          <div className={styles.formActions}>
+            <button className={styles.actionButton} onClick={() => setResultadoImportDireto(null)}>Entendi</button>
+          </div>
+        </Card>
       )}
 
       {criado && (
@@ -754,6 +790,89 @@ function CriarMentoradoDiretoForm({ onCriado, onCancelar }: {
           <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
           <button type="submit" className={styles.actionButton} disabled={submitting || !tipoContrato}>
             {submitting ? 'Criando…' : 'Criar mentorado'}
+          </button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+const COLUNAS_IMPORT_DIRETO = [
+  'email', 'nome', 'negocio', 'nomeFantasia', 'cnpj', 'socios', 'telefone', 'tipoContrato', 'valorContrato',
+  'dataFechamentoContrato', 'faturamentoAnual', 'quantidadeColaboradores', 'empresaRegularizada',
+  'quantidadeLojas', 'cmvDefinido', 'cmvDetalhe', 'tempoMedioAtendimento', 'culturaConstruida', 'processosDesenhados',
+];
+
+// M23 item 4 (bulk-CREATE, 19/07/2026) — import CSV que CRIA mentorados novos em massa, pensado
+// pra migrar de uma vez as empresas reais que hoje só existem no Notion. Só COMERCIAL/ADMIN veem o
+// botão que abre este form (mesmo gate de "Criar mentorado direto" — cria credencial + carrega
+// CNPJ/sócios/valor de contrato).
+function ImportarMentoradosDiretoForm({ onImportado, onCancelar }: {
+  onImportado: (res: ImportMentoradoDiretoResultResponse) => void; onCancelar: () => void;
+}) {
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [erros, setErros] = useState<ImportMentoradoDiretoResultResponse['erros'] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!arquivo) return;
+    setError(null);
+    setErros(null);
+    setSubmitting(true);
+    const form = new FormData();
+    form.append('arquivo', arquivo);
+    try {
+      const res = await apiClient.post<ImportMentoradoDiretoResultResponse>('/admin/mentorados/importar-em-massa', form);
+      onImportado(res.data);
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 422 && Array.isArray(err.response.data?.erros)) {
+        setErros((err.response.data as ImportMentoradoDiretoResultResponse).erros);
+      } else {
+        setError(getApiErrorMessage(err, 'Não foi possível importar o arquivo.'));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }}>
+      <div className={styles.formTitle}>Importar mentorados em massa</div>
+      <p className={styles.muted} style={{ marginTop: -8, marginBottom: 4 }}>
+        Cria um mentorado (com Lead já fechado + credencial de login) por linha do CSV. Tudo-ou-nada:
+        se alguma linha tiver erro, nada é criado. Colunas esperadas (só email/nome/tipoContrato são
+        obrigatórias): <code>{COLUNAS_IMPORT_DIRETO.join(', ')}</code>.
+      </p>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.formField}>
+          Arquivo CSV
+          <input
+            className={styles.textInput}
+            type="file"
+            accept=".csv"
+            onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
+            required
+          />
+        </label>
+
+        {error && <div className={styles.error}>{error}</div>}
+        {erros && erros.length > 0 && (
+          <div className={styles.error}>
+            <div>Nenhuma linha foi importada — corrija o arquivo e reenvie:</div>
+            <ul>
+              {erros.map((e) => (
+                <li key={e.linha}>Linha {e.linha}: {e.motivo}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className={styles.formActions}>
+          <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
+          <button type="submit" className={styles.actionButton} disabled={submitting || !arquivo}>
+            {submitting ? 'Importando…' : 'Importar'}
           </button>
         </div>
       </form>

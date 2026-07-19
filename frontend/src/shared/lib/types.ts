@@ -291,6 +291,16 @@ export interface MentoradoCriado {
   senhaTemporaria: string;
 }
 
+// M23 item 4 (bulk-CREATE, 19/07/2026) — variante de ImportResultResponse pro import que CRIA
+// credencial nova por linha: precisa devolver a senha temporária de cada mentorado criado (não
+// fica recuperável depois — mesma razão de MentoradoCriado).
+export interface ImportMentoradoDiretoResultResponse {
+  totalLinhas: number;
+  importados: number;
+  erros: ImportErro[];
+  criados: MentoradoCriado[];
+}
+
 // M23 (change request pós-MVP, 17/07/2026) — "não existem planos, mas sim produtos". Conceito
 // novo e aditivo, só pro lado comercial (Mentorado/Lead); Plano continua existindo e gateando
 // conteúdo exatamente como hoje (ver Suposição 1 do Blueprint M23 no ROADMAP.md).

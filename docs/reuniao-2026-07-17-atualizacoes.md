@@ -706,6 +706,13 @@ Br..." no topo da página) — uma das três:
 **Bloqueia**: a parte do M24 que depende do "Diagnóstico Inicial" (texto livre, só existe no
 Notion). O resto do M24 (contato/produto/valor via planilhas) não depende disso.
 
+**Atualização (19/07/2026): a ferramenta do M24 foi implementada** (`POST /api/v1/admin/mentorados/
+importar-em-massa`, `MentoradoDiretoCsvService` + `MentoradoAdminService.criarDiretoDeImportacao`,
+ver ROADMAP.md) — o bloqueio do Notion nunca impediu construir o importador em si, só a migração
+real dos dados das ~40 empresas (que precisa do export pra virar o CSV de entrada). O contrato de
+CSV inclui as 19 colunas do "Diagnóstico Inicial" como opcionais, prontas pra receber o resultado
+do parser Notion→CSV descrito acima assim que o Matheus desbloquear o export.
+
 ## Nota de segurança
 A transcrição colada nesta conversa trazia credenciais em texto puro (login de demo mentorado e
 um login pessoal). Elas **não foram gravadas em nenhum arquivo deste repositório**. Como esse

@@ -2,6 +2,7 @@ package com.sawhub.hub.mentorado;
 
 import com.sawhub.hub.mentorado.dto.AtualizarDadosContratoRequest;
 import com.sawhub.hub.mentorado.dto.CriarMentoradoDiretoRequest;
+import com.sawhub.hub.mentorado.dto.ImportMentoradoDiretoResultResponse;
 import com.sawhub.hub.mentorado.dto.MentoradoCriadoResponse;
 import com.sawhub.hub.mentorado.dto.MentoradoResponse;
 import com.sawhub.hub.security.RequiresModulo;
@@ -40,9 +41,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class MentoradoContratoController {
 
     private final MentoradoAdminService mentoradoAdminService;
+    private final MentoradoDiretoCsvService mentoradoDiretoCsvService;
 
-    public MentoradoContratoController(MentoradoAdminService mentoradoAdminService) {
+    public MentoradoContratoController(MentoradoAdminService mentoradoAdminService,
+                                        MentoradoDiretoCsvService mentoradoDiretoCsvService) {
         this.mentoradoAdminService = mentoradoAdminService;
+        this.mentoradoDiretoCsvService = mentoradoDiretoCsvService;
     }
 
     // "criar mentorado direto" (pedido explícito do cliente), sem exigir um Lead pré-existente no funil.
@@ -51,6 +55,17 @@ public class MentoradoContratoController {
     public MentoradoCriadoResponse criarDireto(@Valid @RequestBody CriarMentoradoDiretoRequest request) {
         var resultado = mentoradoAdminService.criarDireto(request);
         return MentoradoCriadoResponse.from(resultado.mentorado(), resultado.senhaTemporaria());
+    }
+
+    // Blueprint M24 (ROADMAP.md) — import CSV que CRIA mentorados novos em massa (diferente de
+    // POST /import em MentoradoAdminController, que é só bulk-UPDATE, M22). Mesmo gate de
+    // Modulo.COMERCIAL de "/direto" (cria credencial + carrega CNPJ/sócios/valor de contrato).
+    // 200 se tudo foi validado e criado, 422 se nada foi (ver erros no corpo).
+    @PostMapping("/importar-em-massa")
+    public ResponseEntity<ImportMentoradoDiretoResultResponse> importarEmMassa(@RequestParam("arquivo") MultipartFile arquivo) {
+        ImportMentoradoDiretoResultResponse resultado = mentoradoDiretoCsvService.importar(arquivo);
+        HttpStatus status = resultado.erros().isEmpty() ? HttpStatus.OK : HttpStatus.UNPROCESSABLE_ENTITY;
+        return ResponseEntity.status(status).body(resultado);
     }
 
     @PatchMapping("/{id}/dados-contrato")
