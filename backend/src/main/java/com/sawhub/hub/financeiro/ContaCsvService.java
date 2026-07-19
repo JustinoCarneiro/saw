@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
@@ -39,8 +40,8 @@ public class ContaCsvService {
         this.categoriaRepository = categoriaRepository;
     }
 
-    public String exportar(TipoConta tipo, StatusConta status, Integer ano, Integer mes) {
-        List<ContaPagarReceber> contas = contaService.listar(tipo, status, ano, mes);
+    public String exportar(TipoConta tipo, StatusConta status, Integer ano, Integer mes, UUID eventoId) {
+        List<ContaPagarReceber> contas = contaService.listar(tipo, status, ano, mes, eventoId);
         StringWriter destino = new StringWriter();
         CSVFormat formato = CSVFormat.Builder.create().setDelimiter(';').setHeader(CABECALHO).build();
         try (CSVPrinter printer = new CSVPrinter(destino, formato)) {

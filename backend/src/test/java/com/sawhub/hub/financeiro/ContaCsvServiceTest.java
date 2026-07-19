@@ -49,9 +49,9 @@ class ContaCsvServiceTest {
         CategoriaFinanceira categoria = categoriaInfra();
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor Hostinger",
                 new BigDecimal("180.00"), LocalDate.of(2026, 7, 20), categoria);
-        when(contaService.listar(null, null, null, null)).thenReturn(List.of(conta));
+        when(contaService.listar(null, null, null, null, null)).thenReturn(List.of(conta));
 
-        String csv = service().exportar(null, null, null, null);
+        String csv = service().exportar(null, null, null, null, null);
 
         assertThat(csv).contains("tipo;descricao;valor;dataVencimento;categoria");
         assertThat(csv).contains("A_PAGAR;Servidor Hostinger;180,00;20/07/2026;Infra");
@@ -61,9 +61,9 @@ class ContaCsvServiceTest {
     void exportarContaSemCategoriaDeixaColunaVazia() {
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Diversos",
                 new BigDecimal("50.00"), LocalDate.of(2026, 7, 20), null);
-        when(contaService.listar(any(), any(), any(), any())).thenReturn(List.of(conta));
+        when(contaService.listar(any(), any(), any(), any(), any())).thenReturn(List.of(conta));
 
-        String csv = service().exportar(TipoConta.A_PAGAR, null, null, null);
+        String csv = service().exportar(TipoConta.A_PAGAR, null, null, null, null);
 
         assertThat(csv).contains("A_PAGAR;Diversos;50,00;20/07/2026;\r\n");
     }

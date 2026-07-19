@@ -1,5 +1,7 @@
 package com.sawhub.hub.financeiro;
 
+import com.sawhub.hub.evento.Evento;
+import com.sawhub.hub.evento.EventoRepository;
 import com.sawhub.hub.financeiro.dto.CriarContaRequest;
 import com.sawhub.hub.financeiro.dto.LiquidarContaRequest;
 import com.sawhub.hub.financeiro.dto.LiquidarParcialContaRequest;
@@ -24,13 +26,16 @@ public class ContaPagarReceberService {
     private final ContaPagarReceberRepository contaRepository;
     private final LancamentoFinanceiroRepository lancamentoRepository;
     private final CategoriaFinanceiraRepository categoriaRepository;
+    private final EventoRepository eventoRepository;
 
     public ContaPagarReceberService(ContaPagarReceberRepository contaRepository,
                                      LancamentoFinanceiroRepository lancamentoRepository,
-                                     CategoriaFinanceiraRepository categoriaRepository) {
+                                     CategoriaFinanceiraRepository categoriaRepository,
+                                     EventoRepository eventoRepository) {
         this.contaRepository = contaRepository;
         this.lancamentoRepository = lancamentoRepository;
         this.categoriaRepository = categoriaRepository;
+        this.eventoRepository = eventoRepository;
     }
 
     @Transactional
@@ -38,13 +43,17 @@ public class ContaPagarReceberService {
         CategoriaFinanceira categoria = request.categoriaId() == null ? null
                 : categoriaRepository.findById(request.categoriaId())
                         .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
+        // Change request 17/07/2026 ("evento no financeiro") — opcional.
+        Evento evento = request.eventoId() == null ? null
+                : eventoRepository.findById(request.eventoId())
+                        .orElseThrow(() -> new IllegalArgumentException("Evento não encontrado."));
         ContaPagarReceber conta = new ContaPagarReceber(request.tipo(), request.descricao(), request.valor(),
-                request.dataVencimento(), categoria);
+                request.dataVencimento(), categoria, evento);
         return contaRepository.save(conta);
     }
 
     public List<ContaPagarReceber> listar(TipoConta tipo, StatusConta status) {
-        return listar(tipo, status, null, null);
+        return listar(tipo, status, null, null, null);
     }
 
     /** Change request 17/07/2026 ("filtro mensal") — ano/mes juntos viram uma janela
@@ -52,6 +61,11 @@ public class ContaPagarReceberService {
      * nulo desliga o filtro de período (mantém 100% do comportamento anterior pra quem não passa
      * ano/mes, ver overload acima). */
     public List<ContaPagarReceber> listar(TipoConta tipo, StatusConta status, Integer ano, Integer mes) {
+        return listar(tipo, status, ano, mes, null);
+    }
+
+    /** Change request 17/07/2026 ("evento no financeiro") — eventoId nulo desliga o filtro. */
+    public List<ContaPagarReceber> listar(TipoConta tipo, StatusConta status, Integer ano, Integer mes, UUID eventoId) {
         LocalDate inicio = SEM_FILTRO_INICIO;
         LocalDate fim = SEM_FILTRO_FIM;
         if (ano != null && mes != null) {
@@ -59,15 +73,17 @@ public class ContaPagarReceberService {
             inicio = periodo.atDay(1);
             fim = periodo.plusMonths(1).atDay(1);
         }
-        return contaRepository.buscarComFiltro(tipo, status, inicio, fim);
+        return contaRepository.buscarComFiltro(tipo, status, inicio, fim, eventoId);
     }
 
     /** Gera o Lançamento REALIZADO correspondente quando `criarLancamento=true` — exige que a
      * conta já tenha uma categoria definida na criação, senão não tem como classificar o
-     * lançamento gerado (H14.4 + H14.1 andam juntos aqui). */
+     * lançamento gerado (H14.4 + H14.1 andam juntos aqui). O evento da conta (se houver) propaga
+     * pro Lançamento gerado — mesmo critério da categoria, ver change request "evento no
+     * financeiro". */
     @Transactional
     public ContaPagarReceber liquidar(UUID contaId, LiquidarContaRequest request) {
-        ContaPagarReceber conta = contaRepository.findById(contaId)
+        ContaPagarReceber conta = contaRepository.buscarPorIdComEvento(contaId)
                 .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
 
         LancamentoFinanceiro lancamentoGerado = null;
@@ -78,7 +94,8 @@ public class ContaPagarReceberService {
             TipoLancamento tipoLancamento = conta.getTipo() == TipoConta.A_PAGAR
                     ? TipoLancamento.DESPESA : TipoLancamento.RECEITA;
             lancamentoGerado = lancamentoRepository.save(new LancamentoFinanceiro(tipoLancamento, conta.getCategoria(),
-                    conta.getDescricao(), conta.getValor(), request.dataPagamento(), StatusLancamento.REALIZADO, null));
+                    conta.getDescricao(), conta.getValor(), request.dataPagamento(), StatusLancamento.REALIZADO,
+                    null, conta.getEvento()));
         }
 
         conta.liquidar(request.dataPagamento(), lancamentoGerado);
@@ -87,7 +104,7 @@ public class ContaPagarReceberService {
 
     @Transactional
     public ContaPagarReceber liquidarParcial(UUID contaId, LiquidarParcialContaRequest request) {
-        ContaPagarReceber conta = contaRepository.findById(contaId)
+        ContaPagarReceber conta = contaRepository.buscarPorIdComEvento(contaId)
                 .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada."));
         conta.liquidarParcial(request.valorPago(), request.dataPagamento());
         return contaRepository.save(conta);

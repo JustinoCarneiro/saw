@@ -135,7 +135,10 @@ export function LancamentosPage() {
           return (
             <DataGridRow key={l.id} columns={COLUMNS}>
               <div className={styles.muted}>{new Date(l.dataCompetencia + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-              <div className={styles.strong}>{l.descricao}</div>
+              <div>
+                <div className={styles.strong}>{l.descricao}</div>
+                {l.eventoTitulo && <div className={styles.muted}>{l.eventoTitulo}</div>}
+              </div>
               <div className={styles.muted}>{l.categoria.nome}</div>
               <div className={styles.valor} style={{ color: l.tipo === 'RECEITA' ? 'var(--success)' : 'var(--danger)' }}>
                 {l.tipo === 'RECEITA' ? '+' : '−'}

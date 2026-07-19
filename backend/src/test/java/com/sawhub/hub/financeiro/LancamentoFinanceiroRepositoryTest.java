@@ -2,8 +2,12 @@ package com.sawhub.hub.financeiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.sawhub.hub.evento.Evento;
+import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.TipoEvento;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -27,6 +31,8 @@ class LancamentoFinanceiroRepositoryTest {
     @Autowired
     private CategoriaFinanceiraRepository categoriaRepository;
     @Autowired
+    private EventoRepository eventoRepository;
+    @Autowired
     private EntityManager entityManager;
 
     @Test
@@ -43,5 +49,28 @@ class LancamentoFinanceiroRepositoryTest {
         entityManager.clear();
 
         assertThat(recarregado.getDescricao()).isEqualTo("Parcela 1 - Maria Souza");
+    }
+
+    // Evento no Financeiro — mesmo raciocínio de ContaPagarReceberRepositoryTest: sem o LEFT JOIN
+    // FETCH l.evento nas duas queries de LancamentoFinanceiroRepository, LancamentoResponse.from()
+    // dispara LazyInitializationException ao ler l.getEvento().getTitulo() fora da transação.
+    @Test
+    void findByDataCompetenciaBetweenInicializaEventoMesmoForaDaTransacaoOriginal() {
+        CategoriaFinanceira categoria = categoriaRepository.save(new CategoriaFinanceira(
+                "Ingressos teste " + UUID.randomUUID(), TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
+        Evento evento = eventoRepository.save(new Evento("Workshop teste", TipoEvento.PRESENCIAL, null,
+                Instant.now(), "Recife", null, 100));
+        lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
+                "Ingresso Workshop teste", new BigDecimal("300.00"), LocalDate.of(2026, 8, 20),
+                StatusLancamento.REALIZADO, null, evento));
+        entityManager.flush();
+        entityManager.clear();
+
+        var lancamentos = lancamentoRepository.findByDataCompetenciaBetweenOrderByDataCompetenciaDesc(
+                LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
+        entityManager.clear();
+
+        assertThat(lancamentos)
+                .anySatisfy(l -> assertThat(l.getEvento().getTitulo()).isEqualTo("Workshop teste"));
     }
 }

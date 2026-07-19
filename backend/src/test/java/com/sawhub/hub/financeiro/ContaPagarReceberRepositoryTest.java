@@ -2,7 +2,11 @@ package com.sawhub.hub.financeiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.sawhub.hub.evento.Evento;
+import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.TipoEvento;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 import jakarta.persistence.EntityManager;
@@ -30,11 +34,18 @@ class ContaPagarReceberRepositoryTest {
     @Autowired
     private CategoriaFinanceiraRepository categoriaRepository;
     @Autowired
+    private EventoRepository eventoRepository;
+    @Autowired
     private EntityManager entityManager;
 
     private CategoriaFinanceira criarCategoria() {
         return categoriaRepository.save(new CategoriaFinanceira("Infra teste " + UUID.randomUUID(),
                 TipoLancamento.DESPESA, GrupoDre.CUSTOS, null));
+    }
+
+    private Evento criarEvento(String sufixo) {
+        return eventoRepository.save(new Evento("Evento teste " + sufixo, TipoEvento.PRESENCIAL, null,
+                Instant.now(), "Recife", null, 100));
     }
 
     // Sentinela pro filtro de período "desligado" — mesma faixa usada por
@@ -52,7 +63,7 @@ class ContaPagarReceberRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM).stream()
+        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, null).stream()
                 .filter(c -> c.getId().equals(salva.getId())).findFirst().orElseThrow();
         entityManager.clear();
 
@@ -67,7 +78,7 @@ class ContaPagarReceberRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(TipoConta.A_PAGAR, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM).stream()
+        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(TipoConta.A_PAGAR, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, null).stream()
                 .filter(c -> c.getId().equals(salva.getId())).findFirst().orElseThrow();
         entityManager.clear();
 
@@ -82,7 +93,7 @@ class ContaPagarReceberRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(null, StatusConta.PENDENTE, SEM_FILTRO_INICIO, SEM_FILTRO_FIM).stream()
+        ContaPagarReceber recarregada = contaRepository.buscarComFiltro(null, StatusConta.PENDENTE, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, null).stream()
                 .filter(c -> c.getId().equals(salva.getId())).findFirst().orElseThrow();
         entityManager.clear();
 
@@ -102,11 +113,49 @@ class ContaPagarReceberRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        var resultado = contaRepository.buscarComFiltro(null, null, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1));
+        var resultado = contaRepository.buscarComFiltro(null, null, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1), null);
         entityManager.clear();
 
         assertThat(resultado).extracting(ContaPagarReceber::getId).contains(dentroDoMes.getId());
         assertThat(resultado).extracting(ContaPagarReceber::getId).doesNotContain(foraDoMes.getId());
+    }
+
+    // Change request 17/07/2026 ("evento no financeiro") — contra banco real de propósito: prova
+    // que buscarPorIdComEvento inicializa o evento (LEFT JOIN FETCH), evitando o
+    // LazyInitializationException que buscarComFiltro/categoria já documentam pra este mesmo
+    // repositório.
+    @Test
+    void buscarPorIdComEventoInicializaEventoMesmoForaDaTransacaoOriginal() {
+        CategoriaFinanceira categoria = criarCategoria();
+        Evento evento = criarEvento("1");
+        ContaPagarReceber salva = contaRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Buffet do evento",
+                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), categoria, evento));
+        entityManager.flush();
+        entityManager.clear();
+
+        ContaPagarReceber recarregada = contaRepository.buscarPorIdComEvento(salva.getId()).orElseThrow();
+        entityManager.clear();
+
+        assertThat(recarregada.getEvento().getTitulo()).isEqualTo(evento.getTitulo());
+    }
+
+    @Test
+    void buscarComFiltroPorEventoIncluiSoContasDoEvento() {
+        CategoriaFinanceira categoria = criarCategoria();
+        Evento eventoA = criarEvento("A");
+        Evento eventoB = criarEvento("B");
+        ContaPagarReceber daEventoA = contaRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Do evento A",
+                new BigDecimal("100.00"), LocalDate.of(2026, 8, 1), categoria, eventoA));
+        ContaPagarReceber daEventoB = contaRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Do evento B",
+                new BigDecimal("100.00"), LocalDate.of(2026, 8, 1), categoria, eventoB));
+        entityManager.flush();
+        entityManager.clear();
+
+        var resultado = contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, eventoA.getId());
+        entityManager.clear();
+
+        assertThat(resultado).extracting(ContaPagarReceber::getId).contains(daEventoA.getId());
+        assertThat(resultado).extracting(ContaPagarReceber::getId).doesNotContain(daEventoB.getId());
     }
 
     // M25 — achado alto do revisor-seguranca: descricao costuma conter nome de lead/mentorado

@@ -1,6 +1,7 @@
 package com.sawhub.hub.financeiro;
 
 import com.sawhub.hub.common.BaseEntity;
+import com.sawhub.hub.evento.Evento;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -62,16 +63,29 @@ public class ContaPagarReceber extends BaseEntity {
     @JoinColumn(name = "lancamento_id")
     private LancamentoFinanceiro lancamento;
 
+    // Change request 17/07/2026 ("evento rastreado no financeiro") — nullable: a maioria das
+    // contas não é ligada a evento nenhum, mesmo critério de categoria. Quando liquidada, o
+    // Lancamento gerado automaticamente herda este evento (ver ContaPagarReceberService.liquidar).
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "evento_id")
+    private Evento evento;
+
     protected ContaPagarReceber() {
     }
 
     public ContaPagarReceber(TipoConta tipo, String descricao, BigDecimal valor, LocalDate dataVencimento,
                               CategoriaFinanceira categoria) {
+        this(tipo, descricao, valor, dataVencimento, categoria, null);
+    }
+
+    public ContaPagarReceber(TipoConta tipo, String descricao, BigDecimal valor, LocalDate dataVencimento,
+                              CategoriaFinanceira categoria, Evento evento) {
         this.tipo = tipo;
         this.descricao = descricao;
         this.valor = valor;
         this.dataVencimento = dataVencimento;
         this.categoria = categoria;
+        this.evento = evento;
         this.status = StatusConta.PENDENTE;
     }
 
@@ -154,5 +168,9 @@ public class ContaPagarReceber extends BaseEntity {
 
     public CategoriaFinanceira getCategoria() {
         return categoria;
+    }
+
+    public Evento getEvento() {
+        return evento;
     }
 }

@@ -13,6 +13,12 @@ public record CriarContaRequest(
         @NotBlank String descricao,
         @NotNull @DecimalMin(value = "0.01", message = "Valor deve ser positivo") BigDecimal valor,
         @NotNull LocalDate dataVencimento,
-        UUID categoriaId
+        UUID categoriaId,
+        // Change request 17/07/2026 ("evento rastreado no financeiro") — opcional.
+        UUID eventoId
 ) {
+    public CriarContaRequest(TipoConta tipo, String descricao, BigDecimal valor, LocalDate dataVencimento,
+                              UUID categoriaId) {
+        this(tipo, descricao, valor, dataVencimento, categoriaId, null);
+    }
 }

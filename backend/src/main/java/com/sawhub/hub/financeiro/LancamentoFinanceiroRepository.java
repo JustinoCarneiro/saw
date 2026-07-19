@@ -13,14 +13,14 @@ public interface LancamentoFinanceiroRepository extends JpaRepository<Lancamento
     // mas todo consumidor destas duas queries acaba lendo campos de categoria (nome, grupoDre,
     // origemReceita) fora da transação — sem o JOIN FETCH aqui, dá LazyInitializationException
     // já que o projeto roda com `spring.jpa.open-in-view: false` de propósito.
-    @Query("SELECT l FROM LancamentoFinanceiro l JOIN FETCH l.categoria "
+    @Query("SELECT l FROM LancamentoFinanceiro l JOIN FETCH l.categoria LEFT JOIN FETCH l.evento "
             + "WHERE l.dataCompetencia BETWEEN :de AND :ate ORDER BY l.dataCompetencia DESC")
     List<LancamentoFinanceiro> findByDataCompetenciaBetweenOrderByDataCompetenciaDesc(
             @Param("de") LocalDate de, @Param("ate") LocalDate ate);
 
     /** DRE (H14.2) e dashboard de faturamento (H14.3) só contam o que de fato aconteceu —
      * PREVISTO é fluxo de caixa futuro, não resultado do período. */
-    @Query("SELECT l FROM LancamentoFinanceiro l JOIN FETCH l.categoria "
+    @Query("SELECT l FROM LancamentoFinanceiro l JOIN FETCH l.categoria LEFT JOIN FETCH l.evento "
             + "WHERE l.status = :status AND l.dataCompetencia BETWEEN :de AND :ate")
     List<LancamentoFinanceiro> findByStatusAndDataCompetenciaBetween(
             @Param("status") StatusLancamento status, @Param("de") LocalDate de, @Param("ate") LocalDate ate);

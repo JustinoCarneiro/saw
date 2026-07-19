@@ -5,7 +5,7 @@ import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
-import type { CategoriaFinanceira, Conta, StatusConta, TipoConta } from '../../shared/lib/types';
+import type { CategoriaFinanceira, Conta, EventoResumoFinanceiro, StatusConta, TipoConta } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import styles from './ContasPage.module.css';
@@ -31,6 +31,9 @@ export function ContasPage() {
   const [filtroMesLigado, setFiltroMesLigado] = useState(false);
   const [ano, setAno] = useState(now.getFullYear());
   const [mes, setMes] = useState(now.getMonth() + 1);
+  // Change request 17/07/2026 ("evento no financeiro").
+  const [eventoId, setEventoId] = useState('');
+  const [eventos, setEventos] = useState<EventoResumoFinanceiro[]>([]);
   const [contas, setContas] = useState<Conta[] | null>(null);
   const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -43,17 +46,22 @@ export function ContasPage() {
   const carregar = () => {
     setContas(null);
     apiClient
-      .get<Conta[]>('/admin/financeiro/contas', { params: { tipo: tipo || undefined, status: status || undefined, ...periodoParams } })
+      .get<Conta[]>('/admin/financeiro/contas', {
+        params: { tipo: tipo || undefined, status: status || undefined, eventoId: eventoId || undefined, ...periodoParams },
+      })
       .then((res) => setContas(res.data))
       .catch(() => setError('Não foi possível carregar as contas.'));
   };
 
-  useEffect(carregar, [tipo, status, filtroMesLigado, ano, mes]);
+  useEffect(carregar, [tipo, status, filtroMesLigado, ano, mes, eventoId]);
 
   useEffect(() => {
     apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias')
       .then((res) => setCategorias(res.data))
       .catch(() => setError('Não foi possível carregar as categorias financeiras.'));
+    apiClient.get<EventoResumoFinanceiro[]>('/admin/financeiro/eventos')
+      .then((res) => setEventos(res.data))
+      .catch(() => setError('Não foi possível carregar a lista de eventos.'));
   }, []);
 
   return (
@@ -73,6 +81,12 @@ export function ContasPage() {
             <option value="RECEBIDO">Recebido</option>
             <option value="VENCIDO">Vencido</option>
           </select>
+          <select className={styles.select} value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
+            <option value="">Todos os eventos</option>
+            {eventos.map((ev) => (
+              <option key={ev.id} value={ev.id}>{ev.titulo}</option>
+            ))}
+          </select>
           <label className={styles.checkboxField}>
             <input type="checkbox" checked={filtroMesLigado} onChange={(e) => setFiltroMesLigado(e.target.checked)} />
             Filtrar por mês
@@ -87,6 +101,7 @@ export function ContasPage() {
             exportParams={{
               tipo: tipo || undefined,
               status: status || undefined,
+              eventoId: eventoId || undefined,
               ano: filtroMesLigado ? String(ano) : undefined,
               mes: filtroMesLigado ? String(mes) : undefined,
             }}
@@ -103,6 +118,7 @@ export function ContasPage() {
       {showForm && (
         <NovaContaForm
           categorias={categorias}
+          eventos={eventos}
           onCriado={() => { setShowForm(false); carregar(); }}
           onCancelar={() => setShowForm(false)}
         />
@@ -135,7 +151,10 @@ export function ContasPage() {
           return (
             <DataGridRow key={c.id} columns={COLUMNS}>
               <div className={styles.muted}>{TIPO_LABEL[c.tipo]}</div>
-              <div className={styles.strong}>{c.descricao}</div>
+              <div>
+                <div className={styles.strong}>{c.descricao}</div>
+                {c.eventoTitulo && <div className={styles.muted}>{c.eventoTitulo}</div>}
+              </div>
               <div className={styles.valor}>
                 {formatBRL(c.valor)}
                 {c.status === 'PARCIAL' && c.valorPago != null && (
@@ -168,8 +187,9 @@ export function ContasPage() {
   );
 }
 
-function NovaContaForm({ categorias, onCriado, onCancelar }: {
+function NovaContaForm({ categorias, eventos, onCriado, onCancelar }: {
   categorias: CategoriaFinanceira[];
+  eventos: EventoResumoFinanceiro[];
   onCriado: () => void;
   onCancelar: () => void;
 }) {
@@ -178,6 +198,7 @@ function NovaContaForm({ categorias, onCriado, onCancelar }: {
   const [valor, setValor] = useState('');
   const [dataVencimento, setDataVencimento] = useState(new Date().toISOString().slice(0, 10));
   const [categoriaId, setCategoriaId] = useState('');
+  const [eventoId, setEventoId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -191,6 +212,7 @@ function NovaContaForm({ categorias, onCriado, onCancelar }: {
     try {
       await apiClient.post('/admin/financeiro/contas', {
         tipo, descricao, valor: Number(valor), dataVencimento, categoriaId: categoriaId || null,
+        eventoId: eventoId || null,
       });
       onCriado();
     } catch (err) {
@@ -231,6 +253,15 @@ function NovaContaForm({ categorias, onCriado, onCancelar }: {
               <option value="">Sem categoria</option>
               {categoriasDoTipo.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.formField}>
+            Evento (opcional)
+            <select className={styles.select} value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
+              <option value="">Sem evento</option>
+              {eventos.map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.titulo}</option>
               ))}
             </select>
           </label>

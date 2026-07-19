@@ -17,7 +17,9 @@ public record LancamentoResponse(
         BigDecimal valor,
         LocalDate dataCompetencia,
         StatusLancamento status,
-        Plano planoReferencia
+        Plano planoReferencia,
+        UUID eventoId,
+        String eventoTitulo
 ) {
     public record CategoriaResumo(UUID id, String nome, OrigemReceita origemReceita) {
     }
@@ -25,7 +27,9 @@ public record LancamentoResponse(
     public static LancamentoResponse from(LancamentoFinanceiro l) {
         var categoria = new CategoriaResumo(l.getCategoria().getId(), l.getCategoria().getNome(),
                 l.getCategoria().getOrigemReceita());
+        UUID eventoId = l.getEvento() != null ? l.getEvento().getId() : null;
+        String eventoTitulo = l.getEvento() != null ? l.getEvento().getTitulo() : null;
         return new LancamentoResponse(l.getId(), l.getTipo(), categoria, l.getDescricao(), l.getValor(),
-                l.getDataCompetencia(), l.getStatus(), l.getPlanoReferencia());
+                l.getDataCompetencia(), l.getStatus(), l.getPlanoReferencia(), eventoId, eventoTitulo);
     }
 }

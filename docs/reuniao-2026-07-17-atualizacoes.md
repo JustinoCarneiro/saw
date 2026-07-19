@@ -135,9 +135,19 @@ retrabalho no MVP atual — tratar como o item técnico mais delicado da leva.
 - ❌ **Ainda não implementado — Merge entre "lançamentos" e "contas a pagar/receber"** — mesmo
   status de antes, precisa desenho técnico (pode virar visão/relatório unificado em vez de merge
   de entidade, mas isso ainda não foi decidido).
-- ❌ **Ainda não implementado — Receita/despesa de evento rastreada por evento específico** —
-  `ContaPagarReceber`/`LancamentoFinanceiro` não têm vínculo com `Evento`; venda de ingresso hoje
-  só aparece agregada em `ComercialDashboardService`, não no financeiro por evento.
+- ✅ **Resolvido (19/07/2026) — Receita/despesa de evento rastreada por evento específico**.
+  `ContaPagarReceber`/`LancamentoFinanceiro` ganharam `evento` (opcional) — ao liquidar uma conta
+  ligada a evento, o `Lancamento` gerado automaticamente herda o mesmo evento. Filtro por evento
+  em `GET /admin/financeiro/contas`; seletor de evento (opcional) no formulário "Nova conta" e
+  filtro na listagem. Endpoint novo `GET /admin/financeiro/eventos` (sem filtro de status,
+  diferente do `ComercialController.eventosParaVenda()` — faz sentido marcar despesa de evento já
+  REALIZADO, não só dos ainda abertos pra venda). Migration `V39__financeiro_evento.sql`. Não
+  inclui um relatório dedicado "despesas/receitas por evento" nesta leva — o filtro na listagem
+  de Contas já cobre o pedido central ("rastreada por evento"), um dashboard agregado por evento
+  fica como possível próximo passo se o cliente pedir mais detalhe. `LancamentoResponse` também
+  passou a expor `eventoId`/`eventoTitulo` (revisor-seguranca pegou a lacuna: entidade já tinha o
+  campo, DTO de `GET /admin/financeiro/lancamentos` ainda não) — exibido na listagem de
+  Lançamentos igual já era feito em Contas.
 - **[PARCIALMENTE RESPONDIDO]** DRE precisa de "mais gráficos e detalhe que estão nas planilhas
   do financeiro" — direção confirmada, mas o detalhe exato depende da planilha real que o Victor
   vai compartilhar (ver seção "Como me passar a estrutura" no fim deste documento).
@@ -770,10 +780,11 @@ seções "E14"/"E17" acima pro detalhe item a item):
    (`TipoContrato.calcularVencimento` já trata Contínua/Individual igual, 12 meses fixos).
 2. ✅ **Comercial (E13)** — resolvido (M25 + 8/8 gaps do raio-x fechados em 19/07/2026, ver seção
    "Implicações pro desenho" acima).
-3. **Financeiro (E14)** — 4 de 7 itens resolvidos em 19/07/2026 (filtro mensal, rename da aba,
-   conciliação, alimentação automática de contas via parcela — este último já vinha do M25).
-   Ainda faltam: subcategorias/fixo-variável em `CategoriaFinanceira`, merge lançamentos/contas
-   (precisa desenho técnico), e evento rastreado no financeiro.
+3. **Financeiro (E14)** — 5 de 7 itens resolvidos em 19/07/2026 (filtro mensal, rename da aba,
+   conciliação, alimentação automática de contas via parcela — este último já vinha do M25 —, e
+   evento rastreado no financeiro). Ainda faltam: subcategorias/fixo-variável em
+   `CategoriaFinanceira` (schema novo, precisa decisão de produto sobre a taxonomia antes de
+   implementar) e merge lançamentos/contas (precisa desenho técnico).
 4. **Mentorado/E17** — 1 de 4 itens resolvido em 19/07/2026 (campo Decisões na ata, manual e via
    IA). Ainda faltam: controle de presença em aula, ranking com as 4 ferramentas nomeadas, dois
    eixos de acompanhamento (engajamento + risco de churn) — os 3 substituem lógica de ranking/

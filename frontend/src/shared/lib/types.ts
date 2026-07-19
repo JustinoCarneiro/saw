@@ -101,6 +101,8 @@ export interface Lancamento {
   dataCompetencia: string;
   status: StatusLancamento;
   planoReferencia: Plano | null;
+  eventoId: string | null;
+  eventoTitulo: string | null;
 }
 
 export interface Conta {
@@ -113,6 +115,16 @@ export interface Conta {
   status: StatusConta;
   valorPago: number | null;
   lancamentoId: string | null;
+  // Change request 17/07/2026 ("evento no financeiro").
+  eventoId: string | null;
+  eventoTitulo: string | null;
+}
+
+// Change request 17/07/2026 ("evento no financeiro") — seletor de evento em Nova conta/filtro.
+export interface EventoResumoFinanceiro {
+  id: string;
+  titulo: string;
+  dataHora: string;
 }
 
 export interface ComparativoMes {

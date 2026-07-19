@@ -7,10 +7,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.evento.Evento;
+import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.TipoEvento;
 import com.sawhub.hub.financeiro.dto.CriarContaRequest;
 import com.sawhub.hub.financeiro.dto.LiquidarContaRequest;
 import com.sawhub.hub.financeiro.dto.LiquidarParcialContaRequest;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -31,9 +35,11 @@ class ContaPagarReceberServiceTest {
     private LancamentoFinanceiroRepository lancamentoRepository;
     @Mock
     private CategoriaFinanceiraRepository categoriaRepository;
+    @Mock
+    private EventoRepository eventoRepository;
 
     private ContaPagarReceberService service() {
-        return new ContaPagarReceberService(contaRepository, lancamentoRepository, categoriaRepository);
+        return new ContaPagarReceberService(contaRepository, lancamentoRepository, categoriaRepository, eventoRepository);
     }
 
     @Test
@@ -53,6 +59,37 @@ class ContaPagarReceberServiceTest {
         assertThat(conta.getValor()).isEqualByComparingTo("180.00");
     }
 
+    // Change request 17/07/2026 ("evento no financeiro").
+    @Test
+    void criarComEventoIdResolveEVincula() {
+        UUID categoriaId = UUID.randomUUID();
+        UUID eventoId = UUID.randomUUID();
+        CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
+        Evento evento = new Evento("Receita do Sucesso", TipoEvento.PRESENCIAL, null, Instant.now(), "Recife", null, 100);
+        when(categoriaRepository.findById(categoriaId)).thenReturn(Optional.of(categoria));
+        when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento));
+        when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new CriarContaRequest(TipoConta.A_PAGAR, "Buffet do evento",
+                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), categoriaId, eventoId);
+        ContaPagarReceber conta = service().criar(request);
+
+        assertThat(conta.getEvento()).isSameAs(evento);
+    }
+
+    @Test
+    void criarComEventoIdInexistenteLancaErro() {
+        UUID eventoId = UUID.randomUUID();
+        when(eventoRepository.findById(eventoId)).thenReturn(Optional.empty());
+
+        var request = new CriarContaRequest(TipoConta.A_PAGAR, "Buffet do evento",
+                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), null, eventoId);
+
+        assertThatThrownBy(() -> service().criar(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Evento");
+    }
+
     // Change request 17/07/2026 ("filtro mensal") — SEM_FILTRO_INICIO/FIM: janela sentinela
     // sempre tipada que substitui "sem filtro" (ver ContaPagarReceberRepository.buscarComFiltro).
     private static final LocalDate SEM_FILTRO_INICIO = LocalDate.of(1900, 1, 1);
@@ -60,33 +97,44 @@ class ContaPagarReceberServiceTest {
 
     @Test
     void listarSemAnoMesNaoAplicaFiltroDePeriodo() {
-        when(contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM)).thenReturn(List.of());
+        when(contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, null)).thenReturn(List.of());
 
         service().listar(null, null);
 
-        verify(contaRepository).buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM);
+        verify(contaRepository).buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, null);
     }
 
     @Test
     void listarComAnoEMesConvertePraJanelaDoMes() {
         when(contaRepository.buscarComFiltro(TipoConta.A_PAGAR, null,
-                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1))).thenReturn(List.of());
+                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1), null)).thenReturn(List.of());
 
         service().listar(TipoConta.A_PAGAR, null, 2026, 7);
 
         verify(contaRepository).buscarComFiltro(TipoConta.A_PAGAR, null,
-                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1));
+                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1), null);
     }
 
     @Test
     void listarComSoAnoOuSoMesIgnoraFiltroDePeriodo() {
-        when(contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM)).thenReturn(List.of());
+        when(contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, null)).thenReturn(List.of());
 
         service().listar(null, null, 2026, null);
         service().listar(null, null, null, 7);
 
         verify(contaRepository, org.mockito.Mockito.times(2))
-                .buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM);
+                .buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, null);
+    }
+
+    // Change request 17/07/2026 ("evento no financeiro").
+    @Test
+    void listarComEventoIdPropagaPraORepositorio() {
+        UUID eventoId = UUID.randomUUID();
+        when(contaRepository.buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, eventoId)).thenReturn(List.of());
+
+        service().listar(null, null, null, null, eventoId);
+
+        verify(contaRepository).buscarComFiltro(null, null, SEM_FILTRO_INICIO, SEM_FILTRO_FIM, eventoId);
     }
 
     @Test
@@ -95,7 +143,7 @@ class ContaPagarReceberServiceTest {
         CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor Hostinger",
                 new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), categoria);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
         when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -112,13 +160,33 @@ class ContaPagarReceberServiceTest {
         assertThat(captor.getValue().getValor()).isEqualByComparingTo("180.00");
     }
 
+    // Change request 17/07/2026 ("evento no financeiro") — o evento da conta propaga pro
+    // Lancamento gerado automaticamente na liquidação.
+    @Test
+    void liquidarComContaLigadaAEventoPropagaEventoPraOLancamentoGerado() {
+        UUID contaId = UUID.randomUUID();
+        CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
+        Evento evento = new Evento("Receita do Sucesso", TipoEvento.PRESENCIAL, null, Instant.now(), "Recife", null, 100);
+        ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Buffet do evento",
+                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), categoria, evento);
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
+        when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service().liquidar(contaId, new LiquidarContaRequest(LocalDate.of(2026, 8, 21), true));
+
+        ArgumentCaptor<LancamentoFinanceiro> captor = ArgumentCaptor.forClass(LancamentoFinanceiro.class);
+        verify(lancamentoRepository).save(captor.capture());
+        assertThat(captor.getValue().getEvento()).isSameAs(evento);
+    }
+
     @Test
     void liquidarARecerberViraRecebido() {
         UUID contaId = UUID.randomUUID();
         CategoriaFinanceira categoria = new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_RECEBER, "Mensalidade João Silva",
                 new BigDecimal("397.00"), LocalDate.of(2026, 7, 5), categoria);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
         when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -133,7 +201,7 @@ class ContaPagarReceberServiceTest {
         CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor", new BigDecimal("180.00"),
                 LocalDate.of(2026, 7, 10), categoria);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
         when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         service().liquidar(contaId, new LiquidarContaRequest(LocalDate.of(2026, 7, 9), false));
@@ -146,7 +214,7 @@ class ContaPagarReceberServiceTest {
         UUID contaId = UUID.randomUUID();
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Sem categoria", new BigDecimal("50.00"),
                 LocalDate.of(2026, 7, 10), null);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
 
         assertThatThrownBy(() -> service().liquidar(contaId, new LiquidarContaRequest(LocalDate.now(), true)))
                 .isInstanceOf(IllegalStateException.class)
@@ -160,7 +228,7 @@ class ContaPagarReceberServiceTest {
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor", new BigDecimal("180.00"),
                 LocalDate.of(2026, 7, 10), categoria);
         conta.liquidar(LocalDate.of(2026, 7, 9), null);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
 
         assertThatThrownBy(() -> service().liquidar(contaId, new LiquidarContaRequest(LocalDate.now(), false)))
                 .isInstanceOf(IllegalStateException.class);
@@ -173,7 +241,7 @@ class ContaPagarReceberServiceTest {
         CategoriaFinanceira categoria = new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_RECEBER, "Mensalidade João Silva",
                 new BigDecimal("1000.00"), LocalDate.of(2026, 8, 5), categoria);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
         when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new LiquidarParcialContaRequest(new BigDecimal("400.00"), LocalDate.of(2026, 7, 19));
@@ -190,7 +258,7 @@ class ContaPagarReceberServiceTest {
         CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor Hostinger",
                 new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), categoria);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
         when(contaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         service().liquidarParcial(contaId, new LiquidarParcialContaRequest(new BigDecimal("100.00"), LocalDate.of(2026, 7, 15)));
@@ -206,7 +274,7 @@ class ContaPagarReceberServiceTest {
         CategoriaFinanceira categoria = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor", new BigDecimal("180.00"),
                 LocalDate.of(2026, 7, 10), categoria);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
 
         assertThatThrownBy(() -> service().liquidarParcial(contaId,
                 new LiquidarParcialContaRequest(new BigDecimal("200.00"), LocalDate.now())))
@@ -220,7 +288,7 @@ class ContaPagarReceberServiceTest {
         ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor", new BigDecimal("180.00"),
                 LocalDate.of(2026, 7, 10), categoria);
         conta.liquidar(LocalDate.of(2026, 7, 9), null);
-        when(contaRepository.findById(contaId)).thenReturn(Optional.of(conta));
+        when(contaRepository.buscarPorIdComEvento(contaId)).thenReturn(Optional.of(conta));
 
         assertThatThrownBy(() -> service().liquidarParcial(contaId,
                 new LiquidarParcialContaRequest(new BigDecimal("10.00"), LocalDate.now())))

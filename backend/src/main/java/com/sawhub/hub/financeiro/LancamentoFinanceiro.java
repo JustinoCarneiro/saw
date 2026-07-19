@@ -1,6 +1,7 @@
 package com.sawhub.hub.financeiro;
 
 import com.sawhub.hub.common.BaseEntity;
+import com.sawhub.hub.evento.Evento;
 import com.sawhub.hub.mentorado.Plano;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -52,12 +53,25 @@ public class LancamentoFinanceiro extends BaseEntity {
     @Column(name = "plano_referencia")
     private Plano planoReferencia;
 
+    // Change request 17/07/2026 ("evento rastreado no financeiro") — nullable, mesmo critério de
+    // ContaPagarReceber.evento. Setado sobretudo pela liquidação automática de uma conta ligada a
+    // evento (ver ContaPagarReceberService.liquidar), não pela criação manual de lançamento.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "evento_id")
+    private Evento evento;
+
     protected LancamentoFinanceiro() {
     }
 
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
                                  BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
                                  Plano planoReferencia) {
+        this(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia, null);
+    }
+
+    public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
+                                 BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
+                                 Plano planoReferencia, Evento evento) {
         this.tipo = tipo;
         this.categoria = categoria;
         this.descricao = descricao;
@@ -65,6 +79,7 @@ public class LancamentoFinanceiro extends BaseEntity {
         this.dataCompetencia = dataCompetencia;
         this.status = status;
         this.planoReferencia = planoReferencia;
+        this.evento = evento;
     }
 
     public TipoLancamento getTipo() {
@@ -93,5 +108,9 @@ public class LancamentoFinanceiro extends BaseEntity {
 
     public Plano getPlanoReferencia() {
         return planoReferencia;
+    }
+
+    public Evento getEvento() {
+        return evento;
     }
 }

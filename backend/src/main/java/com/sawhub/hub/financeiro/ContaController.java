@@ -49,8 +49,9 @@ public class ContaController {
     public List<ContaResponse> listar(@RequestParam(required = false) TipoConta tipo,
                                        @RequestParam(required = false) StatusConta status,
                                        @RequestParam(required = false) Integer ano,
-                                       @RequestParam(required = false) Integer mes) {
-        return contaService.listar(tipo, status, ano, mes).stream().map(ContaResponse::from).toList();
+                                       @RequestParam(required = false) Integer mes,
+                                       @RequestParam(required = false) UUID eventoId) {
+        return contaService.listar(tipo, status, ano, mes, eventoId).stream().map(ContaResponse::from).toList();
     }
 
     @PatchMapping("/{id}/liquidar")
@@ -68,8 +69,9 @@ public class ContaController {
     public ResponseEntity<byte[]> exportar(@RequestParam(required = false) TipoConta tipo,
                                             @RequestParam(required = false) StatusConta status,
                                             @RequestParam(required = false) Integer ano,
-                                            @RequestParam(required = false) Integer mes) {
-        String csv = contaCsvService.exportar(tipo, status, ano, mes);
+                                            @RequestParam(required = false) Integer mes,
+                                            @RequestParam(required = false) UUID eventoId) {
+        String csv = contaCsvService.exportar(tipo, status, ano, mes, eventoId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"contas.csv\"")
