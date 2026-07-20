@@ -22,3 +22,11 @@ backend/data/
 
 # Exports de planilhas/Notion do cliente (dado de mentorado, sigiloso) — nunca versionar
 dados-cliente-notion/
+
+# Arquivos locais com dado de conta/PII (e-mail pessoal, custos, nomes de outros clientes da
+# Onda) — CLAUDE.md sempre disse "arquivo local, não versionado", mas estavam versionados de
+# fato (achado da revisão final de segurança da Fase 5, 20/07/2026). git rm --cached só impede
+# rastreamento novo; o conteúdo continua nos commits antigos já publicados até uma limpeza de
+# histórico separada.
+transicao-acessos-para-cliente.md
+custos-operacionais.md
