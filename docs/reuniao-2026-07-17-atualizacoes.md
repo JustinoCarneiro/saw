@@ -127,11 +127,19 @@ retrabalho no MVP atual — tratar como o item técnico mais delicado da leva.
 - ✅ **Dados do mentorado alimentando contas a receber automaticamente** — já estava implementado
   desde o M25 (`LeadService.criarParcelas`: cada parcela do formulário único de venda já gera um
   `ContaPagarReceber` A_RECEBER automaticamente), só não estava marcado como resolvido aqui.
-- ❌ **Ainda não implementado — Despesas fixas vs. variáveis com subcategorias** (eventos,
-  pessoal, estrutura, operação, financeiro, jurídico). `CategoriaFinanceira` continua um modelo
-  plano (nome/tipo/grupoDre/origemReceita, sem hierarquia nem fixo/variável) — schema novo,
-  precisa decisão de produto sobre a taxonomia exata antes de implementar (afeta DRE/dashboard
-  existentes, maior risco que os itens acima).
+- ✅ **Implementado (19/07/2026) — Despesas fixas vs. variáveis com subcategorias** (último item
+  do E14). Taxonomia resolvida a partir do print real da planilha "DRE Financeira Saw": Fixo/
+  Variável é atributo consistente por subcategoria (mesma subcategoria sempre repete o mesmo
+  valor nas linhas reais), não campo livre por lançamento — por isso vive em `CategoriaFinanceira`
+  (`natureza`, FIXA/VARIAVEL), não em `LancamentoFinanceiro`. `grupo` (agrupamento de
+  departamento/linha, ex. "Estrutura"/"Pessoas") é texto livre, não enum — o vocabulário já é
+  diferente entre receita e despesa na planilha real ("Vendas"/"Mentoria" do lado receita), forçar
+  um enum único obrigaria valores que não fazem sentido pro outro lado. Os dois campos são
+  opcionais, sem seed em massa das 48 subcategorias confirmadas no raio-x — o `GrupoDre` (CUSTOS
+  vs. DESPESA_OPERACIONAL) de cada uma não foi confirmado pelo cliente, não é classificação pra
+  inventar; o Admin popula via "+ Nova categoria" conforme migra o plano de contas real. `DreResponse`
+  ganhou `despesasFixas`/`despesasVariaveis` (soma por `natureza`, só despesa entra na dicotomia).
+  Migration `V41__categoria_grupo_natureza.sql`.
 - ✅ **Implementado (19/07/2026) — Merge entre "lançamentos" e "contas a pagar/receber" (M26)**.
   `ContaPagarReceber` deixou de existir: `LancamentoFinanceiro` absorveu vencimento/pagamento/
   valor pago + a máquina de estado de liquidação (agora com PARCIAL/VENCIDO unificados). Categoria

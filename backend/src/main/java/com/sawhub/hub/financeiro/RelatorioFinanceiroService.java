@@ -33,8 +33,12 @@ public class RelatorioFinanceiroService {
         BigDecimal resultadoAnterior = anterior.resultado();
         double variacaoPct = VariacaoCalculator.pct(resultadoAnterior, resultadoAtual);
 
+        List<LancamentoFinanceiro> lancamentos = lancamentosRealizadosDoPeriodo(periodo);
+        BigDecimal despesasFixas = somaPorNatureza(lancamentos, NaturezaFinanceira.FIXA);
+        BigDecimal despesasVariaveis = somaPorNatureza(lancamentos, NaturezaFinanceira.VARIAVEL);
+
         return new DreResponse(periodo.toString(), atual.receitaBruta, atual.deducoes, atual.receitaLiquida(),
-                atual.custos, atual.despesasOperacionais, resultadoAtual,
+                atual.custos, atual.despesasOperacionais, despesasFixas, despesasVariaveis, resultadoAtual,
                 new ComparativoMes(resultadoAnterior, variacaoPct));
     }
 
@@ -103,6 +107,17 @@ public class RelatorioFinanceiroService {
     private static BigDecimal somaPorTipo(List<LancamentoFinanceiro> lancamentos, TipoLancamento tipo) {
         return lancamentos.stream()
                 .filter(l -> l.getTipo() == tipo)
+                .map(LancamentoFinanceiro::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // E14 — só despesa entra na dicotomia fixa/variável (pedido original do cliente era
+    // "despesas fixas vs. variáveis"); categoria sem natureza preenchida não soma em nenhuma das
+    // duas (ver CategoriaFinanceira.natureza).
+    private static BigDecimal somaPorNatureza(List<LancamentoFinanceiro> lancamentos, NaturezaFinanceira natureza) {
+        return lancamentos.stream()
+                .filter(l -> l.getTipo() == TipoLancamento.DESPESA)
+                .filter(l -> l.getCategoria().getNatureza() == natureza)
                 .map(LancamentoFinanceiro::getValor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

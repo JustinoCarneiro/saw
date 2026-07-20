@@ -4,7 +4,7 @@ import { Card } from '../../shared/components/Card';
 import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
-import type { CategoriaFinanceira, GrupoDre, Lancamento, OrigemReceita, StatusLancamento, TipoLancamento } from '../../shared/lib/types';
+import type { CategoriaFinanceira, GrupoDre, Lancamento, NaturezaFinanceira, OrigemReceita, StatusLancamento, TipoLancamento } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import styles from './LancamentosPage.module.css';
@@ -170,6 +170,10 @@ function NovaCategoriaForm({ onCriado, onCancelar }: {
   const [tipo, setTipo] = useState<TipoLancamento>('RECEITA');
   const [grupoDre, setGrupoDre] = useState<GrupoDre>('RECEITA_BRUTA');
   const [origemReceita, setOrigemReceita] = useState<OrigemReceita | ''>('');
+  // E14 — subcategorias fixo/variável (raio-x da planilha real "DRE Financeira Saw"): grupo é
+  // texto livre (departamento/linha, ex. "Estrutura"), natureza é opcional pros dois lados.
+  const [grupo, setGrupo] = useState('');
+  const [natureza, setNatureza] = useState<NaturezaFinanceira | ''>('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -180,6 +184,7 @@ function NovaCategoriaForm({ onCriado, onCancelar }: {
     try {
       await apiClient.post('/admin/financeiro/categorias', {
         nome, tipo, grupoDre, origemReceita: tipo === 'RECEITA' && origemReceita ? origemReceita : null,
+        grupo: grupo || null, natureza: natureza || null,
       });
       onCriado();
     } catch (err) {
@@ -223,6 +228,20 @@ function NovaCategoriaForm({ onCriado, onCancelar }: {
               </select>
             </label>
           )}
+        </div>
+        <div className={styles.formRow}>
+          <label className={styles.formField}>
+            Grupo (opcional)
+            <input className={styles.textInput} placeholder="Ex.: Estrutura, Pessoas…" value={grupo} onChange={(e) => setGrupo(e.target.value)} />
+          </label>
+          <label className={styles.formField}>
+            Natureza (opcional)
+            <select className={styles.select} value={natureza} onChange={(e) => setNatureza(e.target.value as NaturezaFinanceira | '')}>
+              <option value="">Nenhuma</option>
+              <option value="FIXA">Fixa</option>
+              <option value="VARIAVEL">Variável</option>
+            </select>
+          </label>
         </div>
 
         {error && <div className={styles.error}>{error}</div>}

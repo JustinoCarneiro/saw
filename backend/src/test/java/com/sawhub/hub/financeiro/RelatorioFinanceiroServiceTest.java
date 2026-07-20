@@ -28,6 +28,10 @@ class RelatorioFinanceiroServiceTest {
         return new CategoriaFinanceira(nome, tipo, grupo, origem);
     }
 
+    private static CategoriaFinanceira categoriaComNatureza(String nome, GrupoDre grupo, NaturezaFinanceira natureza) {
+        return new CategoriaFinanceira(nome, TipoLancamento.DESPESA, grupo, null, "Estrutura", natureza);
+    }
+
     private static LancamentoFinanceiro lancamento(CategoriaFinanceira categoria, String valor, LocalDate dataCompetencia) {
         return new LancamentoFinanceiro(categoria.getTipo(), categoria, "desc", new BigDecimal(valor),
                 dataCompetencia, StatusLancamento.REALIZADO, null);
@@ -76,6 +80,36 @@ class RelatorioFinanceiroServiceTest {
         assertThat(dre.comparativoMesAnterior().resultado()).isEqualByComparingTo("900");
         // variação: (1050-900)/900 * 100 = 16.67%
         assertThat(dre.comparativoMesAnterior().variacaoPct()).isCloseTo(16.67, org.assertj.core.data.Offset.offset(0.01));
+    }
+
+    // E14 — raio-x da planilha real: Fixa/Variável é atributo da subcategoria (CategoriaFinanceira),
+    // não escolha livre por lançamento. Categoria sem natureza (ex. ligada a evento) não entra em
+    // nenhuma das duas somas, mas continua contando em despesasOperacionais/custos normalmente.
+    @Test
+    void dreSomaDespesasFixasEVariaveisPorNaturezaDaCategoria() {
+        CategoriaFinanceira aluguel = categoriaComNatureza("Aluguel", GrupoDre.CUSTOS, NaturezaFinanceira.FIXA);
+        CategoriaFinanceira aguaMineral = categoriaComNatureza("Água Mineral", GrupoDre.CUSTOS, NaturezaFinanceira.VARIAVEL);
+        CategoriaFinanceira semNatureza = categoriaComNatureza("Brindes Evento", GrupoDre.DESPESA_OPERACIONAL, null);
+
+        LocalDate julho = LocalDate.of(2026, 7, 15);
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 7, 1)), eq(LocalDate.of(2026, 7, 31))))
+                .thenReturn(List.of(
+                        lancamento(aluguel, "2126", julho),
+                        lancamento(aguaMineral, "53.82", julho),
+                        lancamento(semNatureza, "1608", julho)));
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 6, 1)), eq(LocalDate.of(2026, 6, 30))))
+                .thenReturn(List.of());
+
+        var dre = service().dre(2026, 7);
+
+        assertThat(dre.despesasFixas()).isEqualByComparingTo("2126");
+        assertThat(dre.despesasVariaveis()).isEqualByComparingTo("53.82");
+        // custos = aluguel + aguaMineral (CUSTOS) — semNatureza é DESPESA_OPERACIONAL, soma lá,
+        // não em nenhum dos dois "fixa/variável".
+        assertThat(dre.custos()).isEqualByComparingTo("2179.82");
+        assertThat(dre.despesasOperacionais()).isEqualByComparingTo("1608");
     }
 
     @Test

@@ -32,7 +32,8 @@ public class CategoriaFinanceiraService {
                     "Já existe uma categoria com a origem de receita \"" + request.origemReceita() + "\".");
         }
         CategoriaFinanceira categoria = new CategoriaFinanceira(
-                request.nome(), request.tipo(), request.grupoDre(), request.origemReceita());
+                request.nome(), request.tipo(), request.grupoDre(), request.origemReceita(),
+                request.grupo(), request.natureza());
         try {
             // saveAndFlush, não save: o id é gerado em Java (GenerationType.UUID, ver
             // BaseEntity), então um save() simples só enfileira o INSERT — sem flush explícito

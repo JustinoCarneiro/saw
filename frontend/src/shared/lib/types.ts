@@ -84,12 +84,19 @@ export type GrupoDre = 'RECEITA_BRUTA' | 'DEDUCOES' | 'CUSTOS' | 'DESPESA_OPERAC
 export type OrigemReceita = 'ASSINATURA' | 'LOJA' | 'EVENTO' | 'OUTRA';
 export type Plano = 'GRATUITO' | 'BASICO' | 'ESSENCIAL' | 'PROFISSIONAL';
 
+// E14 — subcategorias fixo/variável (raio-x da planilha real "DRE Financeira Saw"). `grupo` é
+// texto livre (departamento/linha, ex. "Estrutura"/"Pessoas"); `natureza` é consistente por
+// subcategoria, não escolha livre por lançamento. Os dois são opcionais.
+export type NaturezaFinanceira = 'FIXA' | 'VARIAVEL';
+
 export interface CategoriaFinanceira {
   id: string;
   nome: string;
   tipo: TipoLancamento;
   grupoDre: GrupoDre;
   origemReceita: OrigemReceita | null;
+  grupo: string | null;
+  natureza: NaturezaFinanceira | null;
 }
 
 // M26 — merge ContaPagarReceber+LancamentoFinanceiro numa entidade só (ver ROADMAP.md § "Blueprint
@@ -142,6 +149,8 @@ export interface DreResponse {
   receitaLiquida: number;
   custos: number;
   despesasOperacionais: number;
+  despesasFixas: number;
+  despesasVariaveis: number;
   resultado: number;
   comparativoMesAnterior: ComparativoMes;
 }

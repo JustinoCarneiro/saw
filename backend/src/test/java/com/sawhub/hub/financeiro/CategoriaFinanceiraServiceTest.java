@@ -38,6 +38,31 @@ class CategoriaFinanceiraServiceTest {
         assertThat(categoria.getOrigemReceita()).isEqualTo(OrigemReceita.ASSINATURA);
     }
 
+    // E14 — subcategorias fixo/variável (raio-x da planilha real "DRE Financeira Saw").
+    @Test
+    void criarComGrupoENaturezaPersisteOsDois() {
+        when(categoriaRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new CriarCategoriaFinanceiraRequest("Aluguel", TipoLancamento.DESPESA,
+                GrupoDre.CUSTOS, null, "Estrutura", NaturezaFinanceira.FIXA);
+        CategoriaFinanceira categoria = service().criar(request);
+
+        assertThat(categoria.getGrupo()).isEqualTo("Estrutura");
+        assertThat(categoria.getNatureza()).isEqualTo(NaturezaFinanceira.FIXA);
+    }
+
+    @Test
+    void criarSemGrupoNemNaturezaContinuaFuncionando() {
+        when(categoriaRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new CriarCategoriaFinanceiraRequest("Mensalidades", TipoLancamento.RECEITA,
+                GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
+        CategoriaFinanceira categoria = service().criar(request);
+
+        assertThat(categoria.getGrupo()).isNull();
+        assertThat(categoria.getNatureza()).isNull();
+    }
+
     @Test
     void criarDespesaSemOrigemReceitaFunciona() {
         when(categoriaRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));

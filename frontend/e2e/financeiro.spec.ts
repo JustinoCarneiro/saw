@@ -70,6 +70,38 @@ test.describe('Financeiro (E14)', () => {
     await expect(main.getByLabel('Categoria').locator(`option:has-text("${nomeCategoria}")`)).toHaveCount(1);
   });
 
+  // E14 (última pendência) — raio-x da planilha real: Fixa/Variável é atributo da subcategoria,
+  // não do lançamento (ver CategoriaFinanceira.natureza).
+  test('Categoria com natureza Fixa aparece na quebra de Despesas fixas x variáveis do DRE', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await page.getByRole('link', { name: 'Financeiro' }).click();
+    await page.getByRole('link', { name: 'Lançamentos' }).click();
+    await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
+
+    const nomeCategoria = `Aluguel E2E ${Date.now()}`;
+    const main = page.getByRole('main');
+    await main.getByRole('button', { name: 'Nova categoria' }).click();
+    await main.getByLabel('Nome').fill(nomeCategoria);
+    await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
+    await main.getByLabel('Grupo DRE').selectOption({ label: 'Custos' });
+    await main.getByLabel('Grupo (opcional)').fill('Estrutura');
+    await main.getByLabel('Natureza (opcional)').selectOption({ label: 'Fixa' });
+    await main.getByRole('button', { name: 'Salvar categoria' }).click();
+    await expect(main.getByRole('button', { name: 'Salvar categoria' })).toHaveCount(0);
+
+    await main.getByRole('button', { name: 'Novo lançamento' }).click();
+    await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
+    await main.getByLabel('Categoria').selectOption({ label: nomeCategoria });
+    await main.getByLabel('Descrição').fill(`Aluguel escritório E2E ${Date.now()}`);
+    await main.getByLabel('Valor (R$)').fill('321.00');
+    await main.getByRole('button', { name: 'Salvar lançamento' }).click();
+
+    await page.getByRole('link', { name: 'DRE' }).click();
+    await expect(page).toHaveURL(/\/admin\/financeiro\/dre$/);
+    await expect(main.getByText('Despesas fixas x variáveis')).toBeVisible();
+    await expect(main.getByText('Fixas', { exact: true })).toBeVisible();
+  });
+
   test('Contas a pagar/receber permite criar e liquidar uma conta', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();

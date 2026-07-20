@@ -76,6 +76,25 @@ export function DrePage() {
             <DreLinha label={lucro ? '= Resultado (Lucro)' : '= Resultado (Prejuízo)'} valor={dre.resultado} strong highlight={lucro} />
           </Card>
 
+          {/* E14 — só aparece quando pelo menos uma categoria de despesa do período tem
+              natureza (Fixa/Variável) preenchida; a maioria das categorias existentes ainda não
+              tem esse campo populado, mostrar 0/0 sempre pareceria quebrado. */}
+          {(dre.despesasFixas !== 0 || dre.despesasVariaveis !== 0) && (
+            <Card style={{ marginTop: 16, padding: '20px 22px' }}>
+              <div className={styles.sectionTitle}>Despesas fixas x variáveis</div>
+              <div className={styles.comparativo}>
+                <div>
+                  <div className={styles.kpiLabel}>Fixas</div>
+                  <div className={styles.comparativoValue}>{formatBRL(dre.despesasFixas)}</div>
+                </div>
+                <div>
+                  <div className={styles.kpiLabel}>Variáveis</div>
+                  <div className={styles.comparativoValue}>{formatBRL(dre.despesasVariaveis)}</div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           <Card style={{ marginTop: 16, padding: '20px 22px' }}>
             <div className={styles.sectionTitle}>Comparativo com o mês anterior</div>
             <div className={styles.comparativo}>

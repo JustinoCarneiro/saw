@@ -26,14 +26,37 @@ public class CategoriaFinanceira extends BaseEntity {
     @Column(name = "origem_receita")
     private OrigemReceita origemReceita;
 
+    // E14 — achado no raio-x da planilha real "DRE Financeira Saw" (ver docs/reuniao-2026-07-17-
+    // atualizacoes.md). `grupo` é texto livre de propósito (não enum): o vocabulário de
+    // agrupamento já é diferente entre receita e despesa na planilha real ("Estrutura"/"Pessoas"
+    // pra despesa, "Vendas"/"Mentoria" pra receita) — um enum único obrigaria valores que não
+    // fazem sentido pro outro lado.
+    @Column(name = "grupo")
+    private String grupo;
+
+    // Fixa/Variável é consistente por subcategoria (mesma subcategoria sempre repete o mesmo
+    // valor nas linhas reais da planilha), não uma escolha livre por lançamento — por isso vive
+    // aqui, não em LancamentoFinanceiro. Nullable: nem toda categoria se encaixa na dicotomia
+    // (ex. as ligadas a evento, que na planilha caem no próprio bucket "Eventos").
+    @Enumerated(EnumType.STRING)
+    @Column(name = "natureza")
+    private NaturezaFinanceira natureza;
+
     protected CategoriaFinanceira() {
     }
 
     public CategoriaFinanceira(String nome, TipoLancamento tipo, GrupoDre grupoDre, OrigemReceita origemReceita) {
+        this(nome, tipo, grupoDre, origemReceita, null, null);
+    }
+
+    public CategoriaFinanceira(String nome, TipoLancamento tipo, GrupoDre grupoDre, OrigemReceita origemReceita,
+                                String grupo, NaturezaFinanceira natureza) {
         this.nome = nome;
         this.tipo = tipo;
         this.grupoDre = grupoDre;
         this.origemReceita = origemReceita;
+        this.grupo = grupo;
+        this.natureza = natureza;
     }
 
     public String getNome() {
@@ -50,5 +73,13 @@ public class CategoriaFinanceira extends BaseEntity {
 
     public OrigemReceita getOrigemReceita() {
         return origemReceita;
+    }
+
+    public String getGrupo() {
+        return grupo;
+    }
+
+    public NaturezaFinanceira getNatureza() {
+        return natureza;
     }
 }
