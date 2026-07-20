@@ -38,6 +38,15 @@ services:
       # key or corrupt data" assim que qualquer um rodasse depois do outro.
       PGCRYPTO_KEY: chave-de-teste-nunca-usar-em-producao
       EMAIL_PERMITIR_FALLBACK_LOG: "true"
+      # Mesmo raciocínio do scripts/e2e-up.sh (ver LeadRateLimitFilter/AtaAudioRateLimitFilter/
+      # PasswordResetRateLimitFilter): a suíte E2E inteira soma bem mais que os limites default
+      # de produção pros 3 endpoints sem sessão (POST /leads, upload de áudio, esqueci-senha),
+      # todas batendo do mesmo IP dentro da mesma janela — sem isto, docker-smoke-e2e (CI) falha
+      # nesses specs mesmo com a stack saudável. Achado ao vivo (Fase 5, re-verificação 20/07/2026):
+      # esta stack nunca tinha essa mesma folga que e2e-up.sh sempre teve.
+      APP_RATE_LIMIT_LEAD: "1000"
+      APP_RATE_LIMIT_ATA_AUDIO: "1000"
+      APP_RATE_LIMIT_PASSWORD_RESET: "1000"
     ports:
       - "8080:8080"
     volumes:
