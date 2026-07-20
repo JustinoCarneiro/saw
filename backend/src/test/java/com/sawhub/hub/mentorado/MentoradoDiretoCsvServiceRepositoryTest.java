@@ -19,7 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
 /** M23 item 4 (bulk-CREATE, 19/07/2026) — a garantia central de {@link MentoradoDiretoCsvService}
@@ -48,10 +48,25 @@ class MentoradoDiretoCsvServiceRepositoryTest {
     @TempDir
     private Path tempDir;
 
+    // NoOpPasswordEncoder.getInstance() está deprecated — este teste não exercita hash de senha
+    // (não é @SpringBootTest, então não tem o bean real de PasswordEncoder do SecurityConfig
+    // disponível), só precisa de ALGUM PasswordEncoder pra construir MentoradoAdminService.
+    private static final PasswordEncoder PASSWORD_ENCODER_SEM_HASH = new PasswordEncoder() {
+        @Override
+        public String encode(CharSequence rawPassword) {
+            return rawPassword.toString();
+        }
+
+        @Override
+        public boolean matches(CharSequence rawPassword, String encodedPassword) {
+            return rawPassword.toString().equals(encodedPassword);
+        }
+    };
+
     private MentoradoDiretoCsvService service() {
         var contratoStorage = new ContratoDocumentoStorageService(tempDir.toString());
         var mentoradoAdminService = new MentoradoAdminService(mentoradoRepository, usuarioRepository, leadRepository,
-                diagnosticoInicialRepository, contratoStorage, NoOpPasswordEncoder.getInstance());
+                diagnosticoInicialRepository, contratoStorage, PASSWORD_ENCODER_SEM_HASH);
         return new MentoradoDiretoCsvService(usuarioRepository, mentoradoAdminService);
     }
 

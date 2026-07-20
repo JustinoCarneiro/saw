@@ -13,7 +13,6 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import org.apache.commons.csv.CSVRecord;
 import org.springframework.web.multipart.MultipartFile;
 
 /** M21 — utilitários compartilhados entre todos os CsvServices do projeto.
