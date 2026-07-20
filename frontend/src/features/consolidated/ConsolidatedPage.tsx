@@ -5,11 +5,32 @@ import { Card } from '../../shared/components/Card';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { DonutChart } from '../../shared/components/DonutChart';
 import { ICON_PROPS } from '../../shared/components/iconProps';
-import { StatusPill } from '../../shared/components/Pill';
-import type { ConsolidatedSummary, MentoradoConsolidado, RankingFaturamento } from '../../shared/lib/types';
+import { Pill, StatusPill } from '../../shared/components/Pill';
+import type {
+  ConsolidatedSummary,
+  MentoradoConsolidado,
+  NivelEngajamento,
+  RankingFaturamento,
+  RiscoChurn,
+} from '../../shared/lib/types';
 import styles from './ConsolidatedPage.module.css';
 
-const COLUMNS = '1.8fr .8fr 1fr 1fr .9fr .9fr';
+const COLUMNS = '1.6fr .7fr .9fr .9fr .8fr .8fr .9fr .9fr .8fr';
+
+// E17/M27 (change request pós-MVP, 19/07/2026) — dois eixos preenchidos manualmente, exibidos só
+// no Painel Consolidado nesta leva (ver ROADMAP.md § "Blueprint (M27)"). Cores seguem a mesma
+// paleta semântica do StatusPill (verde/âmbar/vermelho), não uma paleta nova.
+const NIVEL_ENGAJAMENTO_TOKEN: Record<NivelEngajamento, { label: string; bg: string; color: string }> = {
+  ALTO: { label: 'Alto', bg: 'var(--success-bg)', color: 'var(--success)' },
+  MEDIO: { label: 'Médio', bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  BAIXO: { label: 'Baixo', bg: 'var(--danger-bg)', color: 'var(--danger)' },
+};
+
+const RISCO_CHURN_TOKEN: Record<RiscoChurn, { label: string; bg: string; color: string }> = {
+  NAO: { label: 'Sem risco', bg: 'var(--success-bg)', color: 'var(--success)' },
+  ATENCAO: { label: 'Atenção', bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  ALTO: { label: 'Alto risco', bg: 'var(--danger-bg)', color: 'var(--danger)' },
+};
 
 // M23 — ícones + abas de filtro por status existiam no protótipo estático congelado
 // (design/prototipo/index.html, bloco "ADMIN PAINEL CONSOLIDADO") e não sobreviveram à
@@ -183,7 +204,10 @@ export function ConsolidatedPage() {
       </div>
 
       <div className={styles.layout}>
-        <DataGrid columns={COLUMNS} headers={['Mentorado', 'Progresso', 'Encaminhamentos', 'Ferramentas', 'Faturamento', 'Status']}>
+        <DataGrid
+          columns={COLUMNS}
+          headers={['Mentorado', 'Progresso', 'Encaminhamentos', 'Ferramentas', 'Frequência', 'Faturamento', 'Engajamento', 'Risco de churn', 'Status']}
+        >
           {mentoradosFiltrados === null && !error && <div className={styles.loading}>Carregando…</div>}
           {mentoradosFiltrados?.length === 0 && (
             <div className={styles.loading}>
@@ -204,8 +228,27 @@ export function ConsolidatedPage() {
                 {m.encaminhamentosCumpridos}/{m.encaminhamentosTotal}
               </div>
               <div className={styles.metric}>{m.ferramentasPct}%</div>
+              <div className={styles.metric}>{m.frequenciaMentoriaPct != null ? `${m.frequenciaMentoriaPct}%` : '—'}</div>
               <div className={styles.metricStrong} style={{ color: pctColor(m.crescimentoFaturamentoPct) }}>
                 {formatPct(m.crescimentoFaturamentoPct)}
+              </div>
+              <div>
+                {m.nivelEngajamento ? (
+                  <Pill bg={NIVEL_ENGAJAMENTO_TOKEN[m.nivelEngajamento].bg} color={NIVEL_ENGAJAMENTO_TOKEN[m.nivelEngajamento].color}>
+                    {NIVEL_ENGAJAMENTO_TOKEN[m.nivelEngajamento].label}
+                  </Pill>
+                ) : (
+                  <span className={styles.metric}>—</span>
+                )}
+              </div>
+              <div>
+                {m.riscoChurn ? (
+                  <Pill bg={RISCO_CHURN_TOKEN[m.riscoChurn].bg} color={RISCO_CHURN_TOKEN[m.riscoChurn].color}>
+                    {RISCO_CHURN_TOKEN[m.riscoChurn].label}
+                  </Pill>
+                ) : (
+                  <span className={styles.metric}>—</span>
+                )}
               </div>
               <div>
                 <StatusPill status={m.status} />

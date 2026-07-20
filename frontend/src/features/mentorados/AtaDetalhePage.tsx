@@ -77,6 +77,8 @@ export function AtaDetalhePage() {
         <UploadAudioForm mentoriaId={mentoriaId} desabilitado={ata.statusProcessamento === 'PROCESSANDO'} onEnviado={carregar} />
       )}
 
+      {mentoria.tipo === 'GRUPO' && <PresencaCard mentoriaId={mentoriaId} mentoria={mentoria} onSalvo={carregar} />}
+
       <ResumoCard mentoriaId={mentoriaId} ata={ata} onSalvo={carregar} />
 
       <DecisoesCard mentoriaId={mentoriaId} ata={ata} onSalvo={carregar} />
@@ -147,6 +149,67 @@ function UploadAudioForm({ mentoriaId, desabilitado, onEnviado }: {
         </button>
       </form>
       {error && <div className={styles.error}>{error}</div>}
+    </Card>
+  );
+}
+
+// E17/M27 (change request pós-MVP, 19/07/2026) — presença só faz sentido em mentoria GRUPO (ver
+// ROADMAP.md § "Blueprint (M27)"); marcada depois da sessão, não em tempo real, então não trava
+// nenhum outro passo da ata. Só alimenta a frequência exibida no Painel Consolidado — não afeta
+// ranking/progresso.
+function PresencaCard({ mentoriaId, mentoria, onSalvo }: { mentoriaId: string; mentoria: Mentoria; onSalvo: () => void }) {
+  const [presencas, setPresencas] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(mentoria.mentorados.map((mt) => [mt.id, mt.presente ?? false])),
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [salvo, setSalvo] = useState(false);
+
+  useEffect(() => {
+    setPresencas(Object.fromEntries(mentoria.mentorados.map((mt) => [mt.id, mt.presente ?? false])));
+  }, [mentoria.mentorados]);
+
+  function toggle(id: string) {
+    setSalvo(false);
+    setPresencas((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  async function salvar() {
+    setError(null);
+    setSalvo(false);
+    setSalvando(true);
+    try {
+      await apiClient.patch(`/admin/mentorias/${mentoriaId}/presencas`, {
+        presencas: mentoria.mentorados.map((mt) => ({ mentoradoId: mt.id, presente: presencas[mt.id] ?? false })),
+      });
+      setSalvo(true);
+      onSalvo();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível salvar a presença.'));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }} testId="presenca-card">
+      <div className={styles.sectionTitle}>Presença</div>
+      <p className={styles.muted}>Marque quem participou desta mentoria em grupo.</p>
+      <div className={styles.checkboxList}>
+        {mentoria.mentorados.map((mt) => (
+          <label key={mt.id} className={styles.checkboxItem}>
+            <input type="checkbox" checked={presencas[mt.id] ?? false} onChange={() => toggle(mt.id)} />
+            {mt.nome}
+          </label>
+        ))}
+      </div>
+      {error && <div className={styles.error}>{error}</div>}
+      <div className={styles.formActions}>
+        {salvo && !salvando && <span className={styles.muted}>Salvo.</span>}
+        <button className={styles.actionButton} onClick={salvar} disabled={salvando}>
+          {salvando ? 'Salvando…' : 'Salvar presença'}
+        </button>
+      </div>
     </Card>
   );
 }

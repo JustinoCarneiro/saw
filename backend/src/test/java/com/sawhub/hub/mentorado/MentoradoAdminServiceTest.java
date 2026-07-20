@@ -414,4 +414,40 @@ class MentoradoAdminServiceTest {
         assertThat(diagnostico.getQuantidadeColaboradores()).isEqualTo(8);
         assertThat(diagnostico.getCulturaConstruida()).isEqualTo(EstadoImplementacao.SIM);
     }
+
+    // E17/M27 — ranking com as 4 ferramentas obrigatórias nomeadas (ver ROADMAP.md § "Blueprint (M27)").
+    @Test
+    void atualizarFerramentasObrigatoriasRecalculaOsContadoresGenericos() {
+        UUID id = UUID.randomUUID();
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
+        when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new com.sawhub.hub.mentorado.dto.AtualizarFerramentasObrigatoriasRequest(
+                EstadoImplementacao.SIM, EstadoImplementacao.EM_CONSTRUCAO, EstadoImplementacao.NAO, EstadoImplementacao.SIM);
+        Mentorado atualizado = service().atualizarFerramentasObrigatorias(id, request);
+
+        assertThat(atualizado.getFerramentaDre()).isEqualTo(EstadoImplementacao.SIM);
+        assertThat(atualizado.getFerramentaManualCultura()).isEqualTo(EstadoImplementacao.EM_CONSTRUCAO);
+        // ferramentasTotal fixo em 4; ferramentasConcluidas = 2 (DRE + manual de processos, os
+        // únicos SIM) — EM_CONSTRUCAO não conta como concluída.
+        assertThat(atualizado.getFerramentasTotal()).isEqualTo(4);
+        assertThat(atualizado.getFerramentasConcluidas()).isEqualTo(2);
+    }
+
+    // E17/M27 — "dois eixos de acompanhamento" (ver ROADMAP.md § "Blueprint (M27)").
+    @Test
+    void atualizarAcompanhamentoPreencheOsDoisEixosEMarcaAData() {
+        UUID id = UUID.randomUUID();
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
+        when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new com.sawhub.hub.mentorado.dto.AtualizarAcompanhamentoRequest(NivelEngajamento.BAIXO, RiscoChurn.ALTO);
+        Mentorado atualizado = service().atualizarAcompanhamento(id, request);
+
+        assertThat(atualizado.getNivelEngajamento()).isEqualTo(NivelEngajamento.BAIXO);
+        assertThat(atualizado.getRiscoChurn()).isEqualTo(RiscoChurn.ALTO);
+        assertThat(atualizado.getAcompanhamentoAvaliadoEm()).isNotNull();
+    }
 }

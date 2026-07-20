@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.consolidated.dto.MentoradoConsolidadoRow;
+import com.sawhub.hub.mentoria.PresencaMentoriaRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -16,14 +17,18 @@ class ConsolidatedServiceTest {
 
     @Mock
     private ConsolidatedRepository consolidatedRepository;
+    @Mock
+    private PresencaMentoriaRepository presencaMentoriaRepository;
 
     private ConsolidatedService service() {
-        return new ConsolidatedService(consolidatedRepository);
+        return new ConsolidatedService(consolidatedRepository, presencaMentoriaRepository);
     }
 
+    // E17/M27 — nivelEngajamento/riscoChurn nulos de propósito: irrelevantes pros testes deste
+    // arquivo (ordenação/resumo/ranking), ver MentoradoConsolidadoResponseTest pro cálculo deles.
     private static MentoradoConsolidadoRow row(String nome, String cresc, long pesoConcluido, long pesoTotal) {
         return new MentoradoConsolidadoRow(java.util.UUID.randomUUID(), nome, "negócio",
-                new BigDecimal(cresc), 0, 0, 0L, 0L, pesoTotal, pesoConcluido);
+                new BigDecimal(cresc), 0, 0, 0L, 0L, pesoTotal, pesoConcluido, null, null);
     }
 
     @Test
@@ -89,12 +94,36 @@ class ConsolidatedServiceTest {
     @Test
     void rankingTrataCrescimentoNuloComoZero() {
         var linhaComNulo = new MentoradoConsolidadoRow(java.util.UUID.randomUUID(), "Sem Dado", "negócio",
-                null, 0, 0, 0L, 0L, 1L, 1L);
+                null, 0, 0, 0L, 0L, 1L, 1L, null, null);
         when(consolidatedRepository.buscarConsolidado()).thenReturn(List.of(linhaComNulo));
 
         var ranking = service().rankingFaturamento(3);
 
         assertThat(ranking).hasSize(1);
         assertThat(ranking.get(0).crescimentoFaturamentoPct()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    // E17/M27 — frequenciaMentoriaPct vem de uma query separada (PresencaMentoriaRepository),
+    // mesclada por mentoradoId em Java — ver ROADMAP.md § "Blueprint (M27)".
+    @Test
+    void listarMentoradosMesclaFrequenciaMentoriaPorId() {
+        MentoradoConsolidadoRow linha = row("Ana Costa", "1.0", 1, 10);
+        when(consolidatedRepository.buscarConsolidado()).thenReturn(List.of(linha));
+        when(presencaMentoriaRepository.buscarFrequencia()).thenReturn(List.of(
+                new com.sawhub.hub.mentoria.dto.FrequenciaMentoriaRow(linha.id(), 4L, 3L)));
+
+        var resultado = service().listarMentorados();
+
+        assertThat(resultado.get(0).frequenciaMentoriaPct()).isEqualTo(75);
+    }
+
+    @Test
+    void listarMentoradosSemFrequenciaRegistradaFicaComCampoNulo() {
+        when(consolidatedRepository.buscarConsolidado()).thenReturn(List.of(row("Ana Costa", "1.0", 1, 10)));
+        when(presencaMentoriaRepository.buscarFrequencia()).thenReturn(List.of());
+
+        var resultado = service().listarMentorados();
+
+        assertThat(resultado.get(0).frequenciaMentoriaPct()).isNull();
     }
 }

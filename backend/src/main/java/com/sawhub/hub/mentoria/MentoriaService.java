@@ -6,6 +6,7 @@ import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentoria.dto.CriarMentoriaRequest;
+import com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
 import java.time.Instant;
@@ -26,15 +27,17 @@ public class MentoriaService {
     private final MentoradoRepository mentoradoRepository;
     private final ConteudoRepository conteudoRepository;
     private final AtividadeLogService atividadeLogService;
+    private final PresencaMentoriaRepository presencaMentoriaRepository;
 
     public MentoriaService(MentoriaRepository mentoriaRepository, ColaboradorRepository colaboradorRepository,
                             MentoradoRepository mentoradoRepository, ConteudoRepository conteudoRepository,
-                            AtividadeLogService atividadeLogService) {
+                            AtividadeLogService atividadeLogService, PresencaMentoriaRepository presencaMentoriaRepository) {
         this.mentoriaRepository = mentoriaRepository;
         this.colaboradorRepository = colaboradorRepository;
         this.mentoradoRepository = mentoradoRepository;
         this.conteudoRepository = conteudoRepository;
         this.atividadeLogService = atividadeLogService;
+        this.presencaMentoriaRepository = presencaMentoriaRepository;
     }
 
     @Transactional
@@ -105,5 +108,31 @@ public class MentoriaService {
         }
         mentoria.atualizarMateriaisRecomendados(new HashSet<>(conteudos));
         return mentoriaRepository.save(mentoria);
+    }
+
+    /** E17/M27 — presença por mentorado, só faz sentido pra mentoria GRUPO (individual já é
+     * coberta pelo status da sessão inteira). Upsert por (mentoria, mentorado): chamar de novo
+     * com o mesmo mentorado só atualiza o registro existente, não duplica. */
+    @Transactional
+    public Mentoria registrarPresencas(UUID id, RegistrarPresencasRequest request) {
+        Mentoria mentoria = buscar(id);
+        if (mentoria.getTipo() != TipoMentoria.GRUPO) {
+            throw new IllegalArgumentException("Presença só se aplica a mentoria em grupo.");
+        }
+        for (RegistrarPresencasRequest.PresencaRequest p : request.presencas()) {
+            Mentorado mentorado = mentoria.getMentorados().stream()
+                    .filter(m -> m.getId().equals(p.mentoradoId()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Mentorado " + p.mentoradoId() + " não participa desta mentoria."));
+            var existente = presencaMentoriaRepository.findByMentoriaIdAndMentoradoId(id, p.mentoradoId());
+            if (existente.isPresent()) {
+                existente.get().marcar(p.presente());
+                presencaMentoriaRepository.save(existente.get());
+            } else {
+                presencaMentoriaRepository.save(new PresencaMentoria(mentoria, mentorado, p.presente()));
+            }
+        }
+        return mentoria;
     }
 }

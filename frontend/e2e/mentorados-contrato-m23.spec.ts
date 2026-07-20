@@ -96,9 +96,43 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
     await page.getByRole('button', { name: 'Salvar Diagnóstico Inicial' }).click();
     await expect(page.getByText('Salvo.')).toBeVisible();
 
+    // E17/M27 (change request pós-MVP, 19/07/2026) — mesma tela, mesmo ator (Gestão de
+    // Performance), mesmo Modulo.MENTORADOS — ver ROADMAP.md § "Blueprint (M27)".
+    // onSalvo (recarrega a listagem em segundo plano) não é aguardado pelo handleSubmit — espera
+    // o próprio refetch da lista terminar antes de reabrir o form (registrando o listener ANTES do
+    // click), senão "Editar" pode reabrir com o `mentorado` (snapshot antigo da linha) de antes do
+    // PATCH, não o dado já persistido.
+    const listaRecarregouAposFerramentas = page.waitForResponse(
+      (res) => res.url().includes('/admin/mentorados') && res.request().method() === 'GET' && res.ok(),
+    );
+    await expect(page.getByText('Ferramentas obrigatórias', { exact: true })).toBeVisible();
+    await page.getByLabel('DRE estruturada').selectOption({ label: 'Sim' });
+    await page.getByLabel('Manual de cultura').selectOption({ label: 'Em construção' });
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/ferramentas-obrigatorias') && res.ok()),
+      page.getByRole('button', { name: 'Salvar ferramentas obrigatórias' }).click(),
+    ]);
+    await listaRecarregouAposFerramentas;
+
+    const listaRecarregouAposAcompanhamento = page.waitForResponse(
+      (res) => res.url().includes('/admin/mentorados') && res.request().method() === 'GET' && res.ok(),
+    );
+    await expect(page.getByText('Acompanhamento', { exact: true })).toBeVisible();
+    await page.getByLabel('Nível de engajamento').selectOption({ label: 'Alto' });
+    await page.getByLabel('Risco de churn').selectOption({ label: 'Atenção' });
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/acompanhamento') && res.ok()),
+      page.getByRole('button', { name: 'Salvar acompanhamento' }).click(),
+    ]);
+    await listaRecarregouAposAcompanhamento;
+
     await page.getByRole('button', { name: 'Cancelar' }).click();
     await linha.getByRole('button', { name: 'Editar' }).click();
     await expect(page.getByLabel('Faturamento anual (R$)')).toHaveValue('600000');
     await expect(page.getByLabel('Cultura construída?')).toHaveValue('EM_CONSTRUCAO');
+    await expect(page.getByLabel('DRE estruturada')).toHaveValue('SIM');
+    await expect(page.getByLabel('Manual de cultura')).toHaveValue('EM_CONSTRUCAO');
+    await expect(page.getByLabel('Nível de engajamento')).toHaveValue('ALTO');
+    await expect(page.getByLabel('Risco de churn')).toHaveValue('ATENCAO');
   });
 });

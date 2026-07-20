@@ -251,6 +251,41 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(page.getByTestId('materiais-card').getByRole('checkbox')).toBeChecked();
   });
 
+  // E17/M27 (change request pós-MVP, 19/07/2026) — mesmo fixture GRUPO/REALIZADA de Ana+Carlos
+  // (mentor Ricardo Costa) do teste de materiais acima; presença é aditiva, não afeta ata/materiais.
+  test('Admin marca presença numa mentoria em grupo, e o valor persiste após reload', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/mentorias');
+
+    const linha = page.locator('[data-testid^="mentoria-row-"]', { hasText: 'Ricardo Costa' });
+    await linha.getByRole('button', { name: 'Ver ata' }).click();
+    await expect(page).toHaveURL(/\/ata$/);
+
+    const card = page.getByTestId('presenca-card');
+    await expect(card.getByText('Presença', { exact: true })).toBeVisible();
+    const itemAna = card.locator('label', { hasText: 'Ana Costa' }).getByRole('checkbox');
+
+    const estadoInicial = await itemAna.isChecked();
+    await itemAna.setChecked(!estadoInicial);
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/presencas') && res.ok()),
+      card.getByRole('button', { name: 'Salvar presença' }).click(),
+    ]);
+
+    await page.reload();
+    await expect(page.getByTestId('presenca-card').locator('label', { hasText: 'Ana Costa' }).getByRole('checkbox'))
+      .toBeChecked({ checked: !estadoInicial });
+
+    // Restaura o estado original pra não deixar side-effect entre execuções do E2E.
+    const itemAnaDepois = page.getByTestId('presenca-card').locator('label', { hasText: 'Ana Costa' }).getByRole('checkbox');
+    await itemAnaDepois.setChecked(estadoInicial);
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/presencas') && res.ok()),
+      page.getByTestId('presenca-card').getByRole('button', { name: 'Salvar presença' }).click(),
+    ]);
+  });
+
   test('Conteúdos: criar e publicar', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);

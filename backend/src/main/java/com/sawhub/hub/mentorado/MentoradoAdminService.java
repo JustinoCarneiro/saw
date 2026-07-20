@@ -4,8 +4,10 @@ import com.sawhub.hub.comercial.Lead;
 import com.sawhub.hub.comercial.LeadRepository;
 import com.sawhub.hub.comercial.ProdutoVenda;
 import com.sawhub.hub.comercial.StatusLead;
+import com.sawhub.hub.mentorado.dto.AtualizarAcompanhamentoRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarDadosContratoRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarDiagnosticoInicialRequest;
+import com.sawhub.hub.mentorado.dto.AtualizarFerramentasObrigatoriasRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarMentoradoRequest;
 import com.sawhub.hub.mentorado.dto.CriarMentoradoDiretoRequest;
 import com.sawhub.hub.mentorado.dto.ImportarMentoradoDiretoLinha;
@@ -253,6 +255,27 @@ public class MentoradoAdminService {
                 request.cmvDetalhe(), request.tempoMedioAtendimento(), request.culturaConstruida(),
                 request.processosDesenhados());
         return diagnosticoInicialRepository.save(diagnostico);
+    }
+
+    /** E17/M27 — as 4 ferramentas obrigatórias nomeadas do ranking (ver ROADMAP.md § "Blueprint
+     * (M27)"). ferramentasConcluidas/ferramentasTotal são recalculados dentro de
+     * Mentorado#atualizarFerramentasObrigatorias — nada aqui toca neles diretamente. */
+    @Transactional
+    public Mentorado atualizarFerramentasObrigatorias(UUID id, AtualizarFerramentasObrigatoriasRequest request) {
+        Mentorado mentorado = buscar(id);
+        mentorado.atualizarFerramentasObrigatorias(request.ferramentaDre(), request.ferramentaManualCultura(),
+                request.ferramentaFichaTecnica(), request.ferramentaManualProcessos());
+        return mentoradoRepository.save(mentorado);
+    }
+
+    /** E17/M27 — "dois eixos de acompanhamento", preenchimento manual (ver ROADMAP.md §
+     * "Blueprint (M27)"). Não substitui o status EM_DIA/ATENCAO/ATRASADO calculado em
+     * ConsolidatedService, que continua existindo do mesmo jeito. */
+    @Transactional
+    public Mentorado atualizarAcompanhamento(UUID id, AtualizarAcompanhamentoRequest request) {
+        Mentorado mentorado = buscar(id);
+        mentorado.atualizarAcompanhamento(request.nivelEngajamento(), request.riscoChurn());
+        return mentoradoRepository.save(mentorado);
     }
 
     private Mentorado buscar(UUID id) {

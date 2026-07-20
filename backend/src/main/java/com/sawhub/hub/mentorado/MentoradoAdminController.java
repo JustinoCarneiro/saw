@@ -1,7 +1,9 @@
 package com.sawhub.hub.mentorado;
 
 import com.sawhub.hub.common.dto.ImportResultResponse;
+import com.sawhub.hub.mentorado.dto.AtualizarAcompanhamentoRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarDiagnosticoInicialRequest;
+import com.sawhub.hub.mentorado.dto.AtualizarFerramentasObrigatoriasRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarMentoradoRequest;
 import com.sawhub.hub.mentorado.dto.DiagnosticoInicialResponse;
 import com.sawhub.hub.mentorado.dto.MentoradoCriadoResponse;
@@ -86,6 +88,22 @@ public class MentoradoAdminController {
     public DiagnosticoInicialResponse atualizarDiagnosticoInicial(
             @PathVariable UUID id, @Valid @RequestBody AtualizarDiagnosticoInicialRequest request) {
         return DiagnosticoInicialResponse.from(mentoradoAdminService.atualizarDiagnosticoInicial(id, request));
+    }
+
+    /** E17/M27 — as 4 ferramentas obrigatórias nomeadas do ranking (ver ROADMAP.md § "Blueprint
+     * (M27)"). */
+    @PatchMapping("/{id}/ferramentas-obrigatorias")
+    public MentoradoResponse atualizarFerramentasObrigatorias(
+            @PathVariable UUID id, @Valid @RequestBody AtualizarFerramentasObrigatoriasRequest request) {
+        return MentoradoResponse.from(mentoradoAdminService.atualizarFerramentasObrigatorias(id, request));
+    }
+
+    /** E17/M27 — "dois eixos de acompanhamento" (engajamento + risco de churn), preenchimento
+     * manual (ver ROADMAP.md § "Blueprint (M27)"). */
+    @PatchMapping("/{id}/acompanhamento")
+    public MentoradoResponse atualizarAcompanhamento(
+            @PathVariable UUID id, @Valid @RequestBody AtualizarAcompanhamentoRequest request) {
+        return MentoradoResponse.from(mentoradoAdminService.atualizarAcompanhamento(id, request));
     }
 
     // M22 — mesmos filtros de GET /mentorados.

@@ -49,6 +49,11 @@ export interface PermissionMatrixRow {
   modulosPermitidos: Modulo[];
 }
 
+// E17/M27 (change request pós-MVP, 19/07/2026) — dois eixos de acompanhamento preenchidos
+// manualmente pelo mentor/time de sucesso (ver ROADMAP.md § "Blueprint (M27)").
+export type NivelEngajamento = 'ALTO' | 'MEDIO' | 'BAIXO';
+export type RiscoChurn = 'NAO' | 'ATENCAO' | 'ALTO';
+
 export interface MentoradoConsolidado {
   id: string;
   nome: string;
@@ -59,6 +64,12 @@ export interface MentoradoConsolidado {
   ferramentasPct: number;
   crescimentoFaturamentoPct: number;
   status: 'EM_DIA' | 'ATENCAO' | 'ATRASADO';
+  // E17/M27 — aditivos: frequenciaMentoriaPct é null se o mentorado nunca participou de uma
+  // mentoria em grupo já realizada (não é 0%, é "sem dado"); nivelEngajamento/riscoChurn são
+  // null enquanto ninguém avaliou ainda. Nenhum dos três entra no cálculo de `status` acima.
+  frequenciaMentoriaPct: number | null;
+  nivelEngajamento: NivelEngajamento | null;
+  riscoChurn: RiscoChurn | null;
 }
 
 export interface ConsolidatedSummary {
@@ -310,6 +321,16 @@ export interface MentoradoAdmin {
   dataFechamentoContrato: string | null;
   vencimentoContrato: string | null;
   documentoContratoUrl: string | null;
+  // E17/M27 — as 4 ferramentas obrigatórias nomeadas do ranking; ferramentasConcluidas/Total
+  // continuam existindo só no Painel Consolidado (MentoradoConsolidado.ferramentasPct), derivados
+  // destas 4 (ver ROADMAP.md § "Blueprint (M27)").
+  ferramentaDre: EstadoImplementacao;
+  ferramentaManualCultura: EstadoImplementacao;
+  ferramentaFichaTecnica: EstadoImplementacao;
+  ferramentaManualProcessos: EstadoImplementacao;
+  nivelEngajamento: NivelEngajamento | null;
+  riscoChurn: RiscoChurn | null;
+  acompanhamentoAvaliadoEm: string | null;
 }
 
 export interface MentoradoCriado {
@@ -367,11 +388,13 @@ export interface MaterialResumo {
   url: string;
 }
 
+// E17/M27 — presente nullable: null quando presença não foi carregada nesta resposta (listagem)
+// ou a mentoria é INDIVIDUAL (presença só se aplica a GRUPO, ver ROADMAP.md § "Blueprint (M27)").
 export interface Mentoria {
   id: string;
   tipo: TipoMentoria;
   mentor: MentorResumo;
-  mentorados: { id: string; nome: string }[];
+  mentorados: { id: string; nome: string; presente: boolean | null }[];
   dataHora: string;
   duracaoMin: number;
   linkOnline: string | null;

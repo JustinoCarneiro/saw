@@ -15,8 +15,10 @@ import type {
   Lead,
   MentoradoAdmin,
   MentoradoCriado,
+  NivelEngajamento,
   Plano,
   RespostaSimNao,
+  RiscoChurn,
   StatusMentorado,
   TipoContrato,
 } from '../../shared/lib/types';
@@ -49,6 +51,18 @@ const ESTADO_IMPLEMENTACAO_LABEL: Record<EstadoImplementacao, string> = {
 const RESPOSTA_SIM_NAO_LABEL: Record<RespostaSimNao, string> = {
   SIM: 'Sim',
   NAO: 'Não',
+};
+
+const NIVEL_ENGAJAMENTO_LABEL: Record<NivelEngajamento, string> = {
+  ALTO: 'Alto',
+  MEDIO: 'Médio',
+  BAIXO: 'Baixo',
+};
+
+const RISCO_CHURN_LABEL: Record<RiscoChurn, string> = {
+  NAO: 'Não',
+  ATENCAO: 'Atenção',
+  ALTO: 'Alto',
 };
 
 const STATUS_LABEL: Record<StatusMentorado, { label: string; bg: string; color: string }> = {
@@ -346,6 +360,8 @@ function EditarMentoradoForm({ mentorado, podeVerContrato, onSalvo, onAtualizarL
       </form>
       {podeVerContrato && <DadosContratoSection mentorado={mentorado} onSalvo={onAtualizarLista} />}
       <DiagnosticoInicialSection mentoradoId={mentorado.id} />
+      <FerramentasObrigatoriasSection mentorado={mentorado} onSalvo={onAtualizarLista} />
+      <AcompanhamentoSection mentorado={mentorado} onSalvo={onAtualizarLista} />
     </Card>
   );
 }
@@ -643,6 +659,150 @@ function DiagnosticoInicialSection({ mentoradoId }: { mentoradoId: string }) {
         {salvo && !submitting && <span className={styles.muted}>Salvo.</span>}
         <button type="submit" className={styles.actionButton} disabled={submitting}>
           {submitting ? 'Salvando…' : 'Salvar Diagnóstico Inicial'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// E17/M27 (change request pós-MVP, 19/07/2026) — as 4 ferramentas obrigatórias nomeadas do
+// ranking (ver ROADMAP.md § "Blueprint (M27)"). Diferente do Diagnóstico Inicial, o valor atual
+// já vem no próprio `mentorado` (MentoradoResponse) — não precisa de um GET separado.
+function FerramentasObrigatoriasSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSalvo: () => void }) {
+  const [ferramentaDre, setFerramentaDre] = useState<EstadoImplementacao>(mentorado.ferramentaDre);
+  const [ferramentaManualCultura, setFerramentaManualCultura] = useState<EstadoImplementacao>(mentorado.ferramentaManualCultura);
+  const [ferramentaFichaTecnica, setFerramentaFichaTecnica] = useState<EstadoImplementacao>(mentorado.ferramentaFichaTecnica);
+  const [ferramentaManualProcessos, setFerramentaManualProcessos] = useState<EstadoImplementacao>(mentorado.ferramentaManualProcessos);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [salvo, setSalvo] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSalvo(false);
+    setSubmitting(true);
+    try {
+      await apiClient.patch(`/admin/mentorados/${mentorado.id}/ferramentas-obrigatorias`, {
+        ferramentaDre, ferramentaManualCultura, ferramentaFichaTecnica, ferramentaManualProcessos,
+      });
+      setSalvo(true);
+      onSalvo();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível salvar as ferramentas obrigatórias. Tente novamente.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={styles.form} style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
+      <div className={styles.formTitle}>Ferramentas obrigatórias</div>
+      <div className={styles.formRow}>
+        <label className={styles.formField}>
+          DRE estruturada
+          <select className={styles.select} value={ferramentaDre} onChange={(e) => setFerramentaDre(e.target.value as EstadoImplementacao)}>
+            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
+              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.formField}>
+          Manual de cultura
+          <select className={styles.select} value={ferramentaManualCultura} onChange={(e) => setFerramentaManualCultura(e.target.value as EstadoImplementacao)}>
+            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
+              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.formField}>
+          Ficha técnica
+          <select className={styles.select} value={ferramentaFichaTecnica} onChange={(e) => setFerramentaFichaTecnica(e.target.value as EstadoImplementacao)}>
+            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
+              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.formField}>
+          Manual de processos
+          <select className={styles.select} value={ferramentaManualProcessos} onChange={(e) => setFerramentaManualProcessos(e.target.value as EstadoImplementacao)}>
+            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
+              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {error && <div className={styles.error}>{error}</div>}
+      <div className={styles.formActions}>
+        {salvo && !submitting && <span className={styles.muted}>Salvo.</span>}
+        <button type="submit" className={styles.actionButton} disabled={submitting}>
+          {submitting ? 'Salvando…' : 'Salvar ferramentas obrigatórias'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// E17/M27 — dois eixos de acompanhamento, preenchidos manualmente pelo mentor/time de sucesso
+// (não calculados — ver ROADMAP.md § "Blueprint (M27)"). "Não avaliado" mapeia pra null na
+// request (semântica de PATCH no backend: campo null não apaga valor já registrado).
+function AcompanhamentoSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSalvo: () => void }) {
+  const [nivelEngajamento, setNivelEngajamento] = useState<NivelEngajamento | ''>(mentorado.nivelEngajamento ?? '');
+  const [riscoChurn, setRiscoChurn] = useState<RiscoChurn | ''>(mentorado.riscoChurn ?? '');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [salvo, setSalvo] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSalvo(false);
+    setSubmitting(true);
+    try {
+      await apiClient.patch(`/admin/mentorados/${mentorado.id}/acompanhamento`, {
+        nivelEngajamento: nivelEngajamento || null,
+        riscoChurn: riscoChurn || null,
+      });
+      setSalvo(true);
+      onSalvo();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível salvar o acompanhamento. Tente novamente.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={styles.form} style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
+      <div className={styles.formTitle}>Acompanhamento</div>
+      <div className={styles.formRow}>
+        <label className={styles.formField}>
+          Nível de engajamento
+          <select className={styles.select} value={nivelEngajamento} onChange={(e) => setNivelEngajamento(e.target.value as NivelEngajamento | '')}>
+            <option value="">Não avaliado</option>
+            {(Object.keys(NIVEL_ENGAJAMENTO_LABEL) as NivelEngajamento[]).map((v) => (
+              <option key={v} value={v}>{NIVEL_ENGAJAMENTO_LABEL[v]}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.formField}>
+          Risco de churn
+          <select className={styles.select} value={riscoChurn} onChange={(e) => setRiscoChurn(e.target.value as RiscoChurn | '')}>
+            <option value="">Não avaliado</option>
+            {(Object.keys(RISCO_CHURN_LABEL) as RiscoChurn[]).map((v) => (
+              <option key={v} value={v}>{RISCO_CHURN_LABEL[v]}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {mentorado.acompanhamentoAvaliadoEm && (
+        <div className={styles.muted}>Última avaliação: {new Date(mentorado.acompanhamentoAvaliadoEm).toLocaleString('pt-BR')}</div>
+      )}
+      {error && <div className={styles.error}>{error}</div>}
+      <div className={styles.formActions}>
+        {salvo && !submitting && <span className={styles.muted}>Salvo.</span>}
+        <button type="submit" className={styles.actionButton} disabled={submitting}>
+          {submitting ? 'Salvando…' : 'Salvar acompanhamento'}
         </button>
       </div>
     </form>

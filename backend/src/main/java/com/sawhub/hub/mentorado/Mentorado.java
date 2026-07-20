@@ -120,6 +120,43 @@ public class Mentorado extends BaseEntity {
     @Column(name = "tipo_contrato")
     private TipoContrato tipoContrato;
 
+    // E17/M27 (change request pós-MVP, 19/07/2026) — as 4 ferramentas obrigatórias nomeadas do
+    // ranking, mesmo enum de 3 estados já usado em MentoradoDiagnosticoInicial (SIM/NAO/
+    // EM_CONSTRUCAO). ferramentasConcluidas/ferramentasTotal (acima) continuam existindo e sendo
+    // lidos exatamente como antes por ConsolidatedRepository — só passam a ser recalculados a
+    // partir destes 4 campos em vez de editáveis livremente, ver atualizarFerramentasObrigatorias.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ferramenta_dre", nullable = false)
+    private EstadoImplementacao ferramentaDre = EstadoImplementacao.NAO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ferramenta_manual_cultura", nullable = false)
+    private EstadoImplementacao ferramentaManualCultura = EstadoImplementacao.NAO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ferramenta_ficha_tecnica", nullable = false)
+    private EstadoImplementacao ferramentaFichaTecnica = EstadoImplementacao.NAO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ferramenta_manual_processos", nullable = false)
+    private EstadoImplementacao ferramentaManualProcessos = EstadoImplementacao.NAO;
+
+    // E17/M27 — "dois eixos de acompanhamento", preenchidos manualmente pelo mentor/time de
+    // sucesso (não calculados). Nullable: nem todo mentorado já passou por uma "análise pós-
+    // check-in". Snapshot único, sem histórico nesta leva (Suposição 3 do Blueprint M27) — o
+    // status EM_DIA/ATENCAO/ATRASADO calculado em ConsolidatedService continua existindo do
+    // mesmo jeito de sempre, estes dois eixos são informação adicional, não substituição.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "nivel_engajamento")
+    private NivelEngajamento nivelEngajamento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risco_churn")
+    private RiscoChurn riscoChurn;
+
+    @Column(name = "acompanhamento_avaliado_em")
+    private Instant acompanhamentoAvaliadoEm;
+
     protected Mentorado() {
     }
 
@@ -194,6 +231,37 @@ public class Mentorado extends BaseEntity {
         if (this.conquistasObservadasEm == null) {
             this.conquistasObservadasEm = Instant.now();
         }
+    }
+
+    /** E17/M27 — seta as 4 ferramentas nomeadas e recalcula ferramentasConcluidas/ferramentasTotal
+     * na mesma chamada (ferramentasTotal fixo em 4; ferramentasConcluidas = quantas das 4 estão
+     * SIM — EM_CONSTRUCAO conta como não concluída, Suposição 2 do Blueprint M27). É isso que
+     * mantém ConsolidatedRepository/MentoradoConsolidadoRow/Response sem nenhuma mudança: o dado
+     * que eles já leem continua no mesmo formato de sempre. */
+    public void atualizarFerramentasObrigatorias(EstadoImplementacao ferramentaDre, EstadoImplementacao ferramentaManualCultura,
+                                                  EstadoImplementacao ferramentaFichaTecnica, EstadoImplementacao ferramentaManualProcessos) {
+        this.ferramentaDre = ferramentaDre != null ? ferramentaDre : EstadoImplementacao.NAO;
+        this.ferramentaManualCultura = ferramentaManualCultura != null ? ferramentaManualCultura : EstadoImplementacao.NAO;
+        this.ferramentaFichaTecnica = ferramentaFichaTecnica != null ? ferramentaFichaTecnica : EstadoImplementacao.NAO;
+        this.ferramentaManualProcessos = ferramentaManualProcessos != null ? ferramentaManualProcessos : EstadoImplementacao.NAO;
+        this.ferramentasTotal = 4;
+        this.ferramentasConcluidas = (int) java.util.stream.Stream.of(
+                        this.ferramentaDre, this.ferramentaManualCultura, this.ferramentaFichaTecnica, this.ferramentaManualProcessos)
+                .filter(e -> e == EstadoImplementacao.SIM)
+                .count();
+    }
+
+    /** E17/M27 — "dois eixos de acompanhamento", preenchimento manual (ver Javadoc dos campos).
+     * Semântica de PATCH: campo nulo na chamada não apaga o valor já registrado, só o campo
+     * explicitamente informado muda — dá pra registrar/atualizar um eixo por vez. */
+    public void atualizarAcompanhamento(NivelEngajamento nivelEngajamento, RiscoChurn riscoChurn) {
+        if (nivelEngajamento != null) {
+            this.nivelEngajamento = nivelEngajamento;
+        }
+        if (riscoChurn != null) {
+            this.riscoChurn = riscoChurn;
+        }
+        this.acompanhamentoAvaliadoEm = Instant.now();
     }
 
     public StatusMentorado getStatus() {
@@ -274,5 +342,33 @@ public class Mentorado extends BaseEntity {
 
     public TipoContrato getTipoContrato() {
         return tipoContrato;
+    }
+
+    public EstadoImplementacao getFerramentaDre() {
+        return ferramentaDre;
+    }
+
+    public EstadoImplementacao getFerramentaManualCultura() {
+        return ferramentaManualCultura;
+    }
+
+    public EstadoImplementacao getFerramentaFichaTecnica() {
+        return ferramentaFichaTecnica;
+    }
+
+    public EstadoImplementacao getFerramentaManualProcessos() {
+        return ferramentaManualProcessos;
+    }
+
+    public NivelEngajamento getNivelEngajamento() {
+        return nivelEngajamento;
+    }
+
+    public RiscoChurn getRiscoChurn() {
+        return riscoChurn;
+    }
+
+    public Instant getAcompanhamentoAvaliadoEm() {
+        return acompanhamentoAvaliadoEm;
     }
 }

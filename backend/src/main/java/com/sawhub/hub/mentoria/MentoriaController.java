@@ -6,6 +6,8 @@ import com.sawhub.hub.mentoria.dto.AtualizarStatusMentoriaRequest;
 import com.sawhub.hub.mentoria.dto.CriarMentoriaRequest;
 import com.sawhub.hub.mentoria.dto.MentoriaResponse;
 import com.sawhub.hub.mentoria.dto.MentorResumoResponse;
+import com.sawhub.hub.mentoria.dto.PresencaResumoRow;
+import com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
@@ -15,7 +17,9 @@ import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -37,12 +41,15 @@ public class MentoriaController {
     private final MentoriaService mentoriaService;
     private final AtaService ataService;
     private final ColaboradorRepository colaboradorRepository;
+    private final PresencaMentoriaRepository presencaMentoriaRepository;
 
     public MentoriaController(MentoriaService mentoriaService, AtaService ataService,
-                               ColaboradorRepository colaboradorRepository) {
+                               ColaboradorRepository colaboradorRepository,
+                               PresencaMentoriaRepository presencaMentoriaRepository) {
         this.mentoriaService = mentoriaService;
         this.ataService = ataService;
         this.colaboradorRepository = colaboradorRepository;
+        this.presencaMentoriaRepository = presencaMentoriaRepository;
     }
 
     /** Só leitura, pro seletor de mentor no formulário de criação (H11.2) — mesmo raciocínio do
@@ -71,7 +78,8 @@ public class MentoriaController {
 
     @GetMapping("/{id}")
     public MentoriaResponse buscar(@PathVariable UUID id) {
-        return MentoriaResponse.from(mentoriaService.buscar(id));
+        Mentoria mentoria = mentoriaService.buscar(id);
+        return MentoriaResponse.from(mentoria, presencasPorMentorado(id));
     }
 
     @PatchMapping("/{id}/status")
@@ -92,5 +100,17 @@ public class MentoriaController {
     public AtaResponse realizar(@PathVariable UUID id) {
         Ata ata = ataService.realizarMentoria(id);
         return AtaResponse.from(ata, ataService.listarSugestoes(id));
+    }
+
+    /** E17/M27 — presença por mentorado, só mentoria GRUPO (ver MentoriaService#registrarPresencas). */
+    @PatchMapping("/{id}/presencas")
+    public MentoriaResponse registrarPresencas(@PathVariable UUID id, @Valid @RequestBody RegistrarPresencasRequest request) {
+        Mentoria mentoria = mentoriaService.registrarPresencas(id, request);
+        return MentoriaResponse.from(mentoria, presencasPorMentorado(id));
+    }
+
+    private Map<UUID, Boolean> presencasPorMentorado(UUID mentoriaId) {
+        return presencaMentoriaRepository.buscarResumoPorMentoria(mentoriaId).stream()
+                .collect(Collectors.toMap(PresencaResumoRow::mentoradoId, PresencaResumoRow::presente));
     }
 }

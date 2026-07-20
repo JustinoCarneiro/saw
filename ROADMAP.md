@@ -3478,6 +3478,139 @@ alimenta a Conciliação (M20) como insumo de cálculo. `fecharVenda()` passa a 
 **Status: todas as Perguntas pendentes resolvidas (19/07/2026) — ver
 `docs/reuniao-2026-07-17-atualizacoes.md` § Perguntas pendentes, item 5. Pronto pra implementar.**
 
+## Blueprint (M27 · Painel Consolidado — presença em mentoria coletiva, ranking com ferramentas
+nomeadas, dois eixos de acompanhamento)
+
+Os 3 últimos itens do E17 (`docs/reuniao-2026-07-17-atualizacoes.md` § "Perguntas e pendências
+pro Victor/Matheus", itens 1-3). O cliente ainda não respondeu — decisão de produto tomada pelo
+Marcos direto, com uma diretriz explícita que muda o desenho: **tudo aditivo, nada que já está em
+produção muda de comportamento por padrão**. Se o Victor pedir diferente depois, é ajuste
+incremental sobre o que existe, não desfazer trabalho.
+
+### 1. Presença em mentoria coletiva
+`Mentoria` já tem `mentorados: Set<Mentorado>` (`@ManyToMany`, tabela `mentoria_mentorado`) — o
+relacionamento "quem participa" já existe, pra `INDIVIDUAL` (1 membro) e `GRUPO` (N membros)
+igual. O que falta é **presença** (quem de fato compareceu), só relevante pra `GRUPO` (individual
+já é coberto pelo status da sessão inteira — não faz sentido uma mentoria 1:1 "Realizada" sem o
+único mentorado).
+
+Nova entidade `PresencaMentoria` (não altera `mentoria_mentorado`, que seria mais arriscado —
+converter um `@ManyToMany` simples num relacionamento com atributo extra muda o mapeamento
+existente): `mentoria` (FK), `mentorado` (FK), `presente` (boolean), `unique(mentoria_id,
+mentorado_id)`. Preenchida via novo endpoint, pelo mentor/time interno, depois da sessão.
+
+**Não entra no cálculo de ranking/progresso** (`ConsolidatedRepository`/`Encaminhamento` continuam
+a única fonte, zero mudança) — vira uma métrica nova e separada, só de exibição:
+`frequenciaMentoriaPct` = % de mentorias `GRUPO`/`REALIZADA` em que o mentorado foi marcado
+presente, sobre o total de mentorias `GRUPO`/`REALIZADA` de que participou. `null` (não 0%) se o
+mentorado nunca participou de nenhuma mentoria em grupo realizada — evita confundir "sem dado"
+com "frequência zero".
+
+### 2. Ranking com as 4 ferramentas obrigatórias nomeadas
+`Mentorado.ferramentasConcluidas`/`ferramentasTotal` (dois inteiros soltos) **não são removidos**
+— continuam existindo exatamente como hoje, lidos por `ConsolidatedRepository`/
+`MentoradoConsolidadoRow`/`Response` sem nenhuma mudança de código nesses três arquivos. O que
+muda é como eles passam a ser preenchidos: 4 campos novos em `Mentorado`, um por ferramenta (**DRE
+estruturada, manual de cultura, ficha técnica, manual de processos**), tipados
+`EstadoImplementacao` (SIM/NAO/EM_CONSTRUCAO — reaproveita o enum que já existe pra "cultura
+construída"/"processos desenhados" no Diagnóstico Inicial, `MentoradoDiagnosticoInicial`, em vez
+de inventar um novo). Um método novo em `Mentorado`
+(`atualizarFerramentasObrigatorias(...)`) seta os 4 campos **e recalcula**
+`ferramentasConcluidas`/`ferramentasTotal` na mesma chamada (`ferramentasTotal` fixo em 4;
+`ferramentasConcluidas` = quantas das 4 estão `SIM` — `EM_CONSTRUCAO` conta como não concluída,
+Suposição 2 abaixo). Isso é o que torna a mudança zero-risco pro ranking: o dado que o
+`ConsolidatedService` já lê continua exatamente no mesmo formato de sempre, só passa a ser
+derivado em vez de editável livremente.
+
+### 3. Dois eixos de acompanhamento (engajamento + risco de churn)
+`Mentorado` ganha 3 campos novos: `nivelEngajamento` (`NivelEngajamento`: ALTO/MEDIO/BAIXO,
+nullable), `riscoChurn` (`RiscoChurn`: NAO/ATENCAO/ALTO, nullable), `acompanhamentoAvaliadoEm`
+(`Instant`, nullable — quando foi a última avaliação). **Preenchidos manualmente** pelo
+mentor/time de sucesso, não calculados automaticamente — não há dado confiável hoje pra uma
+fórmula (frequência de mentoria acabou de nascer nesta mesma leva, sem histórico ainda; cumprimento
+de tarefas já vira o `status` existente), e o processo real do cliente já é uma "análise
+pós-check-in" manual (achado no Notion "Padronizações"). **O status único atual
+(`EM_DIA`/`ATENCAO`/`ATRASADO`, calculado em `ConsolidatedService`/`MentoradoConsolidadoResponse.
+from()`) continua existindo, calculado do mesmo jeito de sempre** — os dois eixos novos aparecem
+ao lado, não substituem. Snapshot único, sem histórico nesta leva (Suposição 3).
+
+### Modelagem de banco (M27, migration V42 em diante)
+```sql
+-- V42__presenca_mentoria.sql
+CREATE TABLE presenca_mentoria (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mentoria_id  UUID NOT NULL REFERENCES mentoria(id),
+    mentorado_id UUID NOT NULL REFERENCES mentorado(id),
+    presente     BOOLEAN NOT NULL,
+    criado_em    TIMESTAMP NOT NULL DEFAULT now(),
+    versao       BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT uq_presenca_mentoria UNIQUE (mentoria_id, mentorado_id)
+);
+
+-- V43__mentorado_ferramentas_obrigatorias.sql
+ALTER TABLE mentorado ADD COLUMN ferramenta_dre VARCHAR(20) NOT NULL DEFAULT 'NAO';
+ALTER TABLE mentorado ADD COLUMN ferramenta_manual_cultura VARCHAR(20) NOT NULL DEFAULT 'NAO';
+ALTER TABLE mentorado ADD COLUMN ferramenta_ficha_tecnica VARCHAR(20) NOT NULL DEFAULT 'NAO';
+ALTER TABLE mentorado ADD COLUMN ferramenta_manual_processos VARCHAR(20) NOT NULL DEFAULT 'NAO';
+-- CHECK IN ('SIM','NAO','EM_CONSTRUCAO') nas 4, mesmo padrão de chk_categoria_natureza (V41).
+
+-- V44__mentorado_acompanhamento.sql
+ALTER TABLE mentorado ADD COLUMN nivel_engajamento VARCHAR(10);
+ALTER TABLE mentorado ADD COLUMN risco_churn VARCHAR(10);
+ALTER TABLE mentorado ADD COLUMN acompanhamento_avaliado_em TIMESTAMP;
+-- CHECK nivel_engajamento IN ('ALTO','MEDIO','BAIXO'), risco_churn IN ('NAO','ATENCAO','ALTO').
+```
+
+### Contratos de API (M27)
+```jsonc
+// Novo — só pra Mentoria tipo GRUPO (400 se INDIVIDUAL).
+PATCH /api/v1/admin/mentorias/{id}/presencas
+{ "presencas": [{ "mentoradoId": "...", "presente": true }, { "mentoradoId": "...", "presente": false }] }
+// -> MentoriaResponse (sem mudança de forma, só efeito colateral persistido)
+
+// Novo — mesmo padrão de PATCH .../diagnostico-inicial já existente.
+PATCH /api/v1/admin/mentorados/{id}/ferramentas-obrigatorias
+{ "ferramentaDre": "SIM", "ferramentaManualCultura": "EM_CONSTRUCAO",
+  "ferramentaFichaTecnica": "NAO", "ferramentaManualProcessos": "SIM" }
+// -> MentoradoResponse (ferramentasConcluidas/ferramentasTotal recalculados, visíveis nele)
+
+// Novo.
+PATCH /api/v1/admin/mentorados/{id}/acompanhamento
+{ "nivelEngajamento": "MEDIO", "riscoChurn": "ALTO" }
+// -> MentoradoResponse
+
+// Alterado — 3 campos novos, todos nullable, sem quebrar nenhum consumidor existente do shape.
+GET /api/v1/admin/consolidated/mentorados
+[{ ..., "frequenciaMentoriaPct": 80, "nivelEngajamento": "MEDIO", "riscoChurn": "ALTO" }]
+```
+
+### Suposições
+1. Presença não afeta ranking/progresso nesta leva — métrica separada
+   (`frequenciaMentoriaPct`), só exibição. Se o cliente quiser que afete o cálculo depois, é
+   mudança incremental em `ConsolidatedService`, não retrabalho de schema.
+2. `EM_CONSTRUCAO` conta como "não concluída" no recálculo de `ferramentasConcluidas` — sem dado
+   do cliente sobre se deveria valer meio ponto.
+3. Dois eixos de acompanhamento são snapshot único (`acompanhamentoAvaliadoEm` guarda só a
+   última avaliação) — sem histórico nesta leva. Se o cliente quiser ver evolução ao longo do
+   tempo, vira entidade própria depois (`AvaliacaoAcompanhamento` com data, não sobrescrita).
+4. Presença só se aplica a `TipoMentoria.GRUPO` — individual continua coberta pelo status da
+   sessão inteira, sem mudança.
+5. Os 3 endpoints novos de edição (`presencas`, `ferramentas-obrigatorias`, `acompanhamento`)
+   vivem nas mesmas telas administrativas já existentes (Mentoria/Mentorado), gated pelos mesmos
+   módulos de hoje (`Modulo.MENTORADOS`/`Modulo.PAINEL_CONSOLIDADO` — confirmar RBAC exato ao
+   implementar, sem inventar módulo novo).
+6. Toda essa leva é explicitamente reversível/ajustável quando o Victor responder — nenhuma
+   decisão aqui substitui lógica em produção, só adiciona ao lado.
+
+### Rastreabilidade história ↔ módulo (M27)
+| História | Cobertura |
+|---|---|
+| H17.1 (ranking e painel consolidado) | Estendida — `frequenciaMentoriaPct`, `nivelEngajamento`, `riscoChurn` somados ao que já existe, sem substituir |
+| H5.1-H5.2 (mentoria) | Estendida — presença por participante em mentoria coletiva |
+| — | Ferramentas obrigatórias nomeadas e dois eixos de acompanhamento: pedido direto do cliente (reunião 17/07/2026), decisão de produto tomada pelo Marcos sem resposta do Victor ainda — mesmo padrão de "generaliza agora, ajusta depois" já usado em decisões de catálogo anteriores (M25) |
+
+**Status: Blueprint desenhado (19/07/2026), pronto pra implementar.**
+
 ## Fórmula de prazo
 
 ```
@@ -3524,6 +3657,7 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 19 | M25 · Comercial — formulário único de venda, parcelamento, venda de ingresso, split de comissão (change request pós-MVP, mesma reunião) | Grande · `revisor-seguranca` obrigatório | 6d | ✅ Concluído — backend (449/449 testes) + `revisor-seguranca` em três rodadas (núcleo: achado médio de vagas/status do evento e achado baixo de valor pago no ato, corrigidos; follow-up: achado alto de `LazyInitializationException` no dashboard, corrigido; achado alto de PII em claro em `ContaPagarReceber.descricao`/`AtividadeLog.descricao`, **corrigido em 18/07/2026** via `V28`/`V29` pgcrypto — mais a lacuna irmã em `LancamentoFinanceiro.descricao` achada na confirmação, ver nota acima) + frontend (`LeadsComercialPage` — Diagnóstico, formulário único de venda; `DashboardComercialPage` — venda de ingressos por evento) + E2E (32+23 rodados, sem regressão; os 5 do self-service pausado seguem esperados). Split dashboard/ranking e propagação Lead→Mentorado (Suposições 6-7) fechados. Achados ao vivo: `chk_lead_status` desatualizada (V26), 3 specs E2E ainda com o "Plano fechado" removido. `ProdutoVenda.FORMULA_SAW`/`FORMACAO_PROFISSIONAL` adicionados em 18/07/2026 (`V27`/`V30`) — Suposição 1 (catálogo de produto) totalmente resolvida, nenhuma Pergunta pendente do M25 segue em aberto. **19/07/2026 — 6 gaps achados via raio-x fechados** (457/457 testes, `tsc -b` limpo): `StatusConta.PARCIAL` + `ContaPagarReceber#liquidarParcial` (`V31`); `OrigemVenda.PARCEIRO` (`V32`); `VendaIngresso` ganhou `nomeEmpresa`/`telefone`/`email`, pgcrypto no telefone/email (`V36`); `ProdutoVenda.FICHA_TECNICA_LUCRATIVA` (`V33`); `FormaPagamento.PIX_RECORRENTE` (`V34`); `CategoriaIngresso` corrigido pra `ESSENCIAL`/`VIP`/`ESPECIAL`/`BLACK` (saiu `CORTESIA`, sem migração de dado — zero linhas usavam) (`V35`). Ver `docs/reuniao-2026-07-17-atualizacoes.md` § "Implicações pro desenho" pra detalhe de cada gap. **Gap 7 (hipótese Hotmart líquido/bruto) resolvido depois** (478/478 testes, `tsc -b` limpo): pesquisa confirmou a taxa real da Hotmart (9,9%+R$1, mais antecipação opcional 2,19%-3,59%) — faixa 9,9%-13,5% bate com o padrão real achado (~9-13%). `Lead` ganhou `taxaPlataformaRetida` (pgcrypto, `V37__lead_taxa_plataforma_retida.sql`), terceiro conceito que evita a venda Hotmart aparentar dívida quando o cliente já pagou 100%. Aditivo: overload de `Lead.fecharVenda()` + construtor secundário de `FecharVendaRequest` mantêm todo chamador existente compilando sem mudança. Todos os 8 gaps da leva de raio-x estão fechados |
 | 20 | E14/E17 · Financeiro & Painel Consolidado — itens do "Sequenciamento sugerido" da reunião 17/07/2026 (change request pós-MVP) | Médio (parcial) | — | 🟡 **E14 concluído (19/07/2026, 7 de 7 itens), E17 parcial** — filtro mensal em contas a pagar/receber, rename da aba "Faturamento"→"Dashboard", conciliação contrato×recebido (`ConciliacaoService`/`ConciliacaoController`, vive em `comercial` mas gated `Modulo.FINANCEIRO`), "alimentação automática de contas via venda" (já vinha do M25), evento rastreado no financeiro, merge `ContaPagarReceber`→`LancamentoFinanceiro` (M26, linha 21 abaixo), e **subcategorias/fixo-variável em `CategoriaFinanceira`** (último item — achado no raio-x da planilha real "DRE Financeira Saw": Fixo/Variável é atributo consistente por subcategoria, não campo livre por lançamento; `CategoriaFinanceira` ganhou `grupo` [texto livre, vocabulário diferente entre receita/despesa na planilha real, não enum] e `natureza` [FIXA/VARIAVEL, ambos opcionais, migration `V41__categoria_grupo_natureza.sql` sem migração de dado — Admin popula ao criar/editar categoria]; `DreResponse` ganhou `despesasFixas`/`despesasVariaveis`, novo card no DRE só aparece quando algum valor é != 0). 1 de 4 itens do E17 fechado: campo `Ata.decisoes` (manual + extraído por IA via `ClaudeAtaRascunhoService`, schema de tool-use estendido). Achado à parte (não fazia parte dos "4 itens" do Sequenciamento, mas era um "não validado" pendente): **filtro por mentorado no Painel Consolidado, implementado em 19/07/2026** — busca por nome client-side em `ConsolidatedPage.tsx`, mesmo padrão do filtro por status já existente; filtro por área segue não implementado, exige decisão de produto (`área` hoje só existe em `Colaborador`, não em `Mentorado`). 499/499 testes, `tsc -b` limpo, `revisor-seguranca` **Seguro** em cada item. **Ainda pendente** (documentado em detalhe em `docs/reuniao-2026-07-17-atualizacoes.md` § E17): controle de presença em mentoria, ranking com as 4 ferramentas nomeadas (substitui `ferramentasConcluidas`/`ferramentasTotal` já em produção), dois eixos de acompanhamento (engajamento + risco de churn, substitui o status único `EM_DIA`/`ATENCAO`/`ATRASADO`) — os 3 mexem em lógica de ranking/status já em produção, maior risco, merecem confirmação de produto antes de implementar. Perguntas + pendências de acesso/dado prontas em `docs/reuniao-2026-07-17-atualizacoes.md` § "Perguntas e pendências pro Victor/Matheus" |
 | 21 | M26 · Financeiro — merge `ContaPagarReceber` + `LancamentoFinanceiro` em uma única entidade, categoria obrigatória em toda venda, `valorPagoNoAto` passa a gerar lançamento (change request pós-MVP, item pendente do E14/linha 20) | Grande | ~6-7d | ✅ **Concluído (19/07/2026)** — `ContaPagarReceber`/`ContaPagarReceberRepository`/`ContaPagarReceberService`/`ContaCsvService`/`TipoConta`/`StatusConta` retirados por completo; `LancamentoFinanceiro` absorveu `dataVencimento`/`dataPagamento`/`valorPago` + `liquidar()`/`liquidarParcial()`/`marcarVencida()`; `StatusLancamento` unificado (PREVISTO/PARCIAL/REALIZADO/VENCIDO); migration única `V40__merge_conta_lancamento.sql` (schema+dado real, categorias novas de receita seedadas, `parcela_venda` reapontada). `LeadService` resolve `CategoriaFinanceira` por `ProdutoVenda` (`CATEGORIA_POR_PRODUTO`) tanto pra parcelas quanto pro `valorPagoNoAto` (gera `LancamentoFinanceiro` REALIZADO na hora, antes não gerava nada). `ContaController` virou recorte fino sobre `LancamentoService`/mesma tabela; CSV unificado num serviço só. Frontend: `types.ts`/`ContasPage.tsx`/`LancamentosPage.tsx` atualizados (sem `criarLancamento`, categoria sempre obrigatória, status novos). 496/496 testes backend, `tsc -b` limpo, 10/10 E2E `financeiro`/`financeiro-import-export` + 19/19 `comercial`/`comercial-venda-m25`/`mentorados-comercial-import-export` (confirma o fluxo real de parcelamento→Financeiro ponta a ponta). `revisor-seguranca`: **Seguro**, zero achados sobreviveram à verificação (máquina de estado, RBAC, CSV injection, SQL injection, corrida via `@Version`, migration de dado — tudo conferido). E14 fica com 6 de 7 itens fechados (só falta subcategorias/fixo-variável de `CategoriaFinanceira`) |
+| 22 | M27 · Painel Consolidado — presença em mentoria coletiva, ranking com as 4 ferramentas nomeadas, dois eixos de acompanhamento (últimos 3 itens do E17, change request pós-MVP) | Médio-Grande | ~5d | ✅ **Concluído (19/07/2026)** — decisão de produto tomada pelo Marcos direto, sem resposta do Victor ainda ("responda com o que fizer mais sentido, ajustamos depois se não for o que ele quer") — por isso o desenho é deliberadamente aditivo: `ferramentasConcluidas`/`ferramentasTotal` (agora derivados das 4 ferramentas nomeadas) e o status `EM_DIA`/`ATENCAO`/`ATRASADO` continuam calculados do mesmo jeito de hoje, nada foi substituído. Backend: `PresencaMentoria` (entidade nova, `mentoria_id`+`mentorado_id` único, `MentoriaService.registrarPresencas` só pra `TipoMentoria.GRUPO`), `Mentorado.atualizarFerramentasObrigatorias`/`atualizarAcompanhamento` (PATCH semantics — campo nulo no acompanhamento não apaga valor já registrado), `frequenciaMentoriaPct` mesclado por `mentoradoId` em `ConsolidatedService` (query separada, `PresencaMentoriaRepository.buscarFrequencia`). Migrations `V42`-`V44`. 517/517 testes backend (`PresencaMentoriaRepositoryTest` novo, `@DataJpaTest` contra Postgres real). Frontend: `AtaDetalhePage` ganhou card de presença (só mentoria GRUPO), `MentoradosListaPage` ganhou seções "Ferramentas obrigatórias"/"Acompanhamento", `ConsolidatedPage` ganhou colunas Frequência/Engajamento/Risco de churn. `tsc -b` limpo, E2E: 90/121 passou (`mentorados`/`consolidated`/`mentorias`/`mentorados-contrato-m23` 100% verde incluindo os testes novos de presença/ferramentas/acompanhamento; os 31 que falharam são 100% do self-service do mentorado/Loja pausado por feature flag, não-regressão, ver `AREA_MENTORADO_PAUSADA`). `revisor-seguranca`: **Seguro**, zero achados sobreviveram à verificação (RBAC via `@RequiresModulo`, mentorado_id validado contra participantes da mentoria antes de gravar presença, projeção JPQL escalar sem vazamento entre mentorias, CHECK constraints dos 3 enums novos corretos, sem SQL bruto) |
 | — | **Fase 5 · Homologação** (smoke test via Docker, validação humana E2E, revisão final de segurança, deploy Coolify, **pass transversal de `pgcrypto` nas colunas sensíveis** — ver notas em M04 e M05) | — | 2d | ⬜ |
 
 **Total restante (peso somado): ≈ 60 dias de engenharia** (MVP original) **+ 6.5d** (M23+M24,

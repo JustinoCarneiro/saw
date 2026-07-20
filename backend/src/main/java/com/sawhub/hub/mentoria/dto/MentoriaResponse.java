@@ -5,6 +5,7 @@ import com.sawhub.hub.mentoria.StatusMentoria;
 import com.sawhub.hub.mentoria.TipoMentoria;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public record MentoriaResponse(
@@ -22,12 +23,19 @@ public record MentoriaResponse(
     public record MentorResumo(UUID id, String nome) {
     }
 
-    public record MentoradoResumo(UUID id, String nome) {
+    // E17/M27 — presente nullable: null quando presença não foi carregada nesta resposta (ver
+    // overload from(Mentoria) abaixo, usado por criar/listar/status/materiais), não "ausente".
+    // Só listar/buscar de mentoria em grupo com presença carregada preenche de verdade.
+    public record MentoradoResumo(UUID id, String nome, Boolean presente) {
     }
 
     public static MentoriaResponse from(Mentoria m) {
+        return from(m, Map.of());
+    }
+
+    public static MentoriaResponse from(Mentoria m, Map<UUID, Boolean> presencasPorMentorado) {
         var mentorados = m.getMentorados().stream()
-                .map(mt -> new MentoradoResumo(mt.getId(), mt.getNome()))
+                .map(mt -> new MentoradoResumo(mt.getId(), mt.getNome(), presencasPorMentorado.get(mt.getId())))
                 .sorted((a, b) -> a.nome().compareTo(b.nome()))
                 .toList();
         // Sem filtro de publicado/plano aqui de propósito — visão do Admin, que já cura o

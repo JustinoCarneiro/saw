@@ -44,10 +44,12 @@ class MentoriaServiceTest {
     private ConteudoRepository conteudoRepository;
     @Mock
     private AtividadeLogService atividadeLogService;
+    @Mock
+    private PresencaMentoriaRepository presencaMentoriaRepository;
 
     private MentoriaService service() {
         return new MentoriaService(mentoriaRepository, colaboradorRepository, mentoradoRepository, conteudoRepository,
-                atividadeLogService);
+                atividadeLogService, presencaMentoriaRepository);
     }
 
     private static Conteudo conteudo(UUID id) {
@@ -236,5 +238,78 @@ class MentoriaServiceTest {
         Mentoria atualizada = service().atualizarMateriais(id, List.of());
 
         assertThat(atualizada.getMateriaisRecomendados()).isEmpty();
+    }
+
+    // E17/M27 — presença por mentorado em mentoria GRUPO (ver ROADMAP.md § "Blueprint (M27)").
+    @Test
+    void registrarPresencasEmMentoriaGrupoSalvaUmRegistroPorMentorado() {
+        UUID id = UUID.randomUUID();
+        Mentorado maria = mentorado(UUID.randomUUID(), "Maria");
+        Mentorado joao = mentorado(UUID.randomUUID(), "João");
+        Mentoria mentoria = new Mentoria(TipoMentoria.GRUPO, mentor(UUID.randomUUID()),
+                java.util.Set.of(maria, joao), Instant.now(), 60, null, null);
+        when(mentoriaRepository.buscarPorIdComDetalhes(id)).thenReturn(Optional.of(mentoria));
+        when(presencaMentoriaRepository.findByMentoriaIdAndMentoradoId(any(), any())).thenReturn(Optional.empty());
+        when(presencaMentoriaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest(List.of(
+                new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest.PresencaRequest(maria.getId(), true),
+                new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest.PresencaRequest(joao.getId(), false)));
+        service().registrarPresencas(id, request);
+
+        org.mockito.Mockito.verify(presencaMentoriaRepository, org.mockito.Mockito.times(2)).save(any());
+    }
+
+    @Test
+    void registrarPresencasEmMentoriaIndividualLancaErro() {
+        UUID id = UUID.randomUUID();
+        Mentorado maria = mentorado(UUID.randomUUID(), "Maria");
+        Mentoria mentoria = new Mentoria(TipoMentoria.INDIVIDUAL, mentor(UUID.randomUUID()),
+                java.util.Set.of(maria), Instant.now(), 60, null, null);
+        when(mentoriaRepository.buscarPorIdComDetalhes(id)).thenReturn(Optional.of(mentoria));
+
+        var request = new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest(List.of(
+                new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest.PresencaRequest(maria.getId(), true)));
+
+        assertThatThrownBy(() -> service().registrarPresencas(id, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("grupo");
+        verifyNoInteractions(presencaMentoriaRepository);
+    }
+
+    @Test
+    void registrarPresencasComMentoradoQueNaoParticipaLancaErro() {
+        UUID id = UUID.randomUUID();
+        Mentorado maria = mentorado(UUID.randomUUID(), "Maria");
+        UUID outroId = UUID.randomUUID();
+        Mentoria mentoria = new Mentoria(TipoMentoria.GRUPO, mentor(UUID.randomUUID()),
+                java.util.Set.of(maria), Instant.now(), 60, null, null);
+        when(mentoriaRepository.buscarPorIdComDetalhes(id)).thenReturn(Optional.of(mentoria));
+
+        var request = new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest(List.of(
+                new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest.PresencaRequest(outroId, true)));
+
+        assertThatThrownBy(() -> service().registrarPresencas(id, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("não participa");
+    }
+
+    @Test
+    void registrarPresencasComRegistroJaExistenteAtualizaEmVezDeDuplicar() {
+        UUID id = UUID.randomUUID();
+        Mentorado maria = mentorado(UUID.randomUUID(), "Maria");
+        Mentoria mentoria = new Mentoria(TipoMentoria.GRUPO, mentor(UUID.randomUUID()),
+                java.util.Set.of(maria), Instant.now(), 60, null, null);
+        PresencaMentoria existente = new PresencaMentoria(mentoria, maria, false);
+        when(mentoriaRepository.buscarPorIdComDetalhes(id)).thenReturn(Optional.of(mentoria));
+        when(presencaMentoriaRepository.findByMentoriaIdAndMentoradoId(id, maria.getId())).thenReturn(Optional.of(existente));
+        when(presencaMentoriaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest(List.of(
+                new com.sawhub.hub.mentoria.dto.RegistrarPresencasRequest.PresencaRequest(maria.getId(), true)));
+        service().registrarPresencas(id, request);
+
+        org.mockito.Mockito.verify(presencaMentoriaRepository, org.mockito.Mockito.times(1)).save(existente);
+        assertThat(existente.isPresente()).isTrue();
     }
 }
