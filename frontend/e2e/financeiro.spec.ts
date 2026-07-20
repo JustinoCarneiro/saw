@@ -102,28 +102,33 @@ test.describe('Financeiro (E14)', () => {
     await expect(main.getByText('Fixas', { exact: true })).toBeVisible();
   });
 
-  test('Contas a pagar/receber permite criar e liquidar uma conta', async ({ page }) => {
+  // Change request 20/07/2026 — "Contas a pagar/receber" fundida em "Lançamentos" (mesma tabela
+  // desde o M26, o cliente achou redundante ter 2 abas pro mesmo dado). "Já foi realizado? Não"
+  // no form único substitui o antigo botão "Nova conta"/form dedicado.
+  test('Lançamentos: criar um previsto e liquidar (fusão da antiga "Contas a pagar/receber")', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
-    await page.getByRole('link', { name: 'Contas a pagar/receber' }).click();
-    await expect(page).toHaveURL(/\/admin\/financeiro\/contas$/);
+    await page.getByRole('link', { name: 'Lançamentos' }).click();
+    await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
 
     // Descrição única por execução: a suíte não reseta o banco entre execuções, então uma
     // descrição fixa colide com a linha deixada por uma execução anterior (inclusive uma que
     // falhou no meio do caminho) e quebra o locator abaixo (2 linhas == 2 botões "Liquidar" ==
     // strict-mode violation no Playwright).
-    const descricao = `Conta de teste E2E ${Date.now()}`;
+    const descricao = `Lancamento pendente teste E2E ${Date.now()}`;
     const main = page.getByRole('main');
-    await main.getByRole('button', { name: 'Nova conta' }).click();
-    await main.getByLabel('Descrição').fill(descricao);
-    await main.getByLabel('Valor (R$)').fill('77.00');
-    // M26 — categoria é obrigatória em toda conta/lançamento agora ("todas as vendas e valores
+    await main.getByRole('button', { name: 'Novo lançamento' }).click();
+    await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
+    // M26 — categoria é obrigatória em todo lançamento agora ("todas as vendas e valores
     // precisam ser mapeados no DRE"), não é mais "(opcional)" — ver ROADMAP.md § "Blueprint (M26)".
     await main.getByLabel('Categoria').selectOption({ label: 'Infraestrutura' });
-    await main.getByRole('button', { name: 'Salvar conta' }).click();
+    await main.getByLabel('Já foi realizado?').selectOption({ label: 'Não (previsto)' });
+    await main.getByLabel('Descrição').fill(descricao);
+    await main.getByLabel('Valor (R$)').fill('77.00');
+    await main.getByRole('button', { name: 'Salvar lançamento' }).click();
 
-    const linha = main.locator('text=' + descricao).locator('xpath=ancestor::div[contains(@class,"row")]');
-    await expect(linha.getByText('Pendente')).toBeVisible();
+    const linha = main.getByTestId('lancamento-row').filter({ hasText: descricao });
+    await expect(linha.getByText('Previsto', { exact: true })).toBeVisible();
 
     await linha.getByRole('button', { name: 'Liquidar' }).click();
     await expect(page.getByText(`Liquidar: ${descricao}`)).toBeVisible();

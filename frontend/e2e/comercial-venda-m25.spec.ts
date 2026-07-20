@@ -85,7 +85,10 @@ test.describe('Comercial — formulário único de venda (M25)', () => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.getByRole('link', { name: 'Financeiro' }).click();
-    await page.getByRole('link', { name: 'Contas a pagar/receber' }).click();
+    // Change request 20/07/2026 — "Contas a pagar/receber" fundida em "Lançamentos" (mesma tabela
+    // desde o M26); a tela unificada mostra tudo por padrão (filtro de período desligado), então
+    // as parcelas futuras aparecem sem precisar navegar pra um mês específico.
+    await page.getByRole('link', { name: 'Lançamentos' }).click();
     const financeiroMain = page.getByRole('main');
     await expect(financeiroMain.getByText(`Parcela 1 - ${nome}`)).toBeVisible();
     await expect(financeiroMain.getByText(`Parcela 2 - ${nome}`)).toBeVisible();

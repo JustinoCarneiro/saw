@@ -63,34 +63,21 @@ test.describe('Financeiro — Import/Export CSV (M21)', () => {
     await expect(main.getByText(descricaoValida)).not.toBeVisible();
   });
 
-  test('Contas: exportar CSV dispara o download do arquivo', async ({ page }) => {
+  // Change request 20/07/2026 — "Contas a pagar/receber" fundida em "Lançamentos" (mesma tabela
+  // desde o M26); export de "Contas" foi removido junto com a aba (redundante com o de
+  // Lançamentos, mesmo CSV). Este teste preserva o cenário que só "Contas" cobria: importar uma
+  // linha PREVISTO com dataVencimento preenchida.
+  test('Lançamentos: importar CSV com status Previsto e dataVencimento cria a linha', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
-    await page.getByRole('link', { name: 'Contas a pagar/receber' }).click();
-    await expect(page).toHaveURL(/\/admin\/financeiro\/contas$/);
+    await page.getByRole('link', { name: 'Lançamentos' }).click();
 
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByTestId('csv-exportar').click(),
-    ]);
-
-    expect(download.suggestedFilename()).toBe('contas.csv');
-  });
-
-  test('Contas: importar CSV válido cria a linha e mostra a confirmação', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
-    await page.getByRole('link', { name: 'Financeiro' }).click();
-    await page.getByRole('link', { name: 'Contas a pagar/receber' }).click();
-
-    const descricao = `Conta import CSV E2E ${Date.now()}`;
-    // M26 — import de Contas usa o mesmo cabeçalho unificado de Lançamentos agora (mesma
-    // entidade/serviço por baixo, ver ROADMAP.md § "Blueprint (M26)"); tipo vira DESPESA/RECEITA
-    // (não mais A_PAGAR/A_RECEBER) e categoria/dataCompetencia são obrigatórias.
+    const descricao = `Previsto import CSV E2E ${Date.now()}`;
     const csv = `tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n`
         + `DESPESA;Infraestrutura;${descricao};88,00;25/07/2026;25/07/2026;PREVISTO;\n`;
 
     await page.getByTestId('csv-importar-input').setInputFiles({
-      name: 'contas.csv',
+      name: 'lancamentos.csv',
       mimeType: 'text/csv',
       buffer: Buffer.from(csv, 'utf-8'),
     });

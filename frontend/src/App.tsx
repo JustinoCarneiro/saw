@@ -16,7 +16,6 @@ import { FinanceiroShell } from './features/financeiro/FinanceiroShell';
 import { DashboardFaturamentoPage } from './features/financeiro/DashboardFaturamentoPage';
 import { DrePage } from './features/financeiro/DrePage';
 import { LancamentosPage } from './features/financeiro/LancamentosPage';
-import { ContasPage } from './features/financeiro/ContasPage';
 import { ConciliacaoPage } from './features/financeiro/ConciliacaoPage';
 import { ComercialShell } from './features/comercial/ComercialShell';
 import { DashboardComercialPage } from './features/comercial/DashboardComercialPage';
@@ -113,7 +112,9 @@ export default function App() {
           <Route path="dashboard" element={<DashboardFaturamentoPage />} />
           <Route path="dre" element={<DrePage />} />
           <Route path="lancamentos" element={<LancamentosPage />} />
-          <Route path="contas" element={<ContasPage />} />
+          {/* Change request 20/07/2026 — "Contas a pagar/receber" fundida em "Lançamentos" (mesma
+              tabela desde o M26, 2 abas eram redundantes). Redirect pra quem tinha o link salvo. */}
+          <Route path="contas" element={<Navigate to="../lancamentos" replace />} />
           <Route path="conciliacao" element={<ConciliacaoPage />} />
         </Route>
         <Route
