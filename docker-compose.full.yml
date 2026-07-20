@@ -47,6 +47,18 @@ services:
       APP_RATE_LIMIT_LEAD: "1000"
       APP_RATE_LIMIT_ATA_AUDIO: "1000"
       APP_RATE_LIMIT_PASSWORD_RESET: "1000"
+      # Mesmo raciocínio do scripts/e2e-up.sh: sem MAIL_HOST, o e-mail de redefinição de senha
+      # nunca sai de verdade (application.yml § email — default vazio de propósito, ver comentário
+      # lá). "mailpit" (não "localhost") de propósito — backend roda em container aqui, precisa do
+      # nome do serviço no compose pra resolver via DNS interno do Docker, ao contrário do
+      # e2e-up.sh (Spring Boot nativo no host, onde localhost:1025 já é o Mailpit exposto).
+      # Achado ao vivo (Fase 5, re-verificação 20/07/2026): esqueci-senha.spec.ts (caminho feliz)
+      # sempre falhava aqui — "Nenhum e-mail... encontrado no Mailpit" — porque o e-mail nunca
+      # era enviado de verdade, não por lentidão/timing.
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+      MAIL_USERNAME: e2e
+      MAIL_PASSWORD: e2e
     ports:
       - "8080:8080"
     volumes:
