@@ -9,6 +9,7 @@ import com.sawhub.hub.security.GoogleOAuth2UserService;
 import com.sawhub.hub.security.GoogleOAuthProperties;
 import com.sawhub.hub.security.JsonAuthEntryPoint;
 import com.sawhub.hub.security.JsonLoginFilter;
+import com.sawhub.hub.security.LoginRateLimitFilter;
 import com.sawhub.hub.security.OAuth2FailureHandler;
 import com.sawhub.hub.security.OAuth2SuccessHandler;
 import com.sawhub.hub.security.PasswordResetRateLimitFilter;
@@ -56,6 +57,7 @@ public class SecurityConfig {
     private final LeadRateLimitFilter leadRateLimitFilter;
     private final AtaAudioRateLimitFilter ataAudioRateLimitFilter;
     private final PasswordResetRateLimitFilter passwordResetRateLimitFilter;
+    private final LoginRateLimitFilter loginRateLimitFilter;
     private final GoogleOAuth2UserService googleOAuth2UserService;
     private final OAuth2SuccessHandler oauth2SuccessHandler;
     private final OAuth2FailureHandler oauth2FailureHandler;
@@ -69,6 +71,7 @@ public class SecurityConfig {
                            JsonAuthEntryPoint jsonAuthEntryPoint, CsrfCookieFilter csrfCookieFilter,
                            LeadRateLimitFilter leadRateLimitFilter, AtaAudioRateLimitFilter ataAudioRateLimitFilter,
                            PasswordResetRateLimitFilter passwordResetRateLimitFilter,
+                           LoginRateLimitFilter loginRateLimitFilter,
                            GoogleOAuth2UserService googleOAuth2UserService, OAuth2SuccessHandler oauth2SuccessHandler,
                            OAuth2FailureHandler oauth2FailureHandler, GoogleOAuthProperties googleOAuthProperties,
                            ObjectMapper objectMapper) {
@@ -79,6 +82,7 @@ public class SecurityConfig {
         this.leadRateLimitFilter = leadRateLimitFilter;
         this.ataAudioRateLimitFilter = ataAudioRateLimitFilter;
         this.passwordResetRateLimitFilter = passwordResetRateLimitFilter;
+        this.loginRateLimitFilter = loginRateLimitFilter;
         this.googleOAuth2UserService = googleOAuth2UserService;
         this.oauth2SuccessHandler = oauth2SuccessHandler;
         this.oauth2FailureHandler = oauth2FailureHandler;
@@ -187,6 +191,13 @@ public class SecurityConfig {
                 // H1.4 (M18) — mesmo raciocínio do leadRateLimitFilter: /esqueci-senha nunca
                 // autentica, roda cedo e barato.
                 .addFilterBefore(passwordResetRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                // Achado da revisão final de segurança (Fase 5, 20/07/2026) — precisa rodar ANTES
+                // do jsonLoginFilter (não depois, ao contrário do ataAudioRateLimitFilter): o
+                // pré-check bloqueia cedo quando já estourou o limite, e o filtro observa
+                // response.getStatus() depois que filterChain.doFilter() retorna (control volta
+                // por este mesmo filtro depois que AuthSuccessHandler/AuthFailureHandler já
+                // escreveram 200/401) — ver LoginRateLimitFilter.
+                .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 // Achado (médio) da revisão de segurança do M06 — roda depois (não antes) do filtro
                 // de login: precisa do SecurityContextHolder já populado (via sessão, carregado bem
                 // mais cedo no chain) pra identificar o usuário autenticado, diferente do leadRateLimitFilter.
