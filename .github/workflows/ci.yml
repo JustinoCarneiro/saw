@@ -103,18 +103,26 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
-      # --grep-invert exclui Google OAuth (google-oauth.spec.ts) e o upload de áudio→IA
-      # (mentorados.spec.ts) — os dois dependem de stubs locais (IdP do Google porta 8092,
-      # Whisper/Claude porta 8091) que só scripts/e2e-up.sh sobe como processo Node à parte;
-      # docker-compose.full.yml nunca teve isso (achado Fase 5, 20/07/2026) e replicar aqui
-      # duplicaria infra de stub em dois lugares pra um job cujo objetivo é validar a topologia
-      # de produção (front+back atrás do Nginx), não reintegrações externas — essa cobertura já
-      # existe de ponta a ponta via e2e-up.sh, que continua rodando a suíte completa sem exclusão.
+      # --grep-invert exclui 2 categorias (achado Fase 5, 20/07/2026 — docker-compose.full.yml
+      # nunca teve o que scripts/e2e-up.sh sempre teve, replicar aqui duplicaria infra pra um job
+      # cujo objetivo é validar a topologia de produção, não reintegrações externas; ambas seguem
+      # cobertas de ponta a ponta via e2e-up.sh, que roda a suíte completa sem exclusão nenhuma):
+      # 1. Google OAuth / upload de áudio→IA — dependem de stubs locais (IdP do Google porta 8092,
+      #    Whisper/Claude porta 8091) que só e2e-up.sh sobe como processo Node à parte.
+      # 2. Área do mentorado + Loja — pausada por feature flag desde 17/07/2026
+      #    (AREA_MENTORADO_PAUSADA/LOJA_ADMIN_PAUSADA, ver frontend/src/shared/lib/featureFlags.ts);
+      #    falha de propósito enquanto durar a pausa, não é regressão. Exclusão por describe/arquivo
+      #    inteiro (não por teste individual) — mais simples de manter, ao custo de também pular
+      #    ~12 testes que hoje ainda passam (ex.: alguns "Admin:"/"isolamento por tenant" que usam
+      #    só API direta, sem tocar a tela pausada) — aceito porque e2e-up.sh já cobre esses também.
+      #    Reverter é só remover os termos abaixo quando a pausa acabar.
       - name: Suite E2E completa (Playwright) contra a stack containerizada
         working-directory: frontend
         env:
           E2E_BASE_URL: http://localhost:8081
-        run: npm run test:e2e -- --grep-invert "Google OAuth|upload de áudio"
+        run: >
+          npm run test:e2e -- --grep-invert
+          "Google OAuth|upload de áudio|lado mentorado|Avisos & Notificações|Dashboard do Mentorado|Loja SAW|Materiais & Dicas do Brayan|Metas Estratégicas|Perfil & Gamificação|Produtos \(Loja\)|Tarefas & Agenda"
 
       - name: Upload de screenshots/traces do Playwright em caso de falha
         # playwright.config.ts usa reporter 'list' (sem html) — screenshot/trace só existem em
