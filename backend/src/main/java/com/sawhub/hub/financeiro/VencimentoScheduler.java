@@ -8,29 +8,31 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** H14.4 — marca PENDENTE -&gt; VENCIDO toda conta cujo vencimento já passou. Roda 1x/dia; não
- * precisa de mais frequência que isso (o próprio CLAUDE.md já define @Scheduled como o mecanismo
- * de agendamento do projeto, sem fila assíncrona pesada). */
+/** H14.4 — marca PREVISTO -&gt; VENCIDO todo lançamento com vencimento cujo prazo já passou. Roda
+ * 1x/dia; não precisa de mais frequência que isso (o próprio CLAUDE.md já define @Scheduled como
+ * o mecanismo de agendamento do projeto, sem fila assíncrona pesada). M26 — repontado de
+ * {@code ContaPagarReceberRepository} pra {@code LancamentoFinanceiroRepository} (merge de
+ * entidade, ver ROADMAP.md § "Blueprint (M26)"). */
 @Component
 public class VencimentoScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(VencimentoScheduler.class);
 
-    private final ContaPagarReceberRepository contaRepository;
+    private final LancamentoFinanceiroRepository lancamentoRepository;
 
-    public VencimentoScheduler(ContaPagarReceberRepository contaRepository) {
-        this.contaRepository = contaRepository;
+    public VencimentoScheduler(LancamentoFinanceiroRepository lancamentoRepository) {
+        this.lancamentoRepository = lancamentoRepository;
     }
 
     @Scheduled(cron = "0 0 1 * * *")
     @Transactional
     public void marcarContasVencidas() {
-        List<ContaPagarReceber> pendentesVencidas = contaRepository
-                .findByStatusAndDataVencimentoBefore(StatusConta.PENDENTE, LocalDate.now());
-        pendentesVencidas.forEach(ContaPagarReceber::marcarVencida);
-        contaRepository.saveAll(pendentesVencidas);
-        if (!pendentesVencidas.isEmpty()) {
-            log.info("{} conta(s) marcada(s) como VENCIDA.", pendentesVencidas.size());
+        List<LancamentoFinanceiro> previstosVencidos = lancamentoRepository
+                .findByStatusAndDataVencimentoBefore(StatusLancamento.PREVISTO, LocalDate.now());
+        previstosVencidos.forEach(LancamentoFinanceiro::marcarVencida);
+        lancamentoRepository.saveAll(previstosVencidos);
+        if (!previstosVencidos.isEmpty()) {
+            log.info("{} lançamento(s) marcado(s) como VENCIDO.", previstosVencidos.size());
         }
     }
 }

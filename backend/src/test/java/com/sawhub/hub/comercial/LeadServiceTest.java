@@ -3,6 +3,7 @@ package com.sawhub.hub.comercial;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.times;
@@ -19,7 +20,11 @@ import com.sawhub.hub.comercial.dto.VendaIngressoRequest;
 import com.sawhub.hub.evento.Evento;
 import com.sawhub.hub.evento.EventoRepository;
 import com.sawhub.hub.evento.TipoEvento;
-import com.sawhub.hub.financeiro.ContaPagarReceberRepository;
+import com.sawhub.hub.financeiro.CategoriaFinanceira;
+import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
+import com.sawhub.hub.financeiro.GrupoDre;
+import com.sawhub.hub.financeiro.LancamentoFinanceiroRepository;
+import com.sawhub.hub.financeiro.TipoLancamento;
 import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
@@ -37,7 +42,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** H1.3 + H13.2 — RED primeiro: LeadService ainda não existe neste ponto do ciclo. */
+/** H1.3 + H13.2. M26 — LeadService ganhou LancamentoFinanceiroRepository/CategoriaFinanceiraRepository
+ * (no lugar de ContaPagarReceberRepository) e passou a resolver a categoria financeira de toda
+ * venda (parcela ou valor pago no ato), ver ROADMAP.md § "Blueprint (M26)". */
 @ExtendWith(MockitoExtension.class)
 class LeadServiceTest {
 
@@ -54,11 +61,14 @@ class LeadServiceTest {
     @Mock
     private EventoRepository eventoRepository;
     @Mock
-    private ContaPagarReceberRepository contaPagarReceberRepository;
+    private LancamentoFinanceiroRepository lancamentoFinanceiroRepository;
+    @Mock
+    private CategoriaFinanceiraRepository categoriaFinanceiraRepository;
 
     private LeadService service() {
         return new LeadService(leadRepository, colaboradorRepository, atividadeLogService,
-                parcelaVendaRepository, vendaIngressoRepository, eventoRepository, contaPagarReceberRepository);
+                parcelaVendaRepository, vendaIngressoRepository, eventoRepository,
+                lancamentoFinanceiroRepository, categoriaFinanceiraRepository);
     }
 
     private static Lead leadEmProposta() {
@@ -72,6 +82,15 @@ class LeadServiceTest {
         Colaborador c = new Colaborador(null, nome, Area.COMERCIAL);
         ReflectionTestUtils.setField(c, "id", id);
         return c;
+    }
+
+    // M26 — toda venda com valorPagoNoAto/parcela precisa resolver uma CategoriaFinanceira por
+    // nome (ver LeadService.resolverCategoriaVenda); stub genérico pros testes que não são sobre
+    // esse mapeamento em si.
+    private void stubQualquerCategoriaEncontrada() {
+        CategoriaFinanceira categoria = new CategoriaFinanceira("Categoria teste", TipoLancamento.RECEITA,
+                GrupoDre.RECEITA_BRUTA, null);
+        when(categoriaFinanceiraRepository.findByNomeIgnoreCase(anyString())).thenReturn(List.of(categoria));
     }
 
     @Test
@@ -258,6 +277,8 @@ class LeadServiceTest {
         Lead lead = leadEmProposta();
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubQualquerCategoriaEncontrada();
+        when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new FecharVendaRequest(ProdutoVenda.CONSULTORIA, OrigemVenda.DIRETA,
                 new BigDecimal("9000.00"), new BigDecimal("9000.00"), FormaPagamento.PIX, null, null, null);
@@ -266,16 +287,19 @@ class LeadServiceTest {
         assertThat(fechado.getStatus()).isEqualTo(StatusLead.FECHADO);
         assertThat(fechado.getProdutoVenda()).isEqualTo(ProdutoVenda.CONSULTORIA);
         verify(atividadeLogService).registrar("LEAD_VENDA_FECHADA", "Venda fechada: Maria Souza");
-        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, eventoRepository, contaPagarReceberRepository);
+        // M26 — valorPagoNoAto (9000, igual ao total) agora gera um lançamento REALIZADO.
+        verify(lancamentoFinanceiroRepository).save(any());
+        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, eventoRepository);
     }
 
     @Test
-    void fecharVendaComParcelasCriaContaPagarReceberPraCadaUma() {
+    void fecharVendaComParcelasCriaLancamentoPraCadaUma() {
         UUID leadId = UUID.randomUUID();
         Lead lead = leadEmProposta();
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(contaPagarReceberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubQualquerCategoriaEncontrada();
+        when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(parcelaVendaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var parcelas = List.of(
@@ -286,8 +310,9 @@ class LeadServiceTest {
 
         service().fecharVenda(leadId, request);
 
-        verify(contaPagarReceberRepository, times(2)).save(any());
-        verify(parcelaVendaRepository, org.mockito.Mockito.times(4)).save(any()); // save + vincularConta -> save de novo, por parcela
+        // M26 — 1 lançamento pro valorPagoNoAto + 1 por parcela (2) = 3.
+        verify(lancamentoFinanceiroRepository, times(3)).save(any());
+        verify(parcelaVendaRepository, times(4)).save(any()); // save + vincularLancamento -> save de novo, por parcela
     }
 
     @Test
@@ -333,6 +358,8 @@ class LeadServiceTest {
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(eventoRepository.findById(eventoId)).thenReturn(Optional.of(evento));
         when(vendaIngressoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubQualquerCategoriaEncontrada();
+        when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var ingressos = List.of(
                 new VendaIngressoRequest(CategoriaIngresso.VIP, "João Comprador", "Financeiro", true,
@@ -415,7 +442,7 @@ class LeadServiceTest {
         assertThatThrownBy(() -> service().fecharVenda(leadId, request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("pago no ato");
-        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, contaPagarReceberRepository);
+        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, lancamentoFinanceiroRepository);
     }
 
     // Gap 7 (raio-x + pesquisa da taxa real da Hotmart, confirmado 19/07/2026).
@@ -425,6 +452,8 @@ class LeadServiceTest {
         Lead lead = leadEmProposta();
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubQualquerCategoriaEncontrada();
+        when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new FecharVendaRequest(ProdutoVenda.PRODUTO_DIGITAL, OrigemVenda.HOTMART,
                 new BigDecimal("1000.00"), new BigDecimal("890.00"), FormaPagamento.HOTMART, null, null, null,
@@ -451,7 +480,7 @@ class LeadServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("pago no ato")
                 .hasMessageContaining("taxa de plataforma");
-        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, contaPagarReceberRepository);
+        verifyNoInteractions(parcelaVendaRepository, vendaIngressoRepository, lancamentoFinanceiroRepository);
     }
 
     @Test
@@ -460,6 +489,8 @@ class LeadServiceTest {
         Lead lead = leadEmProposta();
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubQualquerCategoriaEncontrada();
+        when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new FecharVendaRequest(ProdutoVenda.PRODUTO_DIGITAL, OrigemVenda.HOTMART,
                 new BigDecimal("1000.00"), new BigDecimal("890.00"), FormaPagamento.HOTMART, null, null, null,
@@ -468,5 +499,24 @@ class LeadServiceTest {
         Lead fechado = service().fecharVenda(leadId, request);
 
         assertThat(fechado.getStatus()).isEqualTo(StatusLead.FECHADO);
+    }
+
+    // M26 — mapeamento ProdutoVenda→CategoriaFinanceira: se a categoria esperada não estiver
+    // pré-cadastrada (deveria vir da migration V40), falha alto e claro em vez de silenciosamente
+    // deixar a venda sem rastro financeiro.
+    @Test
+    void fecharVendaComCategoriaEsperadaNaoEncontradaLancaErro() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(categoriaFinanceiraRepository.findByNomeIgnoreCase("Consultoria")).thenReturn(List.of());
+
+        var request = new FecharVendaRequest(ProdutoVenda.CONSULTORIA, OrigemVenda.DIRETA,
+                new BigDecimal("9000.00"), new BigDecimal("9000.00"), FormaPagamento.PIX, null, null, null);
+
+        assertThatThrownBy(() -> service().fecharVenda(leadId, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Consultoria");
     }
 }

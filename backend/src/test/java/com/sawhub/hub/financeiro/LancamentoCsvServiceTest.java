@@ -19,7 +19,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
-/** M21 — RED primeiro: LancamentoCsvService ainda não existe neste ponto do ciclo. */
+/** M21 — export/import CSV de {@link LancamentoFinanceiro}. M26 fundiu ContaCsvServiceTest aqui
+ * (mesma entidade agora, ver ROADMAP.md § "Blueprint (M26)"): o cabeçalho ganhou
+ * {@code dataVencimento} opcional e {@code categoria} passou a ser sempre obrigatória (não existe
+ * mais "sem categoria" — decisão de produto do M26, "todas as vendas e valores precisam ser
+ * mapeados no DRE"). */
 @ExtendWith(MockitoExtension.class)
 class LancamentoCsvServiceTest {
 
@@ -38,14 +42,18 @@ class LancamentoCsvServiceTest {
         return new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
     }
 
+    private static CategoriaFinanceira categoriaInfra() {
+        return new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
+    }
+
     private static MockMultipartFile csv(String conteudo) {
         return new MockMultipartFile("arquivo", "lancamentos.csv", "text/csv", conteudo.getBytes(StandardCharsets.UTF_8));
     }
 
-    // --- exportar ---
+    // --- exportar por competência (GET /lancamentos/export) ---
 
     @Test
-    void exportarProduzCsvComPontoEVirgulaVirgulaDecimalEDataPtBr() {
+    void exportarPorCompetenciaProduzCsvComPontoEVirgulaVirgulaDecimalEDataPtBr() {
         CategoriaFinanceira categoria = categoriaAssinatura();
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
                 "Assinatura João Silva", new BigDecimal("397.50"), LocalDate.of(2026, 7, 10),
@@ -54,10 +62,25 @@ class LancamentoCsvServiceTest {
         LocalDate ate = LocalDate.of(2026, 7, 31);
         when(lancamentoService.listar(de, ate, null, null)).thenReturn(List.of(lancamento));
 
-        String csv = service().exportar(de, ate, null, null);
+        String csv = service().exportarPorCompetencia(de, ate, null, null);
 
-        assertThat(csv).contains("tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia");
-        assertThat(csv).contains("RECEITA;Assinaturas;Assinatura João Silva;397,50;10/07/2026;REALIZADO;");
+        assertThat(csv).contains("tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia");
+        assertThat(csv).contains("RECEITA;Assinaturas;Assinatura João Silva;397,50;10/07/2026;;REALIZADO;");
+    }
+
+    @Test
+    void exportarPorCompetenciaComVencimentoPreenchidoMostraAColuna() {
+        CategoriaFinanceira categoria = categoriaInfra();
+        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.DESPESA, categoria,
+                "Servidor", new BigDecimal("180.00"), LocalDate.of(2026, 7, 20), StatusLancamento.PREVISTO,
+                null, null, LocalDate.of(2026, 7, 25));
+        LocalDate de = LocalDate.of(2026, 7, 1);
+        LocalDate ate = LocalDate.of(2026, 7, 31);
+        when(lancamentoService.listar(de, ate, null, null)).thenReturn(List.of(lancamento));
+
+        String csv = service().exportarPorCompetencia(de, ate, null, null);
+
+        assertThat(csv).contains("DESPESA;Infra;Servidor;180,00;20/07/2026;25/07/2026;PREVISTO;");
     }
 
     @Test
@@ -67,9 +90,25 @@ class LancamentoCsvServiceTest {
                 "=SOMA(A1:A2)", new BigDecimal("10.00"), LocalDate.of(2026, 7, 10), StatusLancamento.REALIZADO, null);
         when(lancamentoService.listar(any(), any(), any(), any())).thenReturn(List.of(lancamento));
 
-        String csv = service().exportar(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), null, null);
+        String csv = service().exportarPorCompetencia(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), null, null);
 
         assertThat(csv).contains("'=SOMA(A1:A2)");
+    }
+
+    // --- exportar por vencimento (GET /contas/export — M26, absorvido de ContaCsvServiceTest) ---
+
+    @Test
+    void exportarPorVencimentoUsaOMesmoCabecalhoDeExportarPorCompetencia() {
+        CategoriaFinanceira categoria = categoriaInfra();
+        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.DESPESA, categoria,
+                "Servidor Hostinger", new BigDecimal("180.00"), LocalDate.of(2026, 7, 20), StatusLancamento.PREVISTO,
+                null, null, LocalDate.of(2026, 7, 20));
+        when(lancamentoService.listarPorVencimento(null, null, null, null, null)).thenReturn(List.of(lancamento));
+
+        String csv = service().exportarPorVencimento(null, null, null, null, null);
+
+        assertThat(csv).contains("tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia");
+        assertThat(csv).contains("DESPESA;Infra;Servidor Hostinger;180,00;20/07/2026;20/07/2026;PREVISTO;");
     }
 
     // --- importar: caminho feliz ---
@@ -80,9 +119,9 @@ class LancamentoCsvServiceTest {
         CategoriaFinanceira categoria = categoriaAssinatura();
         when(categoriaRepository.findByNomeIgnoreCase("Assinaturas")).thenReturn(List.of(categoria));
 
-        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n"
-                + "RECEITA;Assinaturas;Mensalidade João;397,50;10/07/2026;REALIZADO;PROFISSIONAL\n"
-                + "RECEITA;Assinaturas;Mensalidade Ana;250,00;11/07/2026;PREVISTO;\n";
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n"
+                + "RECEITA;Assinaturas;Mensalidade João;397,50;10/07/2026;;REALIZADO;PROFISSIONAL\n"
+                + "RECEITA;Assinaturas;Mensalidade Ana;250,00;11/07/2026;15/07/2026;PREVISTO;\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
@@ -95,6 +134,8 @@ class LancamentoCsvServiceTest {
         assertThat(captor.getValue()).hasSize(2);
         assertThat(captor.getValue().get(0).getValor()).isEqualByComparingTo("397.50");
         assertThat(captor.getValue().get(0).getDescricao()).isEqualTo("Mensalidade João");
+        assertThat(captor.getValue().get(0).getDataVencimento()).isNull();
+        assertThat(captor.getValue().get(1).getDataVencimento()).isEqualTo(LocalDate.of(2026, 7, 15));
     }
 
     @Test
@@ -102,8 +143,8 @@ class LancamentoCsvServiceTest {
         CategoriaFinanceira categoria = categoriaAssinatura();
         when(categoriaRepository.findByNomeIgnoreCase("Assinaturas")).thenReturn(List.of(categoria));
 
-        String conteudo = "tipo,categoria,descricao,valor,dataCompetencia,status,planoReferencia\n"
-                + "RECEITA,Assinaturas,Mensalidade,397.50,10/07/2026,REALIZADO,\n";
+        String conteudo = "tipo,categoria,descricao,valor,dataCompetencia,dataVencimento,status,planoReferencia\n"
+                + "RECEITA,Assinaturas,Mensalidade,397.50,10/07/2026,,REALIZADO,\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
@@ -118,9 +159,9 @@ class LancamentoCsvServiceTest {
         CategoriaFinanceira categoria = categoriaAssinatura();
         when(categoriaRepository.findByNomeIgnoreCase("Assinaturas")).thenReturn(List.of(categoria));
 
-        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n"
-                + "RECEITA;Assinaturas;Mensalidade João;397,50;10/07/2026;REALIZADO;\n"
-                + "RECEITA;Assinaturas;Mensalidade Ana;abc;11/07/2026;REALIZADO;\n";
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n"
+                + "RECEITA;Assinaturas;Mensalidade João;397,50;10/07/2026;;REALIZADO;\n"
+                + "RECEITA;Assinaturas;Mensalidade Ana;abc;11/07/2026;;REALIZADO;\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
@@ -137,8 +178,8 @@ class LancamentoCsvServiceTest {
     void importarRejeitaCategoriaInexistente() {
         when(categoriaRepository.findByNomeIgnoreCase("Aluguel")).thenReturn(List.of());
 
-        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n"
-                + "DESPESA;Aluguel;Sede;1000;10/07/2026;REALIZADO;\n";
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n"
+                + "DESPESA;Aluguel;Sede;1000;10/07/2026;;REALIZADO;\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
@@ -147,12 +188,23 @@ class LancamentoCsvServiceTest {
     }
 
     @Test
+    void importarRejeitaCategoriaEmBranco() {
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n"
+                + "DESPESA;;Sede;1000;10/07/2026;;REALIZADO;\n";
+
+        ImportResultResponse resultado = service().importar(csv(conteudo));
+
+        assertThat(resultado.erros()).hasSize(1);
+        assertThat(resultado.erros().get(0).motivo()).contains("Categoria em branco");
+    }
+
+    @Test
     void importarRejeitaCategoriaAmbigua() {
         when(categoriaRepository.findByNomeIgnoreCase("Assinaturas")).thenReturn(
                 List.of(categoriaAssinatura(), categoriaAssinatura()));
 
-        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n"
-                + "RECEITA;Assinaturas;Mensalidade;397,50;10/07/2026;REALIZADO;\n";
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n"
+                + "RECEITA;Assinaturas;Mensalidade;397,50;10/07/2026;;REALIZADO;\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
@@ -164,11 +216,11 @@ class LancamentoCsvServiceTest {
     // o <select> filtrado do frontend) precisa recusar categoria de tipo incompatível.
     @Test
     void importarRejeitaCategoriaComTipoIncompativel() {
-        CategoriaFinanceira categoriaDespesa = new CategoriaFinanceira("Infra", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
+        CategoriaFinanceira categoriaDespesa = categoriaInfra();
         when(categoriaRepository.findByNomeIgnoreCase("Infra")).thenReturn(List.of(categoriaDespesa));
 
-        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n"
-                + "RECEITA;Infra;Mensalidade;397,50;10/07/2026;REALIZADO;\n";
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n"
+                + "RECEITA;Infra;Mensalidade;397,50;10/07/2026;;REALIZADO;\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
@@ -178,8 +230,8 @@ class LancamentoCsvServiceTest {
 
     @Test
     void importarRejeitaArquivoComColunaFaltando() {
-        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia\n"
-                + "RECEITA;Assinaturas;Mensalidade;397,50;10/07/2026\n";
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;planoReferencia\n"
+                + "RECEITA;Assinaturas;Mensalidade;397,50;10/07/2026;;\n";
 
         assertThatThrownBy(() -> service().importar(csv(conteudo)))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -188,7 +240,7 @@ class LancamentoCsvServiceTest {
 
     @Test
     void importarRejeitaArquivoSemLinhasDeDados() {
-        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n";
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n";
 
         assertThatThrownBy(() -> service().importar(csv(conteudo)))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -214,9 +266,10 @@ class LancamentoCsvServiceTest {
 
     @Test
     void importarRejeitaMaisDe5000Linhas() {
-        StringBuilder conteudo = new StringBuilder("tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n");
+        StringBuilder conteudo = new StringBuilder(
+                "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n");
         for (int i = 0; i < 5001; i++) {
-            conteudo.append("RECEITA;Assinaturas;Mensalidade;100;10/07/2026;REALIZADO;\n");
+            conteudo.append("RECEITA;Assinaturas;Mensalidade;100;10/07/2026;;REALIZADO;\n");
         }
 
         assertThatThrownBy(() -> service().importar(csv(conteudo.toString())))

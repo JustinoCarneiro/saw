@@ -15,9 +15,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.hibernate.annotations.ColumnTransformer;
 
-/** H14.1 — receita/despesa lançada, alimenta fluxo de caixa (H14.1), DRE (H14.2) e dashboard
- * de faturamento (H14.3). Máquina de estado: {@link StatusLancamento#PREVISTO} -&gt;
- * {@link StatusLancamento#REALIZADO}. */
+/** H14.1 + H14.4 — receita/despesa lançada, alimenta fluxo de caixa, DRE (H14.2) e dashboard de
+ * faturamento (H14.3). M26 (change request pós-MVP, 19/07/2026) fundiu o antigo
+ * {@code ContaPagarReceber} nesta entidade — "conta a pagar/receber" e "lançamento" eram, na
+ * prática, o mesmo fato financeiro em dois estágios (ver ROADMAP.md § "Blueprint (M26)"):
+ * {@code dataVencimento} presente = rastreada como conta com prazo; ausente = lançamento direto,
+ * sem prazo (ex.: cadastro manual retroativo). Máquina de estado:
+ * {@link StatusLancamento#PREVISTO} -&gt; {@link StatusLancamento#PARCIAL} -&gt;
+ * {@link StatusLancamento#REALIZADO} (ou desvio PREVISTO -&gt; {@link StatusLancamento#VENCIDO}). */
 @Entity
 @Table(name = "lancamento_financeiro")
 public class LancamentoFinanceiro extends BaseEntity {
@@ -60,18 +65,39 @@ public class LancamentoFinanceiro extends BaseEntity {
     @JoinColumn(name = "evento_id")
     private Evento evento;
 
+    // M26 — campos absorvidos de ContaPagarReceber. dataVencimento nula = lançamento direto, sem
+    // rastreio de prazo (ex.: "Novo lançamento" manual, já PREVISTO/REALIZADO no cadastro).
+    @Column(name = "data_vencimento")
+    private LocalDate dataVencimento;
+
+    @Column(name = "data_pagamento")
+    private LocalDate dataPagamento;
+
+    // Gap 1 (raio-x, 18/07/2026): quanto já foi pago/recebido enquanto o lançamento está PARCIAL.
+    // Null enquanto PREVISTO/VENCIDO (nunca recebeu pagamento nenhum); igual a `valor` quando
+    // liquidado por completo (REALIZADO) — ver liquidarParcial().
+    @Column(name = "valor_pago")
+    private BigDecimal valorPago;
+
     protected LancamentoFinanceiro() {
     }
 
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
                                  BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
                                  Plano planoReferencia) {
-        this(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia, null);
+        this(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia, null, null);
     }
 
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
                                  BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
                                  Plano planoReferencia, Evento evento) {
+        this(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia, evento, null);
+    }
+
+    /** M26 — construtor canônico, ganha {@code dataVencimento} (nullable, ver Javadoc da classe). */
+    public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
+                                 BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
+                                 Plano planoReferencia, Evento evento, LocalDate dataVencimento) {
         this.tipo = tipo;
         this.categoria = categoria;
         this.descricao = descricao;
@@ -80,6 +106,53 @@ public class LancamentoFinanceiro extends BaseEntity {
         this.status = status;
         this.planoReferencia = planoReferencia;
         this.evento = evento;
+        this.dataVencimento = dataVencimento;
+    }
+
+    /** M26 (absorvido de {@code ContaPagarReceber#liquidar}) — só permitido a partir de
+     * PREVISTO/PARCIAL. A data de pagamento também vira a nova {@code dataCompetencia}: o DRE
+     * sempre contou o fato financeiro no dia em que foi de fato realizado, não no vencimento
+     * original (mesmo comportamento de antes, só que na mesma linha em vez de gerar um segundo
+     * registro). */
+    public void liquidar(LocalDate dataPagamento) {
+        if (status == StatusLancamento.REALIZADO) {
+            throw new IllegalStateException("Este lançamento já foi liquidado.");
+        }
+        this.dataPagamento = dataPagamento;
+        this.dataCompetencia = dataPagamento;
+        this.valorPago = valor;
+        this.status = StatusLancamento.REALIZADO;
+    }
+
+    public void marcarVencida() {
+        if (status == StatusLancamento.PREVISTO) {
+            this.status = StatusLancamento.VENCIDO;
+        }
+    }
+
+    /** M26 (absorvido de {@code ContaPagarReceber#liquidarParcial}) — pagamento parcial,
+     * acumulativo: pode ser chamado várias vezes. Se o total acumulado cobrir o valor do
+     * lançamento, liquida por completo (mesmo destino de {@link #liquidar}, inclusive a
+     * atualização de {@code dataCompetencia}) — não dá pra ficar PARCIAL tendo pago 100%. */
+    public void liquidarParcial(BigDecimal valorPagoAdicional, LocalDate dataPagamento) {
+        if (status == StatusLancamento.REALIZADO) {
+            throw new IllegalStateException("Este lançamento já foi liquidado.");
+        }
+        if (valorPagoAdicional == null || valorPagoAdicional.signum() <= 0) {
+            throw new IllegalArgumentException("Valor pago deve ser positivo.");
+        }
+        BigDecimal totalPago = (this.valorPago == null ? BigDecimal.ZERO : this.valorPago).add(valorPagoAdicional);
+        if (totalPago.compareTo(valor) > 0) {
+            throw new IllegalArgumentException("Valor pago não pode ultrapassar o valor do lançamento.");
+        }
+        this.dataPagamento = dataPagamento;
+        this.valorPago = totalPago;
+        if (totalPago.compareTo(valor) == 0) {
+            this.dataCompetencia = dataPagamento;
+            this.status = StatusLancamento.REALIZADO;
+        } else {
+            this.status = StatusLancamento.PARCIAL;
+        }
     }
 
     public TipoLancamento getTipo() {
@@ -112,5 +185,17 @@ public class LancamentoFinanceiro extends BaseEntity {
 
     public Evento getEvento() {
         return evento;
+    }
+
+    public LocalDate getDataVencimento() {
+        return dataVencimento;
+    }
+
+    public LocalDate getDataPagamento() {
+        return dataPagamento;
+    }
+
+    public BigDecimal getValorPago() {
+        return valorPago;
     }
 }

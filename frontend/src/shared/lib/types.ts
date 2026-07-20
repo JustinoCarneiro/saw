@@ -77,11 +77,11 @@ export interface RankingFaturamento {
 
 // E14 · Financeiro & DRE
 export type TipoLancamento = 'RECEITA' | 'DESPESA';
-export type StatusLancamento = 'PREVISTO' | 'REALIZADO';
+// M26 — merge ContaPagarReceber+LancamentoFinanceiro: PAGO/RECEBIDO colapsam em REALIZADO (a
+// direção já vem de TipoLancamento), PENDENTE virou PREVISTO (mesmo conceito).
+export type StatusLancamento = 'PREVISTO' | 'PARCIAL' | 'REALIZADO' | 'VENCIDO';
 export type GrupoDre = 'RECEITA_BRUTA' | 'DEDUCOES' | 'CUSTOS' | 'DESPESA_OPERACIONAL';
 export type OrigemReceita = 'ASSINATURA' | 'LOJA' | 'EVENTO' | 'OUTRA';
-export type TipoConta = 'A_PAGAR' | 'A_RECEBER';
-export type StatusConta = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'RECEBIDO' | 'VENCIDO';
 export type Plano = 'GRATUITO' | 'BASICO' | 'ESSENCIAL' | 'PROFISSIONAL';
 
 export interface CategoriaFinanceira {
@@ -92,6 +92,10 @@ export interface CategoriaFinanceira {
   origemReceita: OrigemReceita | null;
 }
 
+// M26 — merge ContaPagarReceber+LancamentoFinanceiro numa entidade só (ver ROADMAP.md § "Blueprint
+// (M26)"). dataVencimento/dataPagamento/valorPago são o que ContaPagarReceber tinha e Lancamento
+// não tinha; dataVencimento ausente = lançamento direto, sem prazo. `Conta` deixou de existir como
+// tipo próprio — as duas telas (Lançamentos/Contas) agora leem o mesmo `Lancamento`.
 export interface Lancamento {
   id: string;
   tipo: TipoLancamento;
@@ -103,21 +107,9 @@ export interface Lancamento {
   planoReferencia: Plano | null;
   eventoId: string | null;
   eventoTitulo: string | null;
-}
-
-export interface Conta {
-  id: string;
-  tipo: TipoConta;
-  descricao: string;
-  valor: number;
-  dataVencimento: string;
+  dataVencimento: string | null;
   dataPagamento: string | null;
-  status: StatusConta;
   valorPago: number | null;
-  lancamentoId: string | null;
-  // Change request 17/07/2026 ("evento no financeiro").
-  eventoId: string | null;
-  eventoTitulo: string | null;
 }
 
 // Change request 17/07/2026 ("evento no financeiro") — seletor de evento em Nova conta/filtro.

@@ -5,9 +5,9 @@ import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.comercial.dto.ConciliacaoVendaResponse;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
-import com.sawhub.hub.financeiro.ContaPagarReceber;
 import com.sawhub.hub.financeiro.GrupoDre;
-import com.sawhub.hub.financeiro.TipoConta;
+import com.sawhub.hub.financeiro.LancamentoFinanceiro;
+import com.sawhub.hub.financeiro.StatusLancamento;
 import com.sawhub.hub.financeiro.TipoLancamento;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,8 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/** Change request 17/07/2026 ("conciliação") — RED primeiro: ConciliacaoService ainda não existe
- * neste ponto do ciclo. */
+/** Change request 17/07/2026 ("conciliação"). M26 repontou de ContaPagarReceber pra
+ * LancamentoFinanceiro (merge de entidade, ver ROADMAP.md § "Blueprint (M26)"). */
 @ExtendWith(MockitoExtension.class)
 class ConciliacaoServiceTest {
 
@@ -41,23 +41,27 @@ class ConciliacaoServiceTest {
         return lead;
     }
 
-    private static ContaPagarReceber contaLiquidada(BigDecimal valor) {
-        CategoriaFinanceira categoria = new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null);
-        ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_RECEBER, "Parcela", valor, LocalDate.of(2026, 8, 1), categoria);
-        conta.liquidar(LocalDate.of(2026, 7, 20), null);
-        return conta;
+    private static CategoriaFinanceira categoria() {
+        return new CategoriaFinanceira("Mentoria Contínua", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null);
     }
 
-    private static ContaPagarReceber contaParcial(BigDecimal valorTotal, BigDecimal valorPago) {
-        CategoriaFinanceira categoria = new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null);
-        ContaPagarReceber conta = new ContaPagarReceber(TipoConta.A_RECEBER, "Parcela", valorTotal, LocalDate.of(2026, 9, 1), categoria);
-        conta.liquidarParcial(valorPago, LocalDate.of(2026, 7, 20));
-        return conta;
+    private static LancamentoFinanceiro lancamentoLiquidado(BigDecimal valor) {
+        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria(), "Parcela",
+                valor, LocalDate.of(2026, 8, 1), StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 1));
+        lancamento.liquidar(LocalDate.of(2026, 7, 20));
+        return lancamento;
     }
 
-    private static ContaPagarReceber contaPendente(BigDecimal valor) {
-        CategoriaFinanceira categoria = new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null);
-        return new ContaPagarReceber(TipoConta.A_RECEBER, "Parcela", valor, LocalDate.of(2026, 10, 1), categoria);
+    private static LancamentoFinanceiro lancamentoParcial(BigDecimal valorTotal, BigDecimal valorPago) {
+        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria(), "Parcela",
+                valorTotal, LocalDate.of(2026, 9, 1), StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 9, 1));
+        lancamento.liquidarParcial(valorPago, LocalDate.of(2026, 7, 20));
+        return lancamento;
+    }
+
+    private static LancamentoFinanceiro lancamentoPrevisto(BigDecimal valor) {
+        return new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria(), "Parcela", valor,
+                LocalDate.of(2026, 10, 1), StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 10, 1));
     }
 
     @Test
@@ -80,9 +84,9 @@ class ConciliacaoServiceTest {
     void listarSomaParcelasLiquidadasIntegralmente() {
         Lead lead = leadFechado("João Silva", new BigDecimal("26000.00"), new BigDecimal("6000.00"), null);
         ParcelaVenda p1 = new ParcelaVenda(lead, 1, new BigDecimal("10000.00"), LocalDate.of(2026, 8, 17));
-        p1.vincularConta(contaLiquidada(new BigDecimal("10000.00")));
+        p1.vincularLancamento(lancamentoLiquidado(new BigDecimal("10000.00")));
         ParcelaVenda p2 = new ParcelaVenda(lead, 2, new BigDecimal("10000.00"), LocalDate.of(2026, 9, 17));
-        p2.vincularConta(contaPendente(new BigDecimal("10000.00")));
+        p2.vincularLancamento(lancamentoPrevisto(new BigDecimal("10000.00")));
         when(leadRepository.buscarComVendaFechada()).thenReturn(List.of(lead));
         when(parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId())).thenReturn(List.of(p1, p2));
 
@@ -97,7 +101,7 @@ class ConciliacaoServiceTest {
     void listarSomaSoOValorPagoDeParcelaEmLiquidacaoParcial() {
         Lead lead = leadFechado("Ana Costa", new BigDecimal("5000.00"), BigDecimal.ZERO, null);
         ParcelaVenda p1 = new ParcelaVenda(lead, 1, new BigDecimal("5000.00"), LocalDate.of(2026, 8, 17));
-        p1.vincularConta(contaParcial(new BigDecimal("5000.00"), new BigDecimal("2000.00")));
+        p1.vincularLancamento(lancamentoParcial(new BigDecimal("5000.00"), new BigDecimal("2000.00")));
         when(leadRepository.buscarComVendaFechada()).thenReturn(List.of(lead));
         when(parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId())).thenReturn(List.of(p1));
 

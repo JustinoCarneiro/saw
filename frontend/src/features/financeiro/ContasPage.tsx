@@ -5,26 +5,34 @@ import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
-import type { CategoriaFinanceira, Conta, EventoResumoFinanceiro, StatusConta, TipoConta } from '../../shared/lib/types';
+import type { CategoriaFinanceira, Lancamento, EventoResumoFinanceiro, StatusLancamento, TipoLancamento } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import styles from './ContasPage.module.css';
 
+// M26 — "conta a pagar/receber" deixou de ser uma entidade própria (ver ROADMAP.md § "Blueprint
+// (M26)"): esta tela é um recorte por dataVencimento sobre a mesma tabela de Lançamentos.
+// TipoConta/StatusConta foram retirados — TipoLancamento (RECEITA/DESPESA) já carrega a mesma
+// direção que A_PAGAR/A_RECEBER carregava, e StatusLancamento REALIZADO substitui PAGO/RECEBIDO.
+
 const COLUMNS = '1.2fr 2fr 1fr 1fr 1fr 1fr';
 
-const TIPO_LABEL: Record<TipoConta, string> = { A_PAGAR: 'A pagar', A_RECEBER: 'A receber' };
+const TIPO_LABEL: Record<TipoLancamento, string> = { DESPESA: 'A pagar', RECEITA: 'A receber' };
 
-const STATUS_LABEL: Record<StatusConta, { label: string; bg: string; color: string }> = {
-  PENDENTE: { label: 'Pendente', bg: 'var(--warning-bg)', color: 'var(--warning)' },
-  PARCIAL: { label: 'Parcial', bg: 'var(--warning-bg)', color: 'var(--warning)' },
-  PAGO: { label: 'Pago', bg: 'var(--success-bg)', color: 'var(--success)' },
-  RECEBIDO: { label: 'Recebido', bg: 'var(--success-bg)', color: 'var(--success)' },
-  VENCIDO: { label: 'Vencido', bg: 'var(--danger-bg)', color: 'var(--danger)' },
-};
+function statusLabel(l: Lancamento): { label: string; bg: string; color: string } {
+  if (l.status === 'REALIZADO') {
+    return l.tipo === 'DESPESA'
+      ? { label: 'Pago', bg: 'var(--success-bg)', color: 'var(--success)' }
+      : { label: 'Recebido', bg: 'var(--success-bg)', color: 'var(--success)' };
+  }
+  if (l.status === 'PARCIAL') return { label: 'Parcial', bg: 'var(--warning-bg)', color: 'var(--warning)' };
+  if (l.status === 'VENCIDO') return { label: 'Vencido', bg: 'var(--danger-bg)', color: 'var(--danger)' };
+  return { label: 'Pendente', bg: 'var(--warning-bg)', color: 'var(--warning)' };
+}
 
 export function ContasPage() {
-  const [tipo, setTipo] = useState<TipoConta | ''>('');
-  const [status, setStatus] = useState<StatusConta | ''>('');
+  const [tipo, setTipo] = useState<TipoLancamento | ''>('');
+  const [status, setStatus] = useState<StatusLancamento | ''>('');
   // Change request 17/07/2026 ("filtro mensal") — desligado por padrão (mantém o comportamento
   // de sempre listar tudo); ano/mes só vão pro request quando o filtro está ligado.
   const now = new Date();
@@ -34,19 +42,19 @@ export function ContasPage() {
   // Change request 17/07/2026 ("evento no financeiro").
   const [eventoId, setEventoId] = useState('');
   const [eventos, setEventos] = useState<EventoResumoFinanceiro[]>([]);
-  const [contas, setContas] = useState<Conta[] | null>(null);
+  const [contas, setContas] = useState<Lancamento[] | null>(null);
   const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [liquidando, setLiquidando] = useState<Conta | null>(null);
-  const [liquidandoParcial, setLiquidandoParcial] = useState<Conta | null>(null);
+  const [liquidando, setLiquidando] = useState<Lancamento | null>(null);
+  const [liquidandoParcial, setLiquidandoParcial] = useState<Lancamento | null>(null);
 
   const periodoParams = filtroMesLigado ? { ano, mes } : { ano: undefined, mes: undefined };
 
   const carregar = () => {
     setContas(null);
     apiClient
-      .get<Conta[]>('/admin/financeiro/contas', {
+      .get<Lancamento[]>('/admin/financeiro/contas', {
         params: { tipo: tipo || undefined, status: status || undefined, eventoId: eventoId || undefined, ...periodoParams },
       })
       .then((res) => setContas(res.data))
@@ -68,17 +76,16 @@ export function ContasPage() {
     <div>
       <div className={styles.toolbar}>
         <div className={styles.filters}>
-          <select className={styles.select} value={tipo} onChange={(e) => setTipo(e.target.value as TipoConta | '')}>
+          <select className={styles.select} value={tipo} onChange={(e) => setTipo(e.target.value as TipoLancamento | '')}>
             <option value="">Todos os tipos</option>
-            <option value="A_PAGAR">A pagar</option>
-            <option value="A_RECEBER">A receber</option>
+            <option value="DESPESA">A pagar</option>
+            <option value="RECEITA">A receber</option>
           </select>
-          <select className={styles.select} value={status} onChange={(e) => setStatus(e.target.value as StatusConta | '')}>
+          <select className={styles.select} value={status} onChange={(e) => setStatus(e.target.value as StatusLancamento | '')}>
             <option value="">Todos os status</option>
-            <option value="PENDENTE">Pendente</option>
+            <option value="PREVISTO">Pendente</option>
             <option value="PARCIAL">Parcial</option>
-            <option value="PAGO">Pago</option>
-            <option value="RECEBIDO">Recebido</option>
+            <option value="REALIZADO">Pago/Recebido</option>
             <option value="VENCIDO">Vencido</option>
           </select>
           <select className={styles.select} value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
@@ -146,8 +153,8 @@ export function ContasPage() {
         {contas === null && !error && <div className={styles.loading}>Carregando…</div>}
         {contas?.length === 0 && <div className={styles.loading}>Nenhuma conta encontrada.</div>}
         {contas?.map((c) => {
-          const st = STATUS_LABEL[c.status];
-          const podeLiquidar = c.status === 'PENDENTE' || c.status === 'VENCIDO' || c.status === 'PARCIAL';
+          const st = statusLabel(c);
+          const podeLiquidar = c.status === 'PREVISTO' || c.status === 'VENCIDO' || c.status === 'PARCIAL';
           return (
             <DataGridRow key={c.id} columns={COLUMNS}>
               <div className={styles.muted}>{TIPO_LABEL[c.tipo]}</div>
@@ -161,7 +168,9 @@ export function ContasPage() {
                   <div className={styles.muted}>pago: {formatBRL(c.valorPago)}</div>
                 )}
               </div>
-              <div className={styles.muted}>{new Date(c.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+              <div className={styles.muted}>
+                {c.dataVencimento ? new Date(c.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+              </div>
               <div>
                 <Pill bg={st.bg} color={st.color}>{st.label}</Pill>
               </div>
@@ -193,7 +202,7 @@ function NovaContaForm({ categorias, eventos, onCriado, onCancelar }: {
   onCriado: () => void;
   onCancelar: () => void;
 }) {
-  const [tipo, setTipo] = useState<TipoConta>('A_PAGAR');
+  const [tipo, setTipo] = useState<TipoLancamento>('DESPESA');
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
   const [dataVencimento, setDataVencimento] = useState(new Date().toISOString().slice(0, 10));
@@ -202,17 +211,24 @@ function NovaContaForm({ categorias, eventos, onCriado, onCancelar }: {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // A_PAGAR nasce de uma despesa (custo/despesa operacional); A_RECEBER, de uma receita.
-  const categoriasDoTipo = categorias.filter((c) => (tipo === 'A_PAGAR' ? c.tipo === 'DESPESA' : c.tipo === 'RECEITA'));
+  // DESPESA nasce de um custo/despesa operacional; RECEITA, de uma receita.
+  const categoriasDoTipo = categorias.filter((c) => c.tipo === tipo);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!categoriaId) {
+      setError('Selecione uma categoria.');
+      return;
+    }
     setSubmitting(true);
     try {
-      await apiClient.post('/admin/financeiro/contas', {
-        tipo, descricao, valor: Number(valor), dataVencimento, categoriaId: categoriaId || null,
-        eventoId: eventoId || null,
+      // M26 — POST unificado em /lancamentos (não existe mais POST /contas próprio). Uma "conta"
+      // nova nasce PREVISTO, com dataCompetencia igual à dataVencimento (melhor palpite disponível
+      // até liquidar — ver LancamentoFinanceiro no backend, que atualiza pra data real do pagamento).
+      await apiClient.post('/admin/financeiro/lancamentos', {
+        tipo, descricao, valor: Number(valor), dataVencimento, dataCompetencia: dataVencimento,
+        status: 'PREVISTO', categoriaId, eventoId: eventoId || null,
       });
       onCriado();
     } catch (err) {
@@ -228,9 +244,9 @@ function NovaContaForm({ categorias, eventos, onCriado, onCancelar }: {
         <div className={styles.formRow}>
           <label className={styles.formField}>
             Tipo
-            <select className={styles.select} value={tipo} onChange={(e) => { setTipo(e.target.value as TipoConta); setCategoriaId(''); }}>
-              <option value="A_PAGAR">A pagar</option>
-              <option value="A_RECEBER">A receber</option>
+            <select className={styles.select} value={tipo} onChange={(e) => { setTipo(e.target.value as TipoLancamento); setCategoriaId(''); }}>
+              <option value="DESPESA">A pagar</option>
+              <option value="RECEITA">A receber</option>
             </select>
           </label>
           <label className={styles.formField} style={{ flex: 2 }}>
@@ -248,9 +264,9 @@ function NovaContaForm({ categorias, eventos, onCriado, onCancelar }: {
             <input className={styles.textInput} type="date" value={dataVencimento} onChange={(e) => setDataVencimento(e.target.value)} required />
           </label>
           <label className={styles.formField}>
-            Categoria (opcional)
-            <select className={styles.select} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
-              <option value="">Sem categoria</option>
+            Categoria
+            <select className={styles.select} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} required>
+              <option value="">{categoriasDoTipo.length === 0 ? 'Nenhuma categoria cadastrada' : 'Selecione…'}</option>
               {categoriasDoTipo.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
@@ -281,12 +297,11 @@ function NovaContaForm({ categorias, eventos, onCriado, onCancelar }: {
 }
 
 function LiquidarContaForm({ conta, onLiquidado, onCancelar }: {
-  conta: Conta;
+  conta: Lancamento;
   onLiquidado: () => void;
   onCancelar: () => void;
 }) {
   const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().slice(0, 10));
-  const [criarLancamento, setCriarLancamento] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -295,7 +310,8 @@ function LiquidarContaForm({ conta, onLiquidado, onCancelar }: {
     setError(null);
     setSubmitting(true);
     try {
-      await apiClient.patch(`/admin/financeiro/contas/${conta.id}/liquidar`, { dataPagamento, criarLancamento });
+      // M26 — sem criarLancamento: liquidar sempre é mutar o próprio lançamento pra REALIZADO.
+      await apiClient.patch(`/admin/financeiro/contas/${conta.id}/liquidar`, { dataPagamento });
       onLiquidado();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível liquidar. Tente novamente.'));
@@ -312,12 +328,8 @@ function LiquidarContaForm({ conta, onLiquidado, onCancelar }: {
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <label className={styles.formField}>
-            Data do {conta.tipo === 'A_PAGAR' ? 'pagamento' : 'recebimento'}
+            Data do {conta.tipo === 'DESPESA' ? 'pagamento' : 'recebimento'}
             <input className={styles.textInput} type="date" value={dataPagamento} onChange={(e) => setDataPagamento(e.target.value)} required />
-          </label>
-          <label className={styles.checkboxField}>
-            <input type="checkbox" checked={criarLancamento} onChange={(e) => setCriarLancamento(e.target.checked)} />
-            Gerar lançamento financeiro correspondente
           </label>
         </div>
 
@@ -335,10 +347,10 @@ function LiquidarContaForm({ conta, onLiquidado, onCancelar }: {
 }
 
 // Gap 1 (raio-x, 18/07/2026) — pagamento parcial, acumulativo (ver
-// ContaPagarReceber#liquidarParcial no backend). Não oferece "Gerar lançamento": diferente da
+// LancamentoFinanceiro#liquidarParcial no backend). Não oferece "Gerar lançamento": diferente da
 // liquidação total, o valor de um pagamento parcial não corresponde ao valor cheio da conta.
 function LiquidarParcialContaForm({ conta, onLiquidado, onCancelar }: {
-  conta: Conta;
+  conta: Lancamento;
   onLiquidado: () => void;
   onCancelar: () => void;
 }) {
@@ -375,7 +387,7 @@ function LiquidarParcialContaForm({ conta, onLiquidado, onCancelar }: {
                    value={valorPago} onChange={(e) => setValorPago(e.target.value)} required />
           </label>
           <label className={styles.formField}>
-            Data do {conta.tipo === 'A_PAGAR' ? 'pagamento' : 'recebimento'}
+            Data do {conta.tipo === 'DESPESA' ? 'pagamento' : 'recebimento'}
             <input className={styles.textInput} type="date" value={dataPagamento} onChange={(e) => setDataPagamento(e.target.value)} required />
           </label>
         </div>

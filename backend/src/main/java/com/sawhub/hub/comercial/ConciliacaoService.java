@@ -1,8 +1,8 @@
 package com.sawhub.hub.comercial;
 
 import com.sawhub.hub.comercial.dto.ConciliacaoVendaResponse;
-import com.sawhub.hub.financeiro.ContaPagarReceber;
-import com.sawhub.hub.financeiro.StatusConta;
+import com.sawhub.hub.financeiro.LancamentoFinanceiro;
+import com.sawhub.hub.financeiro.StatusLancamento;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
  * parcelas estruturadas ({@link ParcelaVenda}). Vive em {@code comercial} (mesmo pacote de
  * {@link Lead}/{@link ParcelaVenda}, evita depender de {@code financeiro} → {@code comercial} e
  * criar ciclo de pacote) mas o endpoint é gated {@code Modulo.FINANCEIRO} — mesmo padrão já usado
- * em {@code MentoradoContratoController} (M23): pacote de origem do dado ≠ quem deveria ver o dado. */
+ * em {@code MentoradoContratoController} (M23): pacote de origem do dado ≠ quem deveria ver o dado.
+ * M26 repontou de {@code ContaPagarReceber}/{@code StatusConta} pra {@code LancamentoFinanceiro}/
+ * {@code StatusLancamento} (merge de entidade, ver ROADMAP.md § "Blueprint (M26)"). */
 @Service
 public class ConciliacaoService {
 
@@ -32,14 +34,14 @@ public class ConciliacaoService {
     private ConciliacaoVendaResponse conciliar(Lead lead) {
         BigDecimal recebido = zeroSeNulo(lead.getValorPagoNoAto()).add(zeroSeNulo(lead.getTaxaPlataformaRetida()));
         for (ParcelaVenda parcela : parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId())) {
-            ContaPagarReceber conta = parcela.getContaPagarReceber();
-            if (conta == null) {
+            LancamentoFinanceiro lancamento = parcela.getLancamento();
+            if (lancamento == null) {
                 continue;
             }
-            if (conta.getStatus() == StatusConta.PAGO || conta.getStatus() == StatusConta.RECEBIDO) {
+            if (lancamento.getStatus() == StatusLancamento.REALIZADO) {
                 recebido = recebido.add(parcela.getValor());
-            } else if (conta.getStatus() == StatusConta.PARCIAL) {
-                recebido = recebido.add(zeroSeNulo(conta.getValorPago()));
+            } else if (lancamento.getStatus() == StatusLancamento.PARCIAL) {
+                recebido = recebido.add(zeroSeNulo(lancamento.getValorPago()));
             }
         }
 

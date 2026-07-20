@@ -85,9 +85,9 @@ test.describe('Financeiro (E14)', () => {
     await main.getByRole('button', { name: 'Nova conta' }).click();
     await main.getByLabel('Descrição').fill(descricao);
     await main.getByLabel('Valor (R$)').fill('77.00');
-    // Categoria é obrigatória pra liquidar gerando lançamento (padrão do form) — sem ela o
-    // backend rejeita com 409 ("Conta sem categoria não pode gerar lançamento automático").
-    await main.getByLabel('Categoria (opcional)').selectOption({ label: 'Infraestrutura' });
+    // M26 — categoria é obrigatória em toda conta/lançamento agora ("todas as vendas e valores
+    // precisam ser mapeados no DRE"), não é mais "(opcional)" — ver ROADMAP.md § "Blueprint (M26)".
+    await main.getByLabel('Categoria').selectOption({ label: 'Infraestrutura' });
     await main.getByRole('button', { name: 'Salvar conta' }).click();
 
     const linha = main.locator('text=' + descricao).locator('xpath=ancestor::div[contains(@class,"row")]');
@@ -99,28 +99,5 @@ test.describe('Financeiro (E14)', () => {
 
     await expect(page.getByText(`Liquidar: ${descricao}`)).not.toBeVisible();
     await expect(linha.getByText('Pago')).toBeVisible();
-  });
-
-  test('liquidar conta sem categoria mostra o motivo real do backend, não um chute genérico', async ({ page }) => {
-    // Regressão: a UI mostrava sempre "pode já ter sido liquidada em outra sessão", mascarando
-    // a causa real (409 do backend: "Conta sem categoria não pode gerar lançamento automático").
-    await loginAs(page, 'matheus@sawhub.com.br');
-    await page.getByRole('link', { name: 'Financeiro' }).click();
-    await page.getByRole('link', { name: 'Contas a pagar/receber' }).click();
-
-    const descricao = `Conta sem categoria E2E ${Date.now()}`;
-    const main = page.getByRole('main');
-    await main.getByRole('button', { name: 'Nova conta' }).click();
-    await main.getByLabel('Descrição').fill(descricao);
-    await main.getByLabel('Valor (R$)').fill('10.00');
-    await main.getByRole('button', { name: 'Salvar conta' }).click();
-
-    const linha = main.locator('text=' + descricao).locator('xpath=ancestor::div[contains(@class,"row")]');
-    await linha.getByRole('button', { name: 'Liquidar' }).click();
-    // "Gerar lançamento financeiro correspondente" vem marcado por padrão — confirma sem mudar.
-    await page.getByRole('button', { name: 'Confirmar liquidação' }).click();
-
-    await expect(page.getByText('Conta sem categoria não pode gerar lançamento automático.')).toBeVisible();
-    await expect(linha.getByText('Pendente')).toBeVisible();
   });
 });

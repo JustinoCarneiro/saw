@@ -3289,6 +3289,195 @@ anterior — corrigidos pro formulário único de venda.
   financeiro-import-export, dashboard-admin, comercial, comercial-venda-m25) confirmando sem
   regressão, incluindo o teste que exercita `liquidar()` de ponta a ponta.
 
+## Blueprint (M26 · Financeiro — merge ContaPagarReceber + LancamentoFinanceiro)
+
+Item pendente do "Sequenciamento sugerido" da reunião 17/07/2026 (ver M20/linha 20 da tabela de
+status), confirmado pelo cliente (Marcos, 19/07/2026) como **merge de verdade de entidade**, não
+uma view/relatório consolidado por cima das duas. Só desenho nesta leva — nada implementado ainda.
+
+**Por que hoje é redundante, com evidência no código:** `ContaPagarReceberService.liquidar()`
+clona uma `ContaPagarReceber` liquidada num `LancamentoFinanceiro` novo (mesma
+descrição/categoria/valor/evento) — na prática "conta a pagar/receber" já é só "um lançamento
+que ainda não foi REALIZADO, com data de vencimento e possibilidade de pagamento parcial".
+
+### Modelo atual (o que cada entidade tem que a outra não tem)
+`ContaPagarReceber`: `tipo` (`TipoConta` A_PAGAR/A_RECEBER), `dataVencimento`, `dataPagamento`,
+`status` (`StatusConta` PENDENTE/PARCIAL/PAGO/RECEBIDO/VENCIDO), `valorPago` (parcial,
+acumulativo), `lancamento` (FK pro gêmeo gerado na liquidação total — só existe se
+`criarLancamento=true` foi passado). `LancamentoFinanceiro`: `categoria` **NOT NULL** (em
+`ContaPagarReceber` é opcional), `dataCompetencia`, `status` (`StatusLancamento`
+PREVISTO/REALIZADO), `planoReferencia` (enum `Plano` legado da migração Plano→TipoContrato — não
+é setado por nenhum fluxo real hoje, achado ao mapear o modelo pra este Blueprint; fora de escopo
+desta leva, fica como está). Os dois já têm `evento` (opcional, change request 19/07/2026),
+`categoria`/`descricao` (pgcrypto) e o mesmo padrão `@ColumnTransformer`.
+
+### Decisão de nome
+A entidade unificada herda o nome `LancamentoFinanceiro` — já é o nome usado no domínio de
+reporting (DRE/dashboard de faturamento, H14.2/H14.3), mais "canônico" que `ContaPagarReceber`.
+`ContaPagarReceber` deixa de existir como tabela/classe; o vocabulário "conta a pagar/receber"
+sobrevive só como um filtro de status na UI/API (ver Contratos abaixo), não como entidade própria.
+
+### Enums unificados
+- **`TipoConta` (A_PAGAR/A_RECEBER) é retirado.** Hoje já é 1:1 com `TipoLancamento`
+  (`ContaPagarReceberService.liquidar()`: `tipo == A_PAGAR ? DESPESA : RECEITA`) — nenhuma
+  informação se perde substituindo A_PAGAR→DESPESA e A_RECEBER→RECEITA em todo o código.
+- **`StatusConta` + `StatusLancamento` colapsam num `StatusLancamento` novo de 4 estados:**
+  `PREVISTO, PARCIAL, REALIZADO, VENCIDO`. Mapeamento: `PENDENTE→PREVISTO` (mesmo conceito,
+  nomenclatura que já existia ganha); `PARCIAL→PARCIAL` (mantido); `PAGO`/`RECEBIDO→REALIZADO`
+  (a direção já vem de `tipo` RECEITA/DESPESA — ter status separado por direção era redundante,
+  o mesmo padrão que `LancamentoFinanceiro` já usava); `VENCIDO→VENCIDO` (mantido, só relevante
+  quando `dataVencimento` está preenchida). `VencimentoScheduler` passa a operar sobre a mesma
+  tabela/repositório, sem mudança de comportamento (`@Scheduled` diário, PREVISTO→VENCIDO).
+
+### O que o merge resolve de graça (sem precisar de decisão nova)
+- **Liquidação parcial não precisa mais decidir "gerar ou não lançamento".** Hoje
+  `liquidarParcial()` nunca gera `LancamentoFinanceiro` (decisão de escopo documentada no
+  Javadoc do método, "ainda não há decisão de produto sobre lançar cada parcela avulsa"). Na
+  entidade única isso deixa de ser uma escolha em aberto: PARCIAL é o próprio registro em estado
+  intermediário — não existe mais um "segundo registro" pra decidir se cria.
+- **A flag `criarLancamento` (hoje um checkbox em `LiquidarContaForm`, marcado por padrão)
+  desaparece.** Liquidar sempre é mutar o mesmo registro pra REALIZADO — não há mais "gerar o
+  lançamento correspondente" como uma ação opcional separada.
+
+### Achado crítico — receita de parcela comercial e a obrigatoriedade de `categoria`
+**Este é o maior risco do merge, com uma lacuna real já existente hoje que o merge expõe (não
+cria).** `LeadService.criarParcelas()` cria toda `ContaPagarReceber` de parcela de venda com
+`categoria=null` (comercial ainda não classifica financeiramente a venda). Hoje, a única forma de
+liquidar essa conta sem estourar `IllegalStateException` ("Conta sem categoria não pode gerar
+lançamento automático") é **desmarcar manualmente** o checkbox "Gerar lançamento financeiro
+correspondente" — que vem **marcado por padrão** na tela. Ou seja, hoje, receita de parcela
+comercial só entra na DRE/dashboard de faturamento se alguém lembrar de desmarcar o checkbox E
+depois criar um Lançamento equivalente à mão — não encontrei nenhum fluxo que faça isso
+automaticamente. Isso é uma lacuna de completude do DRE que **já existe hoje**, só fica invisível
+porque as duas entidades são separadas (a conta liquidada com `criarLancamento=false` simplesmente
+não deixa rastro nenhum do lado do Lançamento).
+
+Numa entidade única, não dá pra ter uma linha REALIZADO sem categoria sem antes decidir o que
+fazer — `RelatorioFinanceiroService` agrupa por `categoria.getGrupoDre()`/`getOrigemReceita()`
+sem checagem de nulo hoje (nunca precisou, `LancamentoFinanceiro.categoria` sempre foi NOT NULL).
+Duas saídas, registradas como **Pergunta pendente** em
+`docs/reuniao-2026-07-17-atualizacoes.md` — não decidido nesta leva:
+1. **Exigir categoria em toda conta nova, inclusive as geradas por parcela de venda** — corrige a
+   lacuna de verdade (receita comercial passa a entrar na DRE pela primeira vez), mas exige
+   decisão de produto sobre qual categoria/`GrupoDre`/`OrigemReceita` uma parcela de mentoria cai
+   automaticamente (hoje `OrigemReceita` não tem valor pra "mentoria" — só ASSINATURA/LOJA/
+   EVENTO/OUTRA).
+2. **Manter `categoria` nullable na entidade unificada** e fazer os agregados do DRE ignorarem
+   (com segurança, não com exceção) lançamentos sem categoria — preserva o comportamento atual
+   (parcela comercial nunca entra sozinha na DRE), só formaliza como invariante explícita algo
+   que hoje só não quebra por acidente de as duas entidades nunca se encontrarem.
+
+### Migração de schema e dado — proposta em 2 fases (mitigação de risco, mesmo sendo MVP)
+Uma migration Flyway única fazendo DDL + INSERT/UPDATE/DELETE de reconciliação de duas tabelas é
+risco desnecessário mesmo com poucos registros reais em produção hoje. Proposta:
+- **V40 (aditiva, sem apagar nada):** adiciona `data_vencimento`, `data_pagamento`, `valor_pago`
+  (todas nullable) em `lancamento_financeiro`; popula a partir de `conta_pagar_receber` —
+  (a) toda conta com `lancamento_id IS NULL` (nunca gerou gêmeo) vira uma linha nova; (b) toda
+  conta com `lancamento_id IS NOT NULL` tem seus campos de vencimento/pagamento copiados pra
+  dentro da linha do gêmeo já existente (merge de duas linhas em uma, não um INSERT simples).
+  `parcela_venda.conta_pagar_receber_id` ganha uma segunda FK temporária apontando pro
+  `lancamento_financeiro` correspondente, convivendo com a antiga.
+- **V41 (destrutiva, só depois de validar os dados da V40 em produção):** dropa a tabela
+  `conta_pagar_receber`, remove `lancamento_financeiro.lancamento_id`/o conceito de "gêmeo", e
+  `parcela_venda` passa a referenciar só `lancamento_financeiro`.
+- Rodar V40 e validar contagem/soma de valores antes de sequer escrever a V41 — não é uma
+  migration reversível de forma trivial.
+
+### Contratos de API (M26) — proposta
+Mantém os dois **paths** de hoje por compatibilidade de UX (duas telas continuam existindo), mas
+os dois passam a bater no mesmo `LancamentoFinanceiroService`/repositório por baixo — resolve o
+ponto 5 da lista de decisões do Blueprint original (`/contas` vira um filtro de conveniência
+sobre a mesma tabela, não uma tabela própria).
+
+```jsonc
+// Mantido, agora um filtro read-only de conveniência sobre lancamento_financeiro
+// (status in [PREVISTO, PARCIAL, VENCIDO] — "ainda não realizado"):
+GET /api/v1/admin/financeiro/contas?tipo=&status=&ano=&mes=&eventoId=
+
+// Alterado — ganha status (não existia) e eventoId (unifica com o que /contas já tinha):
+GET /api/v1/admin/financeiro/lancamentos?de=&ate=&tipo=&categoriaId=&status=&eventoId=
+
+// Alterado — ganha dataVencimento opcional (ausente = lançamento direto, sem rastreio de prazo,
+// igual ao "Novo lançamento" manual de hoje; presente = também é uma "conta a pagar/receber"):
+POST /api/v1/admin/financeiro/lancamentos
+{ "tipo": "DESPESA", "categoriaId": "...", "descricao": "...", "valor": 100.00,
+  "dataCompetencia": "2026-08-20", "dataVencimento": "2026-08-25", "status": "PREVISTO",
+  "eventoId": null }
+
+// Novo, substitui PATCH .../contas/{id}/liquidar — sem criarLancamento (deixou de existir):
+PATCH /api/v1/admin/financeiro/lancamentos/{id}/liquidar
+{ "dataPagamento": "2026-08-25" }
+
+// Novo, substitui PATCH .../contas/{id}/liquidar-parcial:
+PATCH /api/v1/admin/financeiro/lancamentos/{id}/liquidar-parcial
+{ "valorPago": 50.00, "dataPagamento": "2026-08-25" }
+```
+
+CSV: `ContaCsvService` + `LancamentoCsvService` fundem num serviço só, cabeçalho novo
+(`tipo;categoria;descricao;valor;dataVencimento;dataCompetencia;status;valorPago`) — **única
+quebra de compatibilidade real com um artefato externo** (CSV que o cliente já possa ter
+exportado no formato antigo de qualquer uma das duas telas), vale aviso explícito antes de
+implementar.
+
+### Categoria obrigatória — resolvido (19/07/2026): "todas as vendas e valores precisam ser
+mapeados no DRE" (confirmado pelo Marcos). Opção (a) da Pergunta pendente. Duas consequências:
+
+**1. Mapeamento `ProdutoVenda` → `CategoriaFinanceira` (resolução por nome, sem ciclo de
+pacote).** `comercial` já importa `financeiro` (`LeadService`, `ConciliacaoService`,
+`ComercialDashboardService`, `ParcelaVenda`) — o inverso criaria ciclo, então a resolução
+`ProdutoVenda`→categoria vive em `comercial` (dentro de `LeadService`), reaproveitando
+`CategoriaFinanceiraRepository.findByNomeIgnoreCase` — o mesmo mecanismo já testado que
+`ContaCsvService`/`LancamentoCsvService` usam pra resolver categoria por nome do CSV (evita
+inventar uma FK nova `CategoriaFinanceira.produtoVenda` só pra isso). Categorias novas, seed via
+migration (garantida em produção, não só em `DemoDataSeeder`/dev):
+
+| `ProdutoVenda` | Categoria (nome) | `OrigemReceita` | `GrupoDre` |
+|---|---|---|---|
+| `MENTORIA_CONTINUA` | Mentoria Contínua | `ASSINATURA` | `RECEITA_BRUTA` |
+| `MENTORIA_INDIVIDUAL` | Mentoria Individual | `ASSINATURA` | `RECEITA_BRUTA` |
+| `CONSULTORIA` | Consultoria | `OUTRA` | `RECEITA_BRUTA` |
+| `FORMULA_SAW` | Fórmula SAW | `OUTRA` | `RECEITA_BRUTA` |
+| `FORMACAO_PROFISSIONAL` | Formação Profissional | `OUTRA` | `RECEITA_BRUTA` |
+| `FICHA_TECNICA_LUCRATIVA` | Ficha Técnica Lucrativa | `OUTRA` | `RECEITA_BRUTA` |
+| `PRODUTO_DIGITAL` | Produtos Digitais | `OUTRA` | `RECEITA_BRUTA` |
+| `INGRESSO_EVENTO` | reaproveita "Eventos" (já seedada) | `EVENTO` | `RECEITA_BRUTA` |
+
+`MENTORIA_CONTINUA`/`MENTORIA_INDIVIDUAL` → `ASSINATURA`: são contratos de 12 meses pagos em
+parcelas mensais (evidência real: coluna `Parcela` tipo `4/11` achada na planilha "DRE Financeira
+Saw", ver § Planilhas reais) — o mais próximo do conceito de receita recorrente que
+`dashboardFaturamento()`/MRR já espera, mesmo sem ser assinatura auto-renovável de verdade. Os
+demais produtos são venda avulsa/pontual, sem contrapartida recorrente, por isso `OUTRA`. A
+categoria "Assinaturas" (seed antigo do M14/Loja, `OrigemReceita.ASSINATURA`) fica órfã com a
+Loja pausada — decisão de implementação (não bloqueia o Blueprint): renomear "Assinaturas" →
+"Mentoria Contínua" reaproveitando a mesma linha, em vez de deixar as duas convivendo.
+
+**2. `valorPagoNoAto` também precisa virar lançamento — achado ao confirmar a decisão, amplia o
+escopo do M26.** `LeadService.fecharVenda()` grava `valorPagoNoAto` só como campo do `Lead`,
+nunca cria `ContaPagarReceber`/`LancamentoFinanceiro` — diferente das parcelas (que ao menos
+viram uma conta, só sem categoria), esse valor não tem rastro financeiro nenhum hoje, só
+alimenta a Conciliação (M20) como insumo de cálculo. `fecharVenda()` passa a criar um lançamento
+**já REALIZADO** (dinheiro recebido no ato, não "a receber") na mesma categoria resolvida por
+`request.produtoVenda()`, quando `valorPagoNoAto` > 0.
+
+### Suposições
+1. `LancamentoFinanceiro` absorve `ContaPagarReceber` (não o contrário) — nome do domínio de
+   reporting já é o mais usado/citado no CLAUDE.md (H14.1).
+2. `TipoConta` retirado, substituído 1:1 por `TipoLancamento` — equivalência confirmada no código
+   atual (`ContaPagarReceberService.liquidar()`), não é suposição nova.
+3. `GET /admin/financeiro/contas` mantido nesta leva como filtro de conveniência (não removido) —
+   reduz risco de quebrar frontend/E2E de uma vez; pode ser aposentado depois se o cliente preferir
+   uma tela só.
+4. `planoReferencia`/`Plano` (legado, nunca setado por nenhum fluxo real hoje) fica fora de
+   escopo — não é tocado por este merge.
+5. Migração de dado em 2 fases (V40 aditiva, V41 destrutiva só após validação) — mitigação de
+   risco, não decisão de produto.
+6. Categorias novas de receita seedadas via migration (não só `DemoDataSeeder`) — garante que
+   `LeadService.fecharVenda()`/`criarParcelas()` sempre encontrem a categoria por nome em
+   qualquer ambiente, inclusive produção, sem depender do seed de demo.
+
+**Status: todas as Perguntas pendentes resolvidas (19/07/2026) — ver
+`docs/reuniao-2026-07-17-atualizacoes.md` § Perguntas pendentes, item 5. Pronto pra implementar.**
+
 ## Fórmula de prazo
 
 ```
@@ -3333,7 +3522,8 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 17 | M23 · Mentorado — dados de contrato, Diagnóstico Inicial, `TipoContrato`, criar direto, PDF do contrato (change request pós-MVP, reunião 17/07/2026) | Médio-Grande · `revisor-seguranca` obrigatório | 4d | ✅ Concluído — backend (423/423 testes) + `revisor-seguranca` (achado médio de RBAC + achado médio de teto de tamanho de upload, ambos corrigidos) + frontend + E2E (20/25, os 5 que faltam são do self-service pausado) |
 | 18 | M24 · Import bulk-CREATE de mentorados via CSV (change request pós-MVP, mesma reunião) | Médio | 2.5d | ✅ Concluído (19/07/2026) — backend (472/472 testes) + `revisor-seguranca` (sem achado bloqueante — confirmou que `Modulo.COMERCIAL` como gate do M23 não foi reintroduzido como `Modulo.MENTORADOS`, sem PII em log, sem SQL bruto) + frontend (`MentoradosListaPage` — botão "Importar mentorados em massa", gated por `podeVerContrato`). Contrato batido com o Blueprint: `POST /api/v1/admin/mentorados/importar-em-massa`, `ImportarMentoradoDiretoLinha` cobre as 19 colunas (só email/nome/tipoContrato obrigatórias), `ImportMentoradoDiretoResultResponse` carrega `criados[]` com senha temporária em texto puro (não recuperável depois). `MentoradoAdminService.criarDiretoDeImportacao()` reaproveita a lógica de `criarDireto` (M23) + Diagnóstico Inicial opcional, chamado por `MentoradoDiretoCsvService` (duas passadas, tudo-ou-nada, mesmo padrão de `TeamCsvService`) |
 | 19 | M25 · Comercial — formulário único de venda, parcelamento, venda de ingresso, split de comissão (change request pós-MVP, mesma reunião) | Grande · `revisor-seguranca` obrigatório | 6d | ✅ Concluído — backend (449/449 testes) + `revisor-seguranca` em três rodadas (núcleo: achado médio de vagas/status do evento e achado baixo de valor pago no ato, corrigidos; follow-up: achado alto de `LazyInitializationException` no dashboard, corrigido; achado alto de PII em claro em `ContaPagarReceber.descricao`/`AtividadeLog.descricao`, **corrigido em 18/07/2026** via `V28`/`V29` pgcrypto — mais a lacuna irmã em `LancamentoFinanceiro.descricao` achada na confirmação, ver nota acima) + frontend (`LeadsComercialPage` — Diagnóstico, formulário único de venda; `DashboardComercialPage` — venda de ingressos por evento) + E2E (32+23 rodados, sem regressão; os 5 do self-service pausado seguem esperados). Split dashboard/ranking e propagação Lead→Mentorado (Suposições 6-7) fechados. Achados ao vivo: `chk_lead_status` desatualizada (V26), 3 specs E2E ainda com o "Plano fechado" removido. `ProdutoVenda.FORMULA_SAW`/`FORMACAO_PROFISSIONAL` adicionados em 18/07/2026 (`V27`/`V30`) — Suposição 1 (catálogo de produto) totalmente resolvida, nenhuma Pergunta pendente do M25 segue em aberto. **19/07/2026 — 6 gaps achados via raio-x fechados** (457/457 testes, `tsc -b` limpo): `StatusConta.PARCIAL` + `ContaPagarReceber#liquidarParcial` (`V31`); `OrigemVenda.PARCEIRO` (`V32`); `VendaIngresso` ganhou `nomeEmpresa`/`telefone`/`email`, pgcrypto no telefone/email (`V36`); `ProdutoVenda.FICHA_TECNICA_LUCRATIVA` (`V33`); `FormaPagamento.PIX_RECORRENTE` (`V34`); `CategoriaIngresso` corrigido pra `ESSENCIAL`/`VIP`/`ESPECIAL`/`BLACK` (saiu `CORTESIA`, sem migração de dado — zero linhas usavam) (`V35`). Ver `docs/reuniao-2026-07-17-atualizacoes.md` § "Implicações pro desenho" pra detalhe de cada gap. **Gap 7 (hipótese Hotmart líquido/bruto) resolvido depois** (478/478 testes, `tsc -b` limpo): pesquisa confirmou a taxa real da Hotmart (9,9%+R$1, mais antecipação opcional 2,19%-3,59%) — faixa 9,9%-13,5% bate com o padrão real achado (~9-13%). `Lead` ganhou `taxaPlataformaRetida` (pgcrypto, `V37__lead_taxa_plataforma_retida.sql`), terceiro conceito que evita a venda Hotmart aparentar dívida quando o cliente já pagou 100%. Aditivo: overload de `Lead.fecharVenda()` + construtor secundário de `FecharVendaRequest` mantêm todo chamador existente compilando sem mudança. Todos os 8 gaps da leva de raio-x estão fechados |
-| 20 | E14/E17 · Financeiro & Painel Consolidado — itens do "Sequenciamento sugerido" da reunião 17/07/2026 (change request pós-MVP) | Médio (parcial) | — | 🟡 **Parcial (19/07/2026)** — 5 de 7 itens do E14 fechados: filtro mensal em contas a pagar/receber (`ContaPagarReceberRepository.buscarComFiltro`, sentinela `[1900-01-01, 2999-12-31)` em vez de parâmetro nulo — Postgres não infere tipo de `LocalDate` nulo numa query com tantas colunas `bytea` de pgcrypto ao redor), rename da aba "Faturamento"→"Dashboard", conciliação contrato×recebido (`ConciliacaoService`/`ConciliacaoController`, novo, vive em `comercial` mas gated `Modulo.FINANCEIRO` — mesmo padrão de `MentoradoContratoController`/M23), "alimentação automática de contas via venda" (já vinha do M25), e evento rastreado no financeiro (`ContaPagarReceber`/`LancamentoFinanceiro` ganharam `evento` opcional, propagado automaticamente na liquidação; `GET /admin/financeiro/eventos`, sem filtro de status de propósito; `LancamentoResponse` também exposto com `eventoId`/`eventoTitulo` — lacuna de completude pega pelo `revisor-seguranca`, fechada na mesma leva). 1 de 4 itens do E17 fechado: campo `Ata.decisoes` (manual + extraído por IA via `ClaudeAtaRascunhoService`, schema de tool-use estendido). 501/501 testes, `tsc -b` limpo, `revisor-seguranca` rodado em cada item. **Ainda pendente** (documentado em detalhe em `docs/reuniao-2026-07-17-atualizacoes.md` §§ E14/E17): subcategorias/fixo-variável em `CategoriaFinanceira`, merge lançamentos/contas, controle de presença em mentoria, ranking com as 4 ferramentas nomeadas (substitui `ferramentasConcluidas`/`ferramentasTotal` já em produção), dois eixos de acompanhamento (engajamento + risco de churn, substitui o status único `EM_DIA`/`ATENCAO`/`ATRASADO`) — os 2 últimos do E17 mexem em lógica de ranking/status já em produção, maior risco, merecem confirmação de produto antes de implementar |
+| 20 | E14/E17 · Financeiro & Painel Consolidado — itens do "Sequenciamento sugerido" da reunião 17/07/2026 (change request pós-MVP) | Médio (parcial) | — | 🟡 **Parcial (19/07/2026)** — 5 de 7 itens do E14 fechados: filtro mensal em contas a pagar/receber (`ContaPagarReceberRepository.buscarComFiltro`, sentinela `[1900-01-01, 2999-12-31)` em vez de parâmetro nulo — Postgres não infere tipo de `LocalDate` nulo numa query com tantas colunas `bytea` de pgcrypto ao redor), rename da aba "Faturamento"→"Dashboard", conciliação contrato×recebido (`ConciliacaoService`/`ConciliacaoController`, novo, vive em `comercial` mas gated `Modulo.FINANCEIRO` — mesmo padrão de `MentoradoContratoController`/M23), "alimentação automática de contas via venda" (já vinha do M25), e evento rastreado no financeiro (`ContaPagarReceber`/`LancamentoFinanceiro` ganharam `evento` opcional, propagado automaticamente na liquidação; `GET /admin/financeiro/eventos`, sem filtro de status de propósito; `LancamentoResponse` também exposto com `eventoId`/`eventoTitulo` — lacuna de completude pega pelo `revisor-seguranca`, fechada na mesma leva). 1 de 4 itens do E17 fechado: campo `Ata.decisoes` (manual + extraído por IA via `ClaudeAtaRascunhoService`, schema de tool-use estendido). 501/501 testes, `tsc -b` limpo, `revisor-seguranca` rodado em cada item. **Ainda pendente** (documentado em detalhe em `docs/reuniao-2026-07-17-atualizacoes.md` §§ E14/E17): subcategorias/fixo-variável em `CategoriaFinanceira` (achado em 19/07/2026: pelo print real da planilha, Fixo/Variável é atributo consistente por subcategoria, não campo livre por lançamento — falta implementar), merge lançamentos/contas (Blueprint desenhado, ver linha 21/M26 abaixo — não implementado), controle de presença em mentoria, ranking com as 4 ferramentas nomeadas (substitui `ferramentasConcluidas`/`ferramentasTotal` já em produção), dois eixos de acompanhamento (engajamento + risco de churn, substitui o status único `EM_DIA`/`ATENCAO`/`ATRASADO`) — os 2 últimos do E17 mexem em lógica de ranking/status já em produção, maior risco, merecem confirmação de produto antes de implementar |
+| 21 | M26 · Financeiro — merge `ContaPagarReceber` + `LancamentoFinanceiro` em uma única entidade, categoria obrigatória em toda venda, `valorPagoNoAto` passa a gerar lançamento (change request pós-MVP, item pendente do E14/linha 20) | Grande | ~6-7d | ✅ **Concluído (19/07/2026)** — `ContaPagarReceber`/`ContaPagarReceberRepository`/`ContaPagarReceberService`/`ContaCsvService`/`TipoConta`/`StatusConta` retirados por completo; `LancamentoFinanceiro` absorveu `dataVencimento`/`dataPagamento`/`valorPago` + `liquidar()`/`liquidarParcial()`/`marcarVencida()`; `StatusLancamento` unificado (PREVISTO/PARCIAL/REALIZADO/VENCIDO); migration única `V40__merge_conta_lancamento.sql` (schema+dado real, categorias novas de receita seedadas, `parcela_venda` reapontada). `LeadService` resolve `CategoriaFinanceira` por `ProdutoVenda` (`CATEGORIA_POR_PRODUTO`) tanto pra parcelas quanto pro `valorPagoNoAto` (gera `LancamentoFinanceiro` REALIZADO na hora, antes não gerava nada). `ContaController` virou recorte fino sobre `LancamentoService`/mesma tabela; CSV unificado num serviço só. Frontend: `types.ts`/`ContasPage.tsx`/`LancamentosPage.tsx` atualizados (sem `criarLancamento`, categoria sempre obrigatória, status novos). 496/496 testes backend, `tsc -b` limpo, 10/10 E2E `financeiro`/`financeiro-import-export` + 19/19 `comercial`/`comercial-venda-m25`/`mentorados-comercial-import-export` (confirma o fluxo real de parcelamento→Financeiro ponta a ponta). `revisor-seguranca`: **Seguro**, zero achados sobreviveram à verificação (máquina de estado, RBAC, CSV injection, SQL injection, corrida via `@Version`, migration de dado — tudo conferido). E14 fica com 6 de 7 itens fechados (só falta subcategorias/fixo-variável de `CategoriaFinanceira`) |
 | — | **Fase 5 · Homologação** (smoke test via Docker, validação humana E2E, revisão final de segurança, deploy Coolify, **pass transversal de `pgcrypto` nas colunas sensíveis** — ver notas em M04 e M05) | — | 2d | ⬜ |
 
 **Total restante (peso somado): ≈ 60 dias de engenharia** (MVP original) **+ 6.5d** (M23+M24,

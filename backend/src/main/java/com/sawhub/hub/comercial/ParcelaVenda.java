@@ -1,7 +1,7 @@
 package com.sawhub.hub.comercial;
 
 import com.sawhub.hub.common.BaseEntity;
-import com.sawhub.hub.financeiro.ContaPagarReceber;
+import com.sawhub.hub.financeiro.LancamentoFinanceiro;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -14,9 +14,10 @@ import org.hibernate.annotations.ColumnTransformer;
 
 /** M25 (change request pós-MVP, 17/07/2026) — parcelamento estruturado de uma venda, não
  * existia em lugar nenhum antes (nem coluna solta, nem tabela — confirmado na pesquisa do
- * Blueprint). Cada parcela gera um {@link ContaPagarReceber} A_RECEBER (ver
+ * Blueprint). Cada parcela gera um {@link LancamentoFinanceiro} RECEITA (ver
  * LeadService.fecharVenda) — reusa a entidade existente do Financeiro em vez de duplicar o
- * conceito de "conta a receber". */
+ * conceito de "conta a receber" (M26 fundiu {@code ContaPagarReceber} em
+ * {@code LancamentoFinanceiro}, ver ROADMAP.md § "Blueprint (M26)"). */
 @Entity
 @Table(name = "parcela_venda")
 public class ParcelaVenda extends BaseEntity {
@@ -40,8 +41,8 @@ public class ParcelaVenda extends BaseEntity {
     private LocalDate dataPrevista;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "conta_pagar_receber_id")
-    private ContaPagarReceber contaPagarReceber;
+    @JoinColumn(name = "lancamento_financeiro_id")
+    private LancamentoFinanceiro lancamento;
 
     protected ParcelaVenda() {
     }
@@ -53,8 +54,8 @@ public class ParcelaVenda extends BaseEntity {
         this.dataPrevista = dataPrevista;
     }
 
-    public void vincularConta(ContaPagarReceber contaPagarReceber) {
-        this.contaPagarReceber = contaPagarReceber;
+    public void vincularLancamento(LancamentoFinanceiro lancamento) {
+        this.lancamento = lancamento;
     }
 
     public Lead getLead() {
@@ -73,7 +74,7 @@ public class ParcelaVenda extends BaseEntity {
         return dataPrevista;
     }
 
-    public ContaPagarReceber getContaPagarReceber() {
-        return contaPagarReceber;
+    public LancamentoFinanceiro getLancamento() {
+        return lancamento;
     }
 }

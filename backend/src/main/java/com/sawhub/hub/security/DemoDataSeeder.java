@@ -23,14 +23,11 @@ import com.sawhub.hub.loja.Produto;
 import com.sawhub.hub.loja.ProdutoRepository;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
-import com.sawhub.hub.financeiro.ContaPagarReceber;
-import com.sawhub.hub.financeiro.ContaPagarReceberRepository;
 import com.sawhub.hub.financeiro.GrupoDre;
 import com.sawhub.hub.financeiro.LancamentoFinanceiro;
 import com.sawhub.hub.financeiro.LancamentoFinanceiroRepository;
 import com.sawhub.hub.financeiro.OrigemReceita;
 import com.sawhub.hub.financeiro.StatusLancamento;
-import com.sawhub.hub.financeiro.TipoConta;
 import com.sawhub.hub.financeiro.TipoLancamento;
 import com.sawhub.hub.mentorado.Encaminhamento;
 import com.sawhub.hub.mentorado.EncaminhamentoRepository;
@@ -76,7 +73,6 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final EncaminhamentoRepository encaminhamentoRepository;
     private final CategoriaFinanceiraRepository categoriaFinanceiraRepository;
     private final LancamentoFinanceiroRepository lancamentoFinanceiroRepository;
-    private final ContaPagarReceberRepository contaPagarReceberRepository;
     private final LeadRepository leadRepository;
     private final MetaComercialRepository metaComercialRepository;
     private final MentoriaRepository mentoriaRepository;
@@ -94,7 +90,6 @@ public class DemoDataSeeder implements ApplicationRunner {
                            MentoradoRepository mentoradoRepository, EncaminhamentoRepository encaminhamentoRepository,
                            CategoriaFinanceiraRepository categoriaFinanceiraRepository,
                            LancamentoFinanceiroRepository lancamentoFinanceiroRepository,
-                           ContaPagarReceberRepository contaPagarReceberRepository,
                            LeadRepository leadRepository,
                            MetaComercialRepository metaComercialRepository,
                            MentoriaRepository mentoriaRepository,
@@ -113,7 +108,6 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.encaminhamentoRepository = encaminhamentoRepository;
         this.categoriaFinanceiraRepository = categoriaFinanceiraRepository;
         this.lancamentoFinanceiroRepository = lancamentoFinanceiroRepository;
-        this.contaPagarReceberRepository = contaPagarReceberRepository;
         this.leadRepository = leadRepository;
         this.metaComercialRepository = metaComercialRepository;
         this.mentoriaRepository = mentoriaRepository;
@@ -212,15 +206,21 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private void seedFinanceiro() {
-        if (categoriaFinanceiraRepository.count() > 0) {
+        // M26 — guarda por lancamento (não mais por categoria): a migration V40 já pré-cadastra
+        // "Mentoria Contínua"/"Eventos" (entre outras) pra qualquer ambiente, então
+        // categoriaFinanceiraRepository.count() > 0 seria sempre verdadeiro mesmo num banco novo,
+        // pulando o resto do seed de demo por engano.
+        if (lancamentoFinanceiroRepository.count() > 0) {
             return;
         }
-        CategoriaFinanceira assinaturas = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA));
+        // "Mentoria Contínua"/"Eventos" já vêm da V40 (garantidas em qualquer ambiente, não só
+        // aqui) — recriar geraria violação de uq_categoria_financeira_origem_receita.
+        CategoriaFinanceira assinaturas = categoriaFinanceiraRepository.findByOrigemReceita(OrigemReceita.ASSINATURA)
+                .orElseThrow(() -> new IllegalStateException("Categoria ASSINATURA (V40) não encontrada."));
+        CategoriaFinanceira eventos = categoriaFinanceiraRepository.findByOrigemReceita(OrigemReceita.EVENTO)
+                .orElseThrow(() -> new IllegalStateException("Categoria EVENTO (V40) não encontrada."));
         CategoriaFinanceira loja = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
                 "Loja SAW", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.LOJA));
-        CategoriaFinanceira eventos = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Eventos", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.EVENTO));
         CategoriaFinanceira impostos = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
                 "Impostos sobre vendas", TipoLancamento.DESPESA, GrupoDre.DEDUCOES, null));
         CategoriaFinanceira infra = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
@@ -237,13 +237,17 @@ public class DemoDataSeeder implements ApplicationRunner {
         seedMesFinanceiro(LocalDate.of(2026, 7, 5), assinaturas, loja, eventos, impostos, infra, marketing, equipe,
                 "1782.00", "510.00", "200.00", "108.00", "620.00", "350.00", "3800.00");
 
-        // Contas em aberto — mistura de pendente e vencida, pra tela de Contas ter o que mostrar.
-        contaPagarReceberRepository.save(new ContaPagarReceber(TipoConta.A_PAGAR, "Servidor Hostinger — agosto",
-                new BigDecimal("180.00"), LocalDate.of(2026, 8, 10), infra));
-        ContaPagarReceber vencida = new ContaPagarReceber(TipoConta.A_RECEBER, "Mensalidade em atraso — Rafael Gomes",
-                new BigDecimal("297.00"), LocalDate.of(2026, 7, 1), assinaturas);
+        // Lançamentos em aberto (M26 — antes vivia em ContaPagarReceber) — mistura de previsto e
+        // vencido, pra tela de Contas ter o que mostrar. dataCompetencia nasce igual à
+        // dataVencimento (melhor palpite disponível antes de liquidar — ver LancamentoFinanceiro).
+        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, infra,
+                "Servidor Hostinger — agosto", new BigDecimal("180.00"), LocalDate.of(2026, 8, 10),
+                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 10)));
+        LancamentoFinanceiro vencida = new LancamentoFinanceiro(TipoLancamento.RECEITA, assinaturas,
+                "Mensalidade em atraso — Rafael Gomes", new BigDecimal("297.00"), LocalDate.of(2026, 7, 1),
+                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 7, 1));
         vencida.marcarVencida();
-        contaPagarReceberRepository.save(vencida);
+        lancamentoFinanceiroRepository.save(vencida);
     }
 
     private void seedMesFinanceiro(LocalDate data, CategoriaFinanceira assinaturas, CategoriaFinanceira loja,

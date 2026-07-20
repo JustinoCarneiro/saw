@@ -20,10 +20,9 @@ import com.sawhub.hub.evento.EventoRepository;
 import com.sawhub.hub.evento.InscricaoEventoRepository;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
-import com.sawhub.hub.financeiro.ContaPagarReceber;
-import com.sawhub.hub.financeiro.ContaPagarReceberRepository;
 import com.sawhub.hub.financeiro.LancamentoFinanceiro;
 import com.sawhub.hub.financeiro.LancamentoFinanceiroRepository;
+import com.sawhub.hub.financeiro.OrigemReceita;
 import com.sawhub.hub.mentorado.Encaminhamento;
 import com.sawhub.hub.mentorado.EncaminhamentoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
@@ -39,6 +38,7 @@ import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,8 +70,6 @@ class DemoDataSeederTest {
     @Mock
     private LancamentoFinanceiroRepository lancamentoFinanceiroRepository;
     @Mock
-    private ContaPagarReceberRepository contaPagarReceberRepository;
-    @Mock
     private LeadRepository leadRepository;
     @Mock
     private MetaComercialRepository metaComercialRepository;
@@ -99,7 +97,7 @@ class DemoDataSeederTest {
     private DemoDataSeeder seeder() {
         return new DemoDataSeeder(usuarioRepository, colaboradorRepository, mentoradoRepository,
                 encaminhamentoRepository, categoriaFinanceiraRepository, lancamentoFinanceiroRepository,
-                contaPagarReceberRepository, leadRepository, metaComercialRepository, mentoriaRepository,
+                leadRepository, metaComercialRepository, mentoriaRepository,
                 ataRepository, ataEncaminhamentoSugeridoRepository, conteudoRepository, eventoRepository,
                 inscricaoEventoRepository, produtoRepository, pedidoRepository, avisoRepository, passwordEncoder);
     }
@@ -107,9 +105,12 @@ class DemoDataSeederTest {
     @BeforeEach
     void skipSeedFinanceiroPorPadrao() {
         // A maioria dos testes aqui é sobre colaborador/mentorado — sem isto, toda vez que
-        // categoriaFinanceiraRepository.count() não for explicitamente stubado, o Mockito devolve
-        // 0 por padrão e o seedFinanceiro() roda por inteiro sem querer.
-        lenient().when(categoriaFinanceiraRepository.count()).thenReturn(1L);
+        // lancamentoFinanceiroRepository.count() não for explicitamente stubado, o Mockito devolve
+        // 0 por padrão e o seedFinanceiro() roda por inteiro sem querer. M26 trocou o guard de
+        // categoriaFinanceiraRepository.count() pra lancamentoFinanceiroRepository.count() — a
+        // migration V40 já pré-cadastra categorias em qualquer ambiente, então o guard antigo
+        // sempre veria count()>0 mesmo num banco novo (ver DemoDataSeeder.seedFinanceiro).
+        lenient().when(lancamentoFinanceiroRepository.count()).thenReturn(1L);
     }
 
     @BeforeEach
@@ -189,36 +190,48 @@ class DemoDataSeederTest {
     }
 
     @Test
-    void naoRecriaFinanceiroSeJaExistirCategoria() {
+    void naoRecriaFinanceiroSeJaExistirLancamento() {
         when(colaboradorRepository.count()).thenReturn(2L);
         when(mentoradoRepository.count()).thenReturn(1L);
-        when(categoriaFinanceiraRepository.count()).thenReturn(1L);
+        when(lancamentoFinanceiroRepository.count()).thenReturn(1L);
 
         seeder().run(null);
 
         verify(categoriaFinanceiraRepository, never()).save(any());
     }
 
+    // M26 — "Mentoria Contínua" (ASSINATURA) e "Eventos" (EVENTO) agora vêm pré-cadastradas pela
+    // migration V40 em qualquer ambiente (não só seedadas aqui) — seedFinanceiro() as busca em
+    // vez de criar, por isso só 5 categorias (não mais 7) são salvas por este seeder. As "contas
+    // em aberto" (antes ContaPagarReceber, agora LancamentoFinanceiro com dataVencimento) também
+    // passam a contar no total de lancamentoFinanceiroRepository.save().
     @Test
-    void seedaSeteCategoriasELancamentosDosDoisMesesEDuasContas() {
+    void seedaCincoCategoriasELancamentosDosDoisMesesEDuasContasEmAberto() {
         when(colaboradorRepository.count()).thenReturn(2L);
         when(mentoradoRepository.count()).thenReturn(1L);
-        when(categoriaFinanceiraRepository.count()).thenReturn(0L);
+        when(lancamentoFinanceiroRepository.count()).thenReturn(0L);
+        CategoriaFinanceira categoriaAssinatura = new CategoriaFinanceira("Mentoria Contínua",
+                com.sawhub.hub.financeiro.TipoLancamento.RECEITA, com.sawhub.hub.financeiro.GrupoDre.RECEITA_BRUTA,
+                OrigemReceita.ASSINATURA);
+        CategoriaFinanceira categoriaEvento = new CategoriaFinanceira("Eventos",
+                com.sawhub.hub.financeiro.TipoLancamento.RECEITA, com.sawhub.hub.financeiro.GrupoDre.RECEITA_BRUTA,
+                OrigemReceita.EVENTO);
+        when(categoriaFinanceiraRepository.findByOrigemReceita(OrigemReceita.ASSINATURA))
+                .thenReturn(Optional.of(categoriaAssinatura));
+        when(categoriaFinanceiraRepository.findByOrigemReceita(OrigemReceita.EVENTO))
+                .thenReturn(Optional.of(categoriaEvento));
         when(categoriaFinanceiraRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(contaPagarReceberRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         seeder().run(null);
 
-        verify(categoriaFinanceiraRepository, times(7)).save(any(CategoriaFinanceira.class));
-        // 3 receitas (assinaturas/loja/impostos-não-conta) + ... — junho sem eventos (6 lançamentos),
-        // julho com eventos (7 lançamentos) = 13 ao todo.
-        verify(lancamentoFinanceiroRepository, times(13)).save(any(LancamentoFinanceiro.class));
-
-        ArgumentCaptor<ContaPagarReceber> contaCaptor = ArgumentCaptor.forClass(ContaPagarReceber.class);
-        verify(contaPagarReceberRepository, times(2)).save(contaCaptor.capture());
-        assertThat(contaCaptor.getAllValues()).anySatisfy(c ->
-                assertThat(c.getStatus().name()).isEqualTo("VENCIDO"));
+        // Loja/Impostos/Infra/Marketing/Equipe — Mentoria Contínua e Eventos vêm da V40, não daqui.
+        verify(categoriaFinanceiraRepository, times(5)).save(any(CategoriaFinanceira.class));
+        // 13 dos dois meses (junho sem evento = 6, julho com evento = 7) + 2 contas em aberto = 15.
+        ArgumentCaptor<LancamentoFinanceiro> lancamentoCaptor = ArgumentCaptor.forClass(LancamentoFinanceiro.class);
+        verify(lancamentoFinanceiroRepository, times(15)).save(lancamentoCaptor.capture());
+        assertThat(lancamentoCaptor.getAllValues()).anySatisfy(l ->
+                assertThat(l.getStatus().name()).isEqualTo("VENCIDO"));
     }
 
     @Test

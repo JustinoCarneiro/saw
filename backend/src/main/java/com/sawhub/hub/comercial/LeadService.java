@@ -9,13 +9,18 @@ import com.sawhub.hub.comercial.dto.VendaIngressoRequest;
 import com.sawhub.hub.evento.Evento;
 import com.sawhub.hub.evento.EventoRepository;
 import com.sawhub.hub.evento.StatusEvento;
-import com.sawhub.hub.financeiro.ContaPagarReceber;
-import com.sawhub.hub.financeiro.ContaPagarReceberRepository;
-import com.sawhub.hub.financeiro.TipoConta;
+import com.sawhub.hub.financeiro.CategoriaFinanceira;
+import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
+import com.sawhub.hub.financeiro.LancamentoFinanceiro;
+import com.sawhub.hub.financeiro.LancamentoFinanceiroRepository;
+import com.sawhub.hub.financeiro.StatusLancamento;
+import com.sawhub.hub.financeiro.TipoLancamento;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,25 +29,45 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class LeadService {
 
+    // M26 — "todas as vendas e valores precisam ser mapeados no DRE" (confirmado pelo Marcos,
+    // 19/07/2026): resolução ProdutoVenda→CategoriaFinanceira por nome, mesmo mecanismo já testado
+    // em ContaCsvService/LancamentoCsvService pra resolver categoria de CSV. Vive aqui (comercial),
+    // não em financeiro, porque comercial já depende de financeiro — o inverso criaria ciclo de
+    // pacote (ver ROADMAP.md § "Blueprint (M26)"). Categorias seedadas via V40, garantidas em
+    // qualquer ambiente (não só DemoDataSeeder).
+    private static final Map<ProdutoVenda, String> CATEGORIA_POR_PRODUTO = Map.of(
+            ProdutoVenda.MENTORIA_CONTINUA, "Mentoria Contínua",
+            ProdutoVenda.MENTORIA_INDIVIDUAL, "Mentoria Individual",
+            ProdutoVenda.CONSULTORIA, "Consultoria",
+            ProdutoVenda.FORMULA_SAW, "Fórmula SAW",
+            ProdutoVenda.FORMACAO_PROFISSIONAL, "Formação Profissional",
+            ProdutoVenda.FICHA_TECNICA_LUCRATIVA, "Ficha Técnica Lucrativa",
+            ProdutoVenda.PRODUTO_DIGITAL, "Produtos Digitais",
+            ProdutoVenda.INGRESSO_EVENTO, "Eventos"
+    );
+
     private final LeadRepository leadRepository;
     private final ColaboradorRepository colaboradorRepository;
     private final AtividadeLogService atividadeLogService;
     private final ParcelaVendaRepository parcelaVendaRepository;
     private final VendaIngressoRepository vendaIngressoRepository;
     private final EventoRepository eventoRepository;
-    private final ContaPagarReceberRepository contaPagarReceberRepository;
+    private final LancamentoFinanceiroRepository lancamentoFinanceiroRepository;
+    private final CategoriaFinanceiraRepository categoriaFinanceiraRepository;
 
     public LeadService(LeadRepository leadRepository, ColaboradorRepository colaboradorRepository,
                         AtividadeLogService atividadeLogService, ParcelaVendaRepository parcelaVendaRepository,
                         VendaIngressoRepository vendaIngressoRepository, EventoRepository eventoRepository,
-                        ContaPagarReceberRepository contaPagarReceberRepository) {
+                        LancamentoFinanceiroRepository lancamentoFinanceiroRepository,
+                        CategoriaFinanceiraRepository categoriaFinanceiraRepository) {
         this.leadRepository = leadRepository;
         this.colaboradorRepository = colaboradorRepository;
         this.atividadeLogService = atividadeLogService;
         this.parcelaVendaRepository = parcelaVendaRepository;
         this.vendaIngressoRepository = vendaIngressoRepository;
         this.eventoRepository = eventoRepository;
-        this.contaPagarReceberRepository = contaPagarReceberRepository;
+        this.lancamentoFinanceiroRepository = lancamentoFinanceiroRepository;
+        this.categoriaFinanceiraRepository = categoriaFinanceiraRepository;
     }
 
     @Transactional
@@ -92,9 +117,10 @@ public class LeadService {
 
     /** M25 — "formulário único de venda": fecha o Lead com produto/origem/valor/forma de
      * pagamento (em vez de só o plano legado), e distribui automaticamente o dado que hoje vive
-     * em planilhas separadas: parcelamento vira contas a receber, ingresso de evento vira
+     * em planilhas separadas: parcelamento vira lançamentos a receber, ingresso de evento vira
      * credenciamento. Endpoint dedicado, não substitui avancar()/FECHADO (que continua existindo
-     * pra quem só precisa registrar o plano). */
+     * pra quem só precisa registrar o plano). M26 — valor pago no ato também passa a gerar um
+     * lançamento REALIZADO (antes só ficava gravado no Lead, sem rastro nenhum no financeiro). */
     @Transactional
     public Lead fecharVenda(UUID leadId, FecharVendaRequest request) {
         Lead lead = leadRepository.buscarPorIdComVendedor(leadId)
@@ -118,8 +144,11 @@ public class LeadService {
         if (request.produtoVenda() == ProdutoVenda.INGRESSO_EVENTO) {
             criarVendasIngresso(lead, request);
         }
+        if (request.valorPagoNoAto() != null && request.valorPagoNoAto().signum() > 0) {
+            criarLancamentoValorPagoNoAto(lead, request.produtoVenda(), request.valorPagoNoAto());
+        }
         if (request.parcelas() != null) {
-            criarParcelas(lead, request.parcelas());
+            criarParcelas(lead, request.produtoVenda(), request.parcelas());
         }
 
         atividadeLogService.registrar("LEAD_VENDA_FECHADA", "Venda fechada: " + lead.getNome());
@@ -151,14 +180,40 @@ public class LeadService {
         eventoRepository.save(evento);
     }
 
-    private void criarParcelas(Lead lead, List<ParcelaVendaRequest> parcelas) {
+    /** M26 — dinheiro recebido no ato do fechamento já é receita realizada (diferente de parcela,
+     * que é "a receber"), então nasce direto REALIZADO, sem `dataVencimento`. */
+    private void criarLancamentoValorPagoNoAto(Lead lead, ProdutoVenda produtoVenda, BigDecimal valorPagoNoAto) {
+        CategoriaFinanceira categoria = resolverCategoriaVenda(produtoVenda);
+        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
+                "Pago no ato - " + lead.getNome(), valorPagoNoAto, LocalDate.now(), StatusLancamento.REALIZADO,
+                null, null, null);
+        lancamentoFinanceiroRepository.save(lancamento);
+    }
+
+    private void criarParcelas(Lead lead, ProdutoVenda produtoVenda, List<ParcelaVendaRequest> parcelas) {
+        CategoriaFinanceira categoria = resolverCategoriaVenda(produtoVenda);
         for (ParcelaVendaRequest p : parcelas) {
             ParcelaVenda parcela = parcelaVendaRepository.save(new ParcelaVenda(lead, p.numero(), p.valor(), p.dataPrevista()));
-            ContaPagarReceber conta = contaPagarReceberRepository.save(new ContaPagarReceber(
-                    TipoConta.A_RECEBER, "Parcela " + p.numero() + " - " + lead.getNome(), p.valor(), p.dataPrevista(), null));
-            parcela.vincularConta(conta);
+            LancamentoFinanceiro lancamento = lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(
+                    TipoLancamento.RECEITA, categoria, "Parcela " + p.numero() + " - " + lead.getNome(), p.valor(),
+                    p.dataPrevista(), StatusLancamento.PREVISTO, null, null, p.dataPrevista()));
+            parcela.vincularLancamento(lancamento);
             parcelaVendaRepository.save(parcela);
         }
+    }
+
+    private CategoriaFinanceira resolverCategoriaVenda(ProdutoVenda produtoVenda) {
+        String nomeCategoria = CATEGORIA_POR_PRODUTO.get(produtoVenda);
+        List<CategoriaFinanceira> candidatas = categoriaFinanceiraRepository.findByNomeIgnoreCase(nomeCategoria);
+        if (candidatas.isEmpty()) {
+            throw new IllegalStateException("Categoria financeira \"" + nomeCategoria + "\" não encontrada — "
+                    + "esperada pré-cadastrada pela migration V40 pra vendas de " + produtoVenda + ".");
+        }
+        if (candidatas.size() > 1) {
+            throw new IllegalStateException("Categoria financeira \"" + nomeCategoria + "\" é ambígua "
+                    + "(existe mais de uma com esse nome).");
+        }
+        return candidatas.get(0);
     }
 
     private Colaborador resolverVendedor(UUID vendedorId) {

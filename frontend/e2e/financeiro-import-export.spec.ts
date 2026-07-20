@@ -24,8 +24,10 @@ test.describe('Financeiro — Import/Export CSV (M21)', () => {
     await page.getByRole('link', { name: 'Lançamentos' }).click();
 
     const descricao = `Import CSV E2E ${Date.now()}`;
-    const csv = `tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n`
-        + `RECEITA;Assinaturas;${descricao};250,00;15/07/2026;REALIZADO;\n`;
+    // M26 — cabeçalho ganhou dataVencimento (opcional); "Assinaturas" virou "Mentoria Contínua"
+    // (V40 renomeia a categoria órfã da Loja/E8 pausada) — ver ROADMAP.md § "Blueprint (M26)".
+    const csv = `tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n`
+        + `RECEITA;Mentoria Contínua;${descricao};250,00;15/07/2026;;REALIZADO;\n`;
 
     await page.getByTestId('csv-importar-input').setInputFiles({
       name: 'lancamentos.csv',
@@ -44,9 +46,9 @@ test.describe('Financeiro — Import/Export CSV (M21)', () => {
     await page.getByRole('link', { name: 'Lançamentos' }).click();
 
     const descricaoValida = `Nao deveria entrar ${Date.now()}`;
-    const csv = `tipo;categoria;descricao;valor;dataCompetencia;status;planoReferencia\n`
-        + `RECEITA;Assinaturas;${descricaoValida};100,00;15/07/2026;REALIZADO;\n`
-        + `RECEITA;CategoriaFalsa;Linha ruim;50,00;16/07/2026;REALIZADO;\n`;
+    const csv = `tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n`
+        + `RECEITA;Mentoria Contínua;${descricaoValida};100,00;15/07/2026;;REALIZADO;\n`
+        + `RECEITA;CategoriaFalsa;Linha ruim;50,00;16/07/2026;;REALIZADO;\n`;
 
     await page.getByTestId('csv-importar-input').setInputFiles({
       name: 'lancamentos.csv',
@@ -81,8 +83,11 @@ test.describe('Financeiro — Import/Export CSV (M21)', () => {
     await page.getByRole('link', { name: 'Contas a pagar/receber' }).click();
 
     const descricao = `Conta import CSV E2E ${Date.now()}`;
-    const csv = `tipo;descricao;valor;dataVencimento;categoria\n`
-        + `A_PAGAR;${descricao};88,00;25/07/2026;Infraestrutura\n`;
+    // M26 — import de Contas usa o mesmo cabeçalho unificado de Lançamentos agora (mesma
+    // entidade/serviço por baixo, ver ROADMAP.md § "Blueprint (M26)"); tipo vira DESPESA/RECEITA
+    // (não mais A_PAGAR/A_RECEBER) e categoria/dataCompetencia são obrigatórias.
+    const csv = `tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;planoReferencia\n`
+        + `DESPESA;Infraestrutura;${descricao};88,00;25/07/2026;25/07/2026;PREVISTO;\n`;
 
     await page.getByTestId('csv-importar-input').setInputFiles({
       name: 'contas.csv',

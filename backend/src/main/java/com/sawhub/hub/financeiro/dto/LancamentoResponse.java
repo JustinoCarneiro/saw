@@ -19,7 +19,10 @@ public record LancamentoResponse(
         StatusLancamento status,
         Plano planoReferencia,
         UUID eventoId,
-        String eventoTitulo
+        String eventoTitulo,
+        LocalDate dataVencimento,
+        LocalDate dataPagamento,
+        BigDecimal valorPago
 ) {
     public record CategoriaResumo(UUID id, String nome, OrigemReceita origemReceita) {
     }
@@ -30,6 +33,7 @@ public record LancamentoResponse(
         UUID eventoId = l.getEvento() != null ? l.getEvento().getId() : null;
         String eventoTitulo = l.getEvento() != null ? l.getEvento().getTitulo() : null;
         return new LancamentoResponse(l.getId(), l.getTipo(), categoria, l.getDescricao(), l.getValor(),
-                l.getDataCompetencia(), l.getStatus(), l.getPlanoReferencia(), eventoId, eventoTitulo);
+                l.getDataCompetencia(), l.getStatus(), l.getPlanoReferencia(), eventoId, eventoTitulo,
+                l.getDataVencimento(), l.getDataPagamento(), l.getValorPago());
     }
 }

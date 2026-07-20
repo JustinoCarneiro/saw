@@ -132,9 +132,15 @@ retrabalho no MVP atual — tratar como o item técnico mais delicado da leva.
   plano (nome/tipo/grupoDre/origemReceita, sem hierarquia nem fixo/variável) — schema novo,
   precisa decisão de produto sobre a taxonomia exata antes de implementar (afeta DRE/dashboard
   existentes, maior risco que os itens acima).
-- ❌ **Ainda não implementado — Merge entre "lançamentos" e "contas a pagar/receber"** — mesmo
-  status de antes, precisa desenho técnico (pode virar visão/relatório unificado em vez de merge
-  de entidade, mas isso ainda não foi decidido).
+- ✅ **Implementado (19/07/2026) — Merge entre "lançamentos" e "contas a pagar/receber" (M26)**.
+  `ContaPagarReceber` deixou de existir: `LancamentoFinanceiro` absorveu vencimento/pagamento/
+  valor pago + a máquina de estado de liquidação (agora com PARCIAL/VENCIDO unificados). Categoria
+  passou a ser obrigatória em toda venda — `LeadService` resolve a categoria certa por produto
+  vendido tanto pra parcelas quanto pro valor pago no ato (que antes não gerava nenhum lançamento
+  financeiro, só alimentava a Conciliação). Migration única `V40` (schema+dado real). 496/496
+  testes backend, `tsc -b` limpo, 29 E2E confirmando o fluxo real ponta a ponta,
+  `revisor-seguranca`: **Seguro** (zero achados). Detalhe completo em `ROADMAP.md` § "Blueprint
+  (M26)" e linha 21 da tabela de status.
 - ✅ **Resolvido (19/07/2026) — Receita/despesa de evento rastreada por evento específico**.
   `ContaPagarReceber`/`LancamentoFinanceiro` ganharam `evento` (opcional) — ao liquidar uma conta
   ligada a evento, o `Lancamento` gerado automaticamente herda o mesmo evento. Filtro por evento
@@ -682,11 +688,9 @@ código nem dado:
 
 ## Perguntas pendentes pro Victor
 
-As 4 perguntas desta lista foram todas resolvidas pelo Marcos direto, sem precisar perguntar ao
-Victor (a 4ª, que veio do raio-x do "CREDENCIAMENTO", foi resolvida em 19/07/2026 — ver abaixo).
-Nenhuma pergunta em aberto no momento; a única decisão real ainda pendente de terceiro é o gap 7
-(hipótese Hotmart líquido/bruto), que precisa do cliente mesmo — ver "Implicações pro desenho"
-abaixo.
+As 5 perguntas desta lista foram todas resolvidas pelo Marcos direto, sem precisar perguntar ao
+Victor (a 4ª, que veio do raio-x do "CREDENCIAMENTO", foi resolvida em 19/07/2026; a 5ª, do
+Blueprint do M26, também em 19/07/2026 — ver abaixo).
 
 1. **"Fórmula SAW"** (aba do CRM Saw) — **resolvido:** é produto vendável à parte, categoria
    própria de `ProdutoVenda` (mesmo nível de Mentoria Contínua/Individual/Consultoria). Não é o
@@ -718,6 +722,22 @@ abaixo.
    cliente quiser tirar, tiramos" — inclui/generaliza categoria quando o dado real mostra que
    existe, sem esperar confirmação do Victor pra decisões que são só de nomenclatura/catálogo
    (reservado pro Victor só o que é regra de negócio real, ex.: item 3 acima).
+5. **Merge `ContaPagarReceber`+`LancamentoFinanceiro` (M26) — categoria obrigatória ou não na
+   entidade unificada?** — **resolvido em 19/07/2026: opção (a), categoria obrigatória, toda
+   venda precisa mapear pro DRE** ("todas as vendas e valores precisam ser mapeados no DRE",
+   confirmado pelo Marcos). Achado ao desenhar o Blueprint: hoje
+   `LeadService.criarParcelas()` cria toda conta de parcela de venda comercial **sem categoria**
+   — a única forma de liquidar essa conta hoje sem erro é desmarcar manualmente um checkbox que
+   vem marcado por padrão ("Gerar lançamento financeiro correspondente"), e mesmo assim nenhum
+   lançamento equivalente é criado à mão em seguida.
+   **Achado adicional, ao confirmar a decisão:** o buraco é maior que só as parcelas —
+   `valorPagoNoAto` (o valor pago na hora de fechar a venda, antes de qualquer parcelamento) é
+   gravado **só como campo no `Lead`**, `LeadService.fecharVenda()` nunca cria
+   `ContaPagarReceber`/`LancamentoFinanceiro` pra ele. Hoje só serve de insumo pra Conciliação
+   (M20), nunca vira lançamento — com a decisão de hoje, passa a precisar virar um lançamento
+   REALIZADO no momento em que a venda fecha (já é dinheiro recebido, diferente da parcela que é
+   "a receber"). Mapeamento `ProdutoVenda`→categoria e mecanismo de resolução (evita ciclo de
+   pacote `financeiro`→`comercial`) documentados em ROADMAP.md § "Blueprint (M26)".
 
 ## Plano pra migrar o "Diagnóstico Inicial" do Notion (decidido em 17/07/2026)
 

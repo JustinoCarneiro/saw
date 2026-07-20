@@ -3,6 +3,8 @@ package com.sawhub.hub.financeiro;
 import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.financeiro.dto.CriarLancamentoRequest;
 import com.sawhub.hub.financeiro.dto.LancamentoResponse;
+import com.sawhub.hub.financeiro.dto.LiquidarLancamentoRequest;
+import com.sawhub.hub.financeiro.dto.LiquidarParcialLancamentoRequest;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;
 import jakarta.validation.Valid;
@@ -15,6 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,8 +49,24 @@ public class LancamentoController {
     @GetMapping
     public List<LancamentoResponse> listar(@RequestParam LocalDate de, @RequestParam LocalDate ate,
                                             @RequestParam(required = false) TipoLancamento tipo,
-                                            @RequestParam(required = false) UUID categoriaId) {
-        return lancamentoService.listar(de, ate, tipo, categoriaId).stream().map(LancamentoResponse::from).toList();
+                                            @RequestParam(required = false) UUID categoriaId,
+                                            @RequestParam(required = false) StatusLancamento status,
+                                            @RequestParam(required = false) UUID eventoId) {
+        return lancamentoService.listar(de, ate, tipo, categoriaId, status, eventoId).stream()
+                .map(LancamentoResponse::from).toList();
+    }
+
+    // M26 — substitui PATCH .../contas/{id}/liquidar (sem criarLancamento: liquidar sempre é
+    // mutar o próprio lançamento pra REALIZADO).
+    @PatchMapping("/{id}/liquidar")
+    public LancamentoResponse liquidar(@PathVariable UUID id, @Valid @RequestBody LiquidarLancamentoRequest request) {
+        return LancamentoResponse.from(lancamentoService.liquidar(id, request));
+    }
+
+    @PatchMapping("/{id}/liquidar-parcial")
+    public LancamentoResponse liquidarParcial(@PathVariable UUID id,
+                                               @Valid @RequestBody LiquidarParcialLancamentoRequest request) {
+        return LancamentoResponse.from(lancamentoService.liquidarParcial(id, request));
     }
 
     // M21 — mesmos filtros de GET /lancamentos.
@@ -54,7 +74,7 @@ public class LancamentoController {
     public ResponseEntity<byte[]> exportar(@RequestParam LocalDate de, @RequestParam LocalDate ate,
                                             @RequestParam(required = false) TipoLancamento tipo,
                                             @RequestParam(required = false) UUID categoriaId) {
-        String csv = lancamentoCsvService.exportar(de, ate, tipo, categoriaId);
+        String csv = lancamentoCsvService.exportarPorCompetencia(de, ate, tipo, categoriaId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"lancamentos.csv\"")

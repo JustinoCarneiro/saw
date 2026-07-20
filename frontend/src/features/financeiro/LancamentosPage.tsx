@@ -22,9 +22,13 @@ function ultimoDiaDoMes(): string {
   return ultimo.toISOString().slice(0, 10);
 }
 
+// M26 — StatusLancamento ganhou PARCIAL/VENCIDO (merge com o antigo StatusConta, ver ROADMAP.md
+// § "Blueprint (M26)"); esta tela lista por dataCompetencia, então pode mostrar qualquer um dos 4.
 const STATUS_LABEL: Record<StatusLancamento, { label: string; bg: string; color: string }> = {
   PREVISTO: { label: 'Previsto', bg: 'var(--info-bg)', color: 'var(--info)' },
+  PARCIAL: { label: 'Parcial', bg: 'var(--warning-bg)', color: 'var(--warning)' },
   REALIZADO: { label: 'Realizado', bg: 'var(--success-bg)', color: 'var(--success)' },
+  VENCIDO: { label: 'Vencido', bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 const GRUPO_DRE_LABEL: Record<GrupoDre, string> = {

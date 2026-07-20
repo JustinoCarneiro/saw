@@ -22,14 +22,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-/** M21 — export/import CSV de {@link LancamentoFinanceiro}. Import é tudo-ou-nada: ver
- * justificativa no Blueprint (ROADMAP.md) — a entidade é imutável, sem endpoint de exclusão pra
- * desfazer um import parcial ruim. */
+/** M21 — export/import CSV de {@link LancamentoFinanceiro}. M26 fundiu {@code ContaCsvService}
+ * aqui (mesma entidade agora, ver ROADMAP.md § "Blueprint (M26)"): ganhou {@code dataVencimento}
+ * opcional no cabeçalho e um segundo método de export por vencimento (pra `/contas/export`) — o
+ * import continua único (uma linha vira um lançamento, com ou sem vencimento). Import é
+ * tudo-ou-nada: a entidade é imutável por linha, sem endpoint de exclusão pra desfazer um import
+ * parcial ruim. */
 @Service
 public class LancamentoCsvService {
 
     private static final String[] CABECALHO = {
-            "tipo", "categoria", "descricao", "valor", "dataCompetencia", "status", "planoReferencia"
+            "tipo", "categoria", "descricao", "valor", "dataCompetencia", "dataVencimento", "status", "planoReferencia"
     };
     private static final int LIMITE_LINHAS = 5000;
 
@@ -44,8 +47,18 @@ public class LancamentoCsvService {
         this.categoriaRepository = categoriaRepository;
     }
 
-    public String exportar(LocalDate de, LocalDate ate, TipoLancamento tipo, UUID categoriaId) {
-        List<LancamentoFinanceiro> lancamentos = lancamentoService.listar(de, ate, tipo, categoriaId);
+    public String exportarPorCompetencia(LocalDate de, LocalDate ate, TipoLancamento tipo, UUID categoriaId) {
+        return exportar(lancamentoService.listar(de, ate, tipo, categoriaId));
+    }
+
+    /** M26 (absorvido de {@code ContaCsvService.exportar}) — mesmos filtros de
+     * `GET /admin/financeiro/contas`. */
+    public String exportarPorVencimento(TipoLancamento tipo, StatusLancamento status, Integer ano, Integer mes,
+                                         UUID eventoId) {
+        return exportar(lancamentoService.listarPorVencimento(tipo, status, ano, mes, eventoId));
+    }
+
+    private String exportar(List<LancamentoFinanceiro> lancamentos) {
         StringWriter destino = new StringWriter();
         CSVFormat formato = CSVFormat.Builder.create().setDelimiter(';').setHeader(CABECALHO).build();
         try (CSVPrinter printer = new CSVPrinter(destino, formato)) {
@@ -56,6 +69,7 @@ public class LancamentoCsvService {
                         CsvUtils.neutralizarFormula(l.getDescricao()),
                         l.getValor().toPlainString().replace('.', ','),
                         CsvUtils.formatarData(l.getDataCompetencia()),
+                        l.getDataVencimento() == null ? "" : CsvUtils.formatarData(l.getDataVencimento()),
                         l.getStatus().name(),
                         l.getPlanoReferencia() == null ? "" : l.getPlanoReferencia().name());
             }
@@ -126,10 +140,12 @@ public class LancamentoCsvService {
             throw new IllegalArgumentException("Valor deve ser maior ou igual a 0,01.");
         }
         LocalDate dataCompetencia = CsvUtils.parseData(registro.get("dataCompetencia"));
+        LocalDate dataVencimento = CsvUtils.parseDataOpcional(registro.get("dataVencimento"));
         StatusLancamento status = parseEnum(StatusLancamento.class, registro.get("status"), "Status");
         Plano planoReferencia = parsePlanoOpcional(registro.get("planoReferencia"));
 
-        return new LancamentoFinanceiro(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia);
+        return new LancamentoFinanceiro(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia,
+                null, dataVencimento);
     }
 
     private CategoriaFinanceira resolverCategoria(String nome, TipoLancamento tipo) {

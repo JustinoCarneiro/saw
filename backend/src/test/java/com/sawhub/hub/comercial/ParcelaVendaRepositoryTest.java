@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
-import com.sawhub.hub.financeiro.ContaPagarReceber;
-import com.sawhub.hub.financeiro.ContaPagarReceberRepository;
 import com.sawhub.hub.financeiro.GrupoDre;
-import com.sawhub.hub.financeiro.TipoConta;
+import com.sawhub.hub.financeiro.LancamentoFinanceiro;
+import com.sawhub.hub.financeiro.LancamentoFinanceiroRepository;
+import com.sawhub.hub.financeiro.StatusLancamento;
 import com.sawhub.hub.financeiro.TipoLancamento;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
@@ -27,10 +27,11 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
 /** Change request 17/07/2026 ("conciliação") — {@code buscarPorLeadIdComConta} precisa de
- * LEFT JOIN FETCH em {@code contaPagarReceber} porque {@link ConciliacaoService} lê
- * {@code conta.getStatus()} fora da transação original. @DataJpaTest de propósito (sessão real do
- * Hibernate) — mesmo raciocínio do {@code LeadRepositoryTest} (M05): um mock nunca reproduz um
- * proxy LAZY não inicializado. */
+ * LEFT JOIN FETCH em {@code lancamento} porque {@link ConciliacaoService} lê
+ * {@code lancamento.getStatus()} fora da transação original. M26 repontou de ContaPagarReceber
+ * pra LancamentoFinanceiro (merge de entidade, ver ROADMAP.md § "Blueprint (M26)").
+ * @DataJpaTest de propósito (sessão real do Hibernate) — mesmo raciocínio do
+ * {@code LeadRepositoryTest} (M05): um mock nunca reproduz um proxy LAZY não inicializado. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
@@ -47,7 +48,7 @@ class ParcelaVendaRepositoryTest {
     @Autowired
     private CategoriaFinanceiraRepository categoriaRepository;
     @Autowired
-    private ContaPagarReceberRepository contaRepository;
+    private LancamentoFinanceiroRepository lancamentoRepository;
     @Autowired
     private EntityManager entityManager;
 
@@ -63,15 +64,16 @@ class ParcelaVendaRepositoryTest {
     }
 
     @Test
-    void findByLeadIdPuroMantemContaComoProxyLazyNaoInicializado() {
+    void findByLeadIdPuroMantemLancamentoComoProxyLazyNaoInicializado() {
         // RED — documenta o bug: findByLeadId() (derivado, sem JOIN FETCH) é a causa raiz.
         Lead lead = criarLeadFechado("1");
         CategoriaFinanceira categoria = categoriaRepository.save(
                 new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
-        ContaPagarReceber conta = contaRepository.save(new ContaPagarReceber(TipoConta.A_RECEBER, "Parcela 1",
-                new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17), categoria));
+        LancamentoFinanceiro lancamento = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA,
+                categoria, "Parcela 1", new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17),
+                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 17)));
         ParcelaVenda parcela = new ParcelaVenda(lead, 1, new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17));
-        parcela.vincularConta(conta);
+        parcela.vincularLancamento(lancamento);
         parcelaVendaRepository.save(parcela);
         entityManager.flush();
         entityManager.clear();
@@ -79,19 +81,20 @@ class ParcelaVendaRepositoryTest {
         ParcelaVenda recarregada = parcelaVendaRepository.findByLeadId(lead.getId()).get(0);
         entityManager.clear();
 
-        assertThatThrownBy(() -> recarregada.getContaPagarReceber().getStatus())
+        assertThatThrownBy(() -> recarregada.getLancamento().getStatus())
                 .isInstanceOf(LazyInitializationException.class);
     }
 
     @Test
-    void buscarPorLeadIdComContaInicializaContaMesmoForaDaTransacaoOriginal() {
+    void buscarPorLeadIdComContaInicializaLancamentoMesmoForaDaTransacaoOriginal() {
         Lead lead = criarLeadFechado("2");
         CategoriaFinanceira categoria = categoriaRepository.save(
                 new CategoriaFinanceira("Assinaturas2", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
-        ContaPagarReceber conta = contaRepository.save(new ContaPagarReceber(TipoConta.A_RECEBER, "Parcela 1",
-                new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17), categoria));
+        LancamentoFinanceiro lancamento = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA,
+                categoria, "Parcela 1", new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17),
+                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 17)));
         ParcelaVenda parcela = new ParcelaVenda(lead, 1, new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17));
-        parcela.vincularConta(conta);
+        parcela.vincularLancamento(lancamento);
         parcelaVendaRepository.save(parcela);
         entityManager.flush();
         entityManager.clear();
@@ -99,7 +102,7 @@ class ParcelaVendaRepositoryTest {
         ParcelaVenda recarregada = parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId()).get(0);
         entityManager.clear();
 
-        assertThat(recarregada.getContaPagarReceber().getStatus()).isNotNull();
+        assertThat(recarregada.getLancamento().getStatus()).isNotNull();
     }
 
     @Test
@@ -114,6 +117,6 @@ class ParcelaVendaRepositoryTest {
         entityManager.clear();
 
         assertThat(resultado).hasSize(1);
-        assertThat(resultado.get(0).getContaPagarReceber()).isNull();
+        assertThat(resultado.get(0).getLancamento()).isNull();
     }
 }
