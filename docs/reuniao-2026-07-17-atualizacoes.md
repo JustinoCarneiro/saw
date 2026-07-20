@@ -188,11 +188,99 @@ retrabalho no MVP atual — tratar como o item técnico mais delicado da leva.
   Alto/Médio/Baixo + Risco de churn: Não/Atenção/Alto, achado na página "PADRONIZAÇÕES") em vez
   do status único atual (`EM_DIA`/`ATENCAO`/`ATRASADO`, calculado só a partir de um número de
   progresso em `ConsolidatedService`).
-- ❌ **Ainda não implementado — Dashboard consolidado com filtro por mentorado e por área** —
-  não validado se o `ConsolidatedPage` atual já cobre esse nível de filtro/navegação.
+- 🟡 **Parcialmente resolvido (19/07/2026) — Dashboard consolidado com filtro por mentorado e
+  por área.** Validado direto contra o código (não estava claro se já existia): filtro por
+  mentorado **não existia** — implementado, busca por nome client-side (`ConsolidatedPage.tsx`,
+  mesmo padrão do filtro por status já existente na tela; escala do MVP, 10-15 mentorados, não
+  justifica ida ao backend por texto). Filtro por área **segue não implementado** — achado ao
+  investigar: hoje `área` é atributo do *colaborador* interno (`Colaborador.area`), não existe
+  relação mentorado↔área no schema. Não é "faltar UI", precisa decisão de produto (o que "área do
+  mentorado" significa antes de mexer em schema) — mesma categoria dos itens que foram pro Victor.
 - **[CONFIRMADO indireto]** Indicadores mostrados no modelo Canva usado hoje (caso "J Crocs"):
   faturamento, número de pedidos, % de execução de tarefas/encaminhamentos — informativo, não
   gera item de implementação novo por si só.
+
+### Perguntas e pendências pro Victor/Matheus (19/07/2026)
+Os 3 itens restantes do E17 substituem lógica de ranking/status já em produção — maior risco que
+qualquer item já fechado do E14. Não decidir sozinho: cada um tem uma regra de negócio real que
+só o Victor sabe responder. Termos usados abaixo, explicados por extenso (documento pra ser lido
+sem contexto prévio da conversa):
+
+1. **Controle de presença em mentoria/aula — o que é**: hoje o sistema só registra se **a
+   mentoria inteira** aconteceu ou não (`StatusMentoria`: Agendada/Confirmada/Realizada/
+   Cancelada). Não existe registro de **quem, individualmente, compareceu** — isso importa
+   principalmente na mentoria **coletiva** (em grupo, vários mentorados na mesma sessão), onde
+   "a sessão aconteceu" não quer dizer "todo mundo veio". No Notion do cliente já existe um campo
+   `Frequência` com a tag "FALTOU" por mentorado, mas isso é preenchido fora do sistema hoje.
+   Perguntas:
+   - Numa mentoria em grupo, **quem marca a presença de cada mentorado** — o mentor, na hora ou
+     depois da sessão? Ou já existe algum check-in fora do sistema que dá essa informação pronta?
+   - A presença **muda o cálculo do ranking/percentual de execução** de cada mentorado (ex.:
+     "faltou numa sessão = essa sessão não conta como cumprida pra ele/ela"), ou é só um registro
+     informativo, sem afetar nenhum número calculado?
+   - Isso vale só pra mentoria coletiva, ou pra individual também (na individual, "faltou" já é o
+     mesmo que "a sessão não aconteceu", coberto pelo status atual da sessão)?
+
+2. **Ranking com as 4 ferramentas obrigatórias nomeadas — o que é**: hoje o ranking usa dois
+   números soltos e genéricos, `Mentorado.ferramentasConcluidas` e `Mentorado.ferramentasTotal`
+   (ex.: "concluiu 3 de 5"), sem saber **quais** ferramentas são essas. O pedido é trocar isso por
+   4 ferramentas nomeadas especificamente: **(1) DRE estruturada, (2) manual de cultura, (3) ficha
+   técnica, (4) manual de processos** — cada mentorado teria um "concluiu sim/não" (ou um estado
+   parecido) pra cada uma dessas 4, em vez de um contador genérico.
+   Perguntas:
+   - Essas 4 (DRE, manual de cultura, ficha técnica, manual de processos) são as definitivas, ou
+     pode entrar mais alguma no futuro — por exemplo **CMV estruturado** (Custo da Mercadoria
+     Vendida), que já aparece como pergunta separada no "Diagnóstico Inicial" do mentorado?
+   - Pra cada uma das 4, o controle é só "feito"/"não feito" (sim ou não), ou tem um terceiro
+     estado no meio — igual "cultura construída" e "processos desenhados" já têm hoje no
+     Diagnóstico Inicial (lá as opções são sim / não / **em construção**)? Isso muda a fórmula do
+     percentual do ranking.
+   - As 4 ferramentas pesam igual no cálculo do ranking, ou alguma delas (ex. DRE) pesa mais que
+     as outras?
+   - Isso **substitui de vez** os dois contadores genéricos atuais (`ferramentasConcluidas`/
+     `ferramentasTotal` deixam de existir), ou os dois convivem no sistema?
+
+3. **Dois eixos de acompanhamento (engajamento + risco de churn) — o que é**: hoje, cada
+   mentorado tem um único status calculado automaticamente a partir de um número de progresso —
+   "Em dia", "Atenção" ou "Atrasado" (`EM_DIA`/`ATENCAO`/`ATRASADO` no código, calculado em
+   `ConsolidatedService`). O pedido é substituir esse status único por **dois indicadores
+   separados**, achados na página "Padronizações" do Notion do cliente:
+   - **Eixo 1 — Nível de engajamento**: o quanto o mentorado está ativo/participativo na
+     mentoria, com 3 níveis possíveis: **Alto**, **Médio** ou **Baixo**.
+   - **Eixo 2 — Risco de churn**: "churn" é o termo de negócio pra **cliente cancelar/abandonar o
+     serviço** (nesse caso, o mentorado desistir da mentoria ou não renovar o contrato). Esse eixo
+     mede o risco disso acontecer, também com 3 níveis: **Não** (sem risco), **Atenção** (risco
+     moderado) ou **Alto** (risco alto de cancelamento).
+   Ou seja, em vez de 1 status (Em dia/Atenção/Atrasado), o mentorado passaria a ter 2 rótulos
+   independentes ao mesmo tempo (ex.: "engajamento Médio" + "risco de churn Alto").
+   Perguntas:
+   - Qual é a **regra** de cada um dos dois eixos — o que define, concretamente, se o
+     engajamento de um mentorado é Alto, Médio ou Baixo (frequência nas mentorias? cumprimento de
+     tarefas? tempo desde o último contato)? E o que define se o risco de churn é Não, Atenção ou
+     Alto?
+   - O risco de churn é **calculado automaticamente pelo sistema** a partir de algum dado (ex.
+     frequência, engajamento), ou é um campo que **o mentor/time de sucesso do cliente preenche
+     manualmente** depois de cada conversa com o mentorado — como parece ser hoje no Notion,
+     onde vira uma "análise pós-check-in"?
+   - Esses dois eixos **substituem de vez** o status único atual (Em dia/Atenção/Atrasado deixa
+     de existir), ou os dois convivem no sistema?
+   - Esses dois eixos aparecem só no Painel Consolidado (visão de todos os mentorados de uma vez,
+     usada pelo time interno), ou também no Dashboard individual que cada mentorado vê do próprio
+     progresso?
+
+**Pendências de ação — não são perguntas de decisão, são dado/acesso que falta receber pra
+destravar trabalho já mapeado:**
+
+4. **Matheus precisa liberar o acesso de export do Notion.** Sem isso ficam travados: o import em
+   massa de mentorados via CSV (M24 — a regra de mapeamento já está definida, só falta o arquivo
+   real pra rodar) e o script que migra o "Diagnóstico Inicial" de cada mentorado (hoje só existe
+   como texto livre por página no Notion "CRM Saw", sem campo estruturado — o plano de parsing já
+   foi desenhado, só falta o export pra testar contra dado real).
+5. **Victor precisa mandar a lista de recursos oferecidos aos mentorados** (DRE, manual de
+   cultura, ficha técnica, manual de processos, e qualquer outro que ele use). Serve pra dois
+   fins ao mesmo tempo: (a) popular a biblioteca de Materiais (E6) com os arquivos/links reais, e
+   (b) responder direto a pergunta 2 acima — se essas 4 ferramentas nomeadas do ranking são
+   exatamente essas ou se falta alguma na lista.
 
 ### E9 · Perfil & Gamificação — M15, concluído
 - Diretamente afetado pela decisão crítica de Planos vs. Tipos de contrato (H9.3 hoje mostra

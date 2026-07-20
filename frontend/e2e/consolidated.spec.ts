@@ -51,3 +51,25 @@ test('M23 — abas filtram a grade de mentorados por status', async ({ page }) =
   await expect(main.getByRole('tab', { name: 'Todos' })).toHaveAttribute('aria-selected', 'true');
   await expect(main.getByTestId('mentorado-row')).toHaveCount(todasAsLinhas);
 });
+
+// E17 (achado na auditoria do change request 17/07/2026, "dashboard consolidado com filtro por
+// mentorado" — não existia, achado confirmado e fechado em 19/07/2026).
+test('busca por nome filtra a grade de mentorados, client-side', async ({ page }) => {
+  await loginAs(page, 'matheus@sawhub.com.br');
+  await page.getByRole('link', { name: 'Mentorados' }).click();
+  await expect(page).toHaveURL(/\/admin\/mentorados\/consolidado$/);
+
+  const main = page.getByRole('main');
+  await expect(main.getByTestId('mentorado-row').first()).toBeVisible();
+  const todasAsLinhas = await main.getByTestId('mentorado-row').count();
+
+  await main.getByLabel('Buscar mentorado por nome').fill('João Silva');
+  await expect(main.getByTestId('mentorado-row')).toHaveCount(1);
+  await expect(main.getByTestId('mentorado-row').getByText('João Silva')).toBeVisible();
+
+  await main.getByLabel('Buscar mentorado por nome').fill('nome que não existe zzz');
+  await expect(main.getByText('Nenhum mentorado encontrado com esse nome.')).toBeVisible();
+
+  await main.getByLabel('Buscar mentorado por nome').fill('');
+  await expect(main.getByTestId('mentorado-row')).toHaveCount(todasAsLinhas);
+});

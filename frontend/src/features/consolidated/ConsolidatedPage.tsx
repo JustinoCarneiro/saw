@@ -80,6 +80,10 @@ export function ConsolidatedPage() {
   const [ranking, setRanking] = useState<RankingFaturamento[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<FiltroStatus>('TODOS');
+  // E17 (achado na auditoria do change request 17/07/2026) — busca por nome, client-side sobre
+  // a lista já carregada, mesmo padrão do filtro por status logo abaixo (a escala do MVP,
+  // 10-15 mentorados, não justifica ida ao backend por busca de texto).
+  const [busca, setBusca] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -97,9 +101,13 @@ export function ConsolidatedPage() {
 
   const mentoradosFiltrados = useMemo(() => {
     if (!mentorados) return mentorados;
-    if (filtro === 'TODOS') return mentorados;
-    return mentorados.filter((m) => m.status === filtro);
-  }, [mentorados, filtro]);
+    let resultado = filtro === 'TODOS' ? mentorados : mentorados.filter((m) => m.status === filtro);
+    const buscaNormalizada = busca.trim().toLowerCase();
+    if (buscaNormalizada) {
+      resultado = resultado.filter((m) => m.nome.toLowerCase().includes(buscaNormalizada));
+    }
+    return resultado;
+  }, [mentorados, filtro, busca]);
 
   return (
     <div>
@@ -150,26 +158,37 @@ export function ConsolidatedPage() {
         </div>
       )}
 
-      <div className={styles.tabs} role="tablist">
-        {ABAS.map((aba) => (
-          <button
-            key={aba.valor}
-            type="button"
-            role="tab"
-            aria-selected={filtro === aba.valor}
-            className={`${styles.tab} ${filtro === aba.valor ? styles.tabActive : ''}`}
-            onClick={() => setFiltro(aba.valor)}
-          >
-            {aba.label}
-          </button>
-        ))}
+      <div className={styles.toolbar}>
+        <div className={styles.tabs} role="tablist">
+          {ABAS.map((aba) => (
+            <button
+              key={aba.valor}
+              type="button"
+              role="tab"
+              aria-selected={filtro === aba.valor}
+              className={`${styles.tab} ${filtro === aba.valor ? styles.tabActive : ''}`}
+              onClick={() => setFiltro(aba.valor)}
+            >
+              {aba.label}
+            </button>
+          ))}
+        </div>
+        <input
+          className={styles.textInput}
+          placeholder="Buscar por nome…"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          aria-label="Buscar mentorado por nome"
+        />
       </div>
 
       <div className={styles.layout}>
         <DataGrid columns={COLUMNS} headers={['Mentorado', 'Progresso', 'Encaminhamentos', 'Ferramentas', 'Faturamento', 'Status']}>
           {mentoradosFiltrados === null && !error && <div className={styles.loading}>Carregando…</div>}
           {mentoradosFiltrados?.length === 0 && (
-            <div className={styles.loading}>Nenhum mentorado nesse status.</div>
+            <div className={styles.loading}>
+              {busca.trim() ? 'Nenhum mentorado encontrado com esse nome.' : 'Nenhum mentorado nesse status.'}
+            </div>
           )}
           {mentoradosFiltrados?.map((m) => (
             <DataGridRow key={m.id} columns={COLUMNS} testId="mentorado-row">
