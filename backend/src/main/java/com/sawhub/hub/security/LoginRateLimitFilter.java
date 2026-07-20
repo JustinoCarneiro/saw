@@ -50,7 +50,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         long falhas = contagemAtual != null ? Long.parseLong(contagemAtual) : 0;
         if (falhas >= limite) {
             response.setStatus(429);
-            response.setContentType("application/json");
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"message\":\"Muitas tentativas de login. Tente novamente mais tarde.\"}");
             return;
         }

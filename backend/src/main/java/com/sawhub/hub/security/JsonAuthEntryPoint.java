@@ -26,7 +26,7 @@ public class JsonAuthEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response,
                           AuthenticationException authException) throws java.io.IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
+        response.setContentType("application/json;charset=UTF-8");
         objectMapper.writeValue(response.getWriter(),
                 ApiError.of(401, "Unauthorized", "Faça login para continuar.", request.getRequestURI()));
     }

@@ -22,7 +22,7 @@ public class AuthFailureHandler implements AuthenticationFailureHandler {
                                          AuthenticationException exception) throws java.io.IOException {
         // Mensagem genérica de propósito (H1.1) — nunca revela se foi o e-mail ou a senha que falhou.
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
+        response.setContentType("application/json;charset=UTF-8");
         objectMapper.writeValue(response.getWriter(),
                 ApiError.of(401, "Unauthorized", "Credenciais inválidas.", request.getRequestURI()));
     }

@@ -21,7 +21,7 @@ public class AuthSuccessHandler implements AuthenticationSuccessHandler {
                                          Authentication authentication) throws java.io.IOException {
         AppUserPrincipal principal = (AppUserPrincipal) authentication.getPrincipal();
         response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentType("application/json");
+        response.setContentType("application/json;charset=UTF-8");
         objectMapper.writeValue(response.getWriter(), MeResponse.from(principal));
     }
 }

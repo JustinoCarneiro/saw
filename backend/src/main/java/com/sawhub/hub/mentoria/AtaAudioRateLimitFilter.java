@@ -56,7 +56,7 @@ public class AtaAudioRateLimitFilter extends OncePerRequestFilter {
 
         if (contagem != null && contagem > limite) {
             response.setStatus(429);
-            response.setContentType("application/json");
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"message\":\"Muitos envios de áudio. Tente novamente mais tarde.\"}");
             return;
         }
