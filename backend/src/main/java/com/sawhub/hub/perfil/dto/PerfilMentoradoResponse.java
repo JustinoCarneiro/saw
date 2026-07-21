@@ -1,9 +1,8 @@
 package com.sawhub.hub.perfil.dto;
 
 import com.sawhub.hub.mentorado.Mentorado;
-import com.sawhub.hub.mentorado.Plano;
+import com.sawhub.hub.mentorado.TipoContrato;
 import java.time.Instant;
-import java.time.LocalDate;
 
 public record PerfilMentoradoResponse(
         String nome,
@@ -12,8 +11,7 @@ public record PerfilMentoradoResponse(
         String telefone,
         String bio,
         String fotoUrl,
-        Plano plano,
-        LocalDate vencimentoPlano,
+        TipoContrato tipoContrato,
         Instant membroDesde
 ) {
     public static PerfilMentoradoResponse from(Mentorado m) {
@@ -24,8 +22,7 @@ public record PerfilMentoradoResponse(
                 m.getTelefone(),
                 m.getBio(),
                 m.getFotoUrl(),
-                m.getPlano(),
-                m.getVencimentoPlano(),
+                m.getTipoContrato(),
                 m.getCriadoEm()
         );
     }

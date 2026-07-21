@@ -7,13 +7,11 @@ import static org.mockito.Mockito.when;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentorado.Plano;
-import com.sawhub.hub.perfil.dto.AssinaturaResponse;
 import com.sawhub.hub.perfil.dto.AtualizarPerfilMentoradoRequest;
 import com.sawhub.hub.perfil.dto.PerfilMentoradoResponse;
 import com.sawhub.hub.security.Usuario;
 import com.sawhub.hub.security.Perfil;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -61,7 +59,7 @@ class PerfilMentoradoServiceTest {
     }
 
     @Test
-    void atualizarGravaContatoEPreferenciasSemTocarNomeNegocioOuPlano() {
+    void atualizarGravaContatoEPreferenciasSemTocarNomeOuNegocio() {
         UUID usuarioId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
@@ -75,24 +73,5 @@ class PerfilMentoradoServiceTest {
         assertThat(resposta.fotoUrl()).isEqualTo("https://cdn.sawhub.com.br/foto.jpg");
         // Campos admin-only intocados:
         assertThat(resposta.nome()).isEqualTo("Ana Costa");
-        assertThat(resposta.plano()).isEqualTo(Plano.ESSENCIAL);
-    }
-
-    @Test
-    void assinaturaListaSoOsPlanosAcimaDoAtualComoDisponiveis() {
-        UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
-        ReflectionTestUtils.setField(mentorado, "vencimentoPlano", LocalDate.of(2026, 9, 20));
-        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
-
-        AssinaturaResponse resposta = service().assinatura(usuarioId);
-
-        assertThat(resposta.planoAtual()).isEqualTo(Plano.ESSENCIAL);
-        assertThat(resposta.vencimentoPlano()).isEqualTo(LocalDate.of(2026, 9, 20));
-        assertThat(resposta.planosDisponiveis()).extracting(AssinaturaResponse.PlanoDisponivel::plano)
-                .containsExactly(Plano.GRATUITO, Plano.BASICO, Plano.ESSENCIAL, Plano.PROFISSIONAL);
-        assertThat(resposta.planosDisponiveis()).filteredOn(AssinaturaResponse.PlanoDisponivel::acimaDoPlanoAtual)
-                .extracting(AssinaturaResponse.PlanoDisponivel::plano)
-                .containsExactly(Plano.PROFISSIONAL);
     }
 }

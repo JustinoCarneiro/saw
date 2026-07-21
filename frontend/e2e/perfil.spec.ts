@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { loginAs } from './helpers';
 
 test.describe('M15 — E9 Perfil & Gamificação', () => {
-  test('mentorado vê identidade, jornada e assinatura no próprio perfil', async ({ page }) => {
+  test('mentorado vê identidade, jornada e tipo de contrato no próprio perfil', async ({ page }) => {
     await loginAs(page, 'ana@anacosta.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
 
@@ -13,6 +13,9 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     await expect(cartao.getByText('Ana Costa', { exact: true })).toBeVisible();
     await expect(cartao.getByText('Cantina Ana Costa')).toBeVisible();
     await expect(cartao.getByText('ana@anacosta.com.br')).toBeVisible();
+    // M28 — "Plano atual"/upgrade removido ("não existem planos, mas sim produtos"); Tipo de
+    // contrato passou a ser só informativo dentro do próprio cartão de perfil.
+    await expect(cartao.getByText('Mentoria Individual')).toBeVisible();
 
     const jornada = page.getByTestId('jornada-cartao');
     await expect(jornada.getByText('Nível atual:')).toBeVisible();
@@ -21,11 +24,6 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     // H9.2 — já era verdadeira no seed, antes do rastreamento de data existir (V18): a primeira
     // visita a este perfil tem que mostrar "Desde sempre", nunca a data de hoje fabricada.
     await expect(jornada.getByTestId('conquista-MENTORIA_REALIZADA').getByText('Desde sempre')).toBeVisible();
-
-    const assinatura = page.getByTestId('assinatura-cartao');
-    await expect(assinatura.getByText('Essencial')).toBeVisible();
-    await expect(assinatura.getByText('20/09/2026')).toBeVisible();
-    await expect(assinatura.getByText('Profissional')).toBeVisible(); // única opção acima de Essencial
   });
 
   test('H9.2 — conquista desbloqueada depois da primeira visita ao perfil ganha data real, não "Desde sempre"', async ({ page }) => {
@@ -127,7 +125,7 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     // necessidade de limpeza (diferente do carrinho da Loja/M14, que é uma ação aditiva).
   });
 
-  test('editar perfil não altera nome, negócio nem plano (admin-only)', async ({ page }) => {
+  test('editar perfil não altera nome, negócio nem tipo de contrato (admin-only)', async ({ page }) => {
     await loginAs(page, 'rafael@bistrogomes.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
     await page.getByRole('link', { name: 'Perfil' }).click();
@@ -140,8 +138,7 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     const cartao = page.getByTestId('perfil-cartao');
     await expect(cartao.getByText('Rafael Gomes')).toBeVisible();
     await expect(cartao.getByText('Bistrô Gomes')).toBeVisible();
-    const assinatura = page.getByTestId('assinatura-cartao');
-    await expect(assinatura.getByText('Essencial')).toBeVisible();
+    await expect(cartao.getByText('Mentoria Individual')).toBeVisible();
   });
 
   test('isolamento por tenant: perfil de um mentorado não vaza pra outro', async ({ page }) => {

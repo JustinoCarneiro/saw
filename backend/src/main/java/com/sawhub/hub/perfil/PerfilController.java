@@ -1,6 +1,5 @@
 package com.sawhub.hub.perfil;
 
-import com.sawhub.hub.perfil.dto.AssinaturaResponse;
 import com.sawhub.hub.perfil.dto.AtualizarPerfilMentoradoRequest;
 import com.sawhub.hub.perfil.dto.JornadaResponse;
 import com.sawhub.hub.perfil.dto.PerfilMentoradoResponse;
@@ -42,10 +41,5 @@ public class PerfilController {
     @GetMapping("/jornada")
     public JornadaResponse jornada(@AuthenticationPrincipal AppUserPrincipal principal) {
         return perfilJornadaService.jornada(principal.getUsuarioId());
-    }
-
-    @GetMapping("/assinatura")
-    public AssinaturaResponse assinatura(@AuthenticationPrincipal AppUserPrincipal principal) {
-        return perfilMentoradoService.assinatura(principal.getUsuarioId());
     }
 }

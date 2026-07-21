@@ -751,8 +751,7 @@ export interface PerfilMentorado {
   telefone: string | null;
   bio: string | null;
   fotoUrl: string | null;
-  plano: Plano;
-  vencimentoPlano: string | null;
+  tipoContrato: TipoContrato | null;
   membroDesde: string;
 }
 
@@ -782,17 +781,6 @@ export interface Jornada {
   progressoPct: number;
   stats: StatsJornada;
   conquistas: Conquista[];
-}
-
-export interface PlanoDisponivel {
-  plano: Plano;
-  acimaDoPlanoAtual: boolean;
-}
-
-export interface Assinatura {
-  planoAtual: Plano;
-  vencimentoPlano: string | null;
-  planosDisponiveis: PlanoDisponivel[];
 }
 
 // M16 — E10 Painel Administrativo & Métricas.
