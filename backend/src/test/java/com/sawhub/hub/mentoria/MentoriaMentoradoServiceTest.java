@@ -142,23 +142,10 @@ class MentoriaMentoradoServiceTest {
     }
 
     @Test
-    void materialAcimaDoPlanoDoMentoradoNuncaAparece() {
-        UUID usuarioId = UUID.randomUUID();
-        UUID mentoriaId = UUID.randomUUID();
-        Mentorado mentoradoGratuito = mentorado(UUID.randomUUID(), Plano.GRATUITO);
-        Conteudo materialProfissional = conteudo(UUID.randomUUID(), Plano.PROFISSIONAL, true);
-        Mentoria m = mentoria(mentoriaId, StatusMentoria.AGENDADA, Set.of(materialProfissional));
-        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentoradoGratuito));
-        when(mentoriaRepository.buscarPorMentorado(mentoradoGratuito)).thenReturn(List.of(m));
-        when(ataRepository.findByMentoriaIdInAndStatus(List.of(mentoriaId), StatusAta.PUBLICADA)).thenReturn(List.of());
-
-        List<MentoriaMentoradoResponse> resultado = service().listar(usuarioId);
-
-        assertThat(resultado.get(0).materiaisRecomendados()).isEmpty();
-    }
-
-    @Test
-    void materialPublicadoDentroDoPlanoAparece() {
+    void materialPublicadoAparecePraQualquerMentorado() {
+        // M28 — gating por Plano removido ("não existem planos, mas sim produtos",
+        // docs/reuniao-2026-07-17-atualizacoes.md). Único critério de visibilidade agora é o
+        // material estar publicado (ver materialNaoPublicadoNuncaApareceMesmoAssociado acima).
         UUID usuarioId = UUID.randomUUID();
         UUID mentoriaId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.BASICO);

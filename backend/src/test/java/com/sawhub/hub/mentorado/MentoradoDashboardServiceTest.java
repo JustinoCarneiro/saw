@@ -186,7 +186,11 @@ class MentoradoDashboardServiceTest {
     }
 
     @Test
-    void dicaDestaqueEOVideoPublicadoMaisRecenteDentroDoPlanoDoMentorado() {
+    void dicaDestaqueEOVideoPublicadoMaisRecente() {
+        // M28 — gating por Plano removido ("não existem planos, mas sim produtos",
+        // docs/reuniao-2026-07-17-atualizacoes.md). dicaDestaque agora é só "vídeo publicado mais
+        // recente", sem filtro de tier — repositório já devolve ordenado DESC por criadoEm
+        // (buscarComFiltro real), então o primeiro item da lista simulada abaixo é o esperado.
         UUID usuarioId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
@@ -194,21 +198,19 @@ class MentoradoDashboardServiceTest {
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
         semAvisos(usuarioId);
 
-        // Repositório já devolve ordenado DESC por criadoEm (buscarComFiltro real) — o mais
-        // recente vem primeiro na lista simulada aqui.
-        Conteudo profissionalForaDoAlcance = new Conteudo("Vídeo avançado", TipoConteudo.VIDEO, "url1", Plano.PROFISSIONAL);
-        Conteudo essencialElegivelMaisRecente = new Conteudo("Vídeo essencial", TipoConteudo.VIDEO, "url2", Plano.ESSENCIAL);
-        Conteudo gratuitoElegivelMaisAntigo = new Conteudo("Vídeo básico", TipoConteudo.VIDEO, "url3", Plano.GRATUITO);
+        Conteudo maisRecente = new Conteudo("Vídeo avançado", TipoConteudo.VIDEO, "url1", Plano.PROFISSIONAL);
+        Conteudo maisAntigo1 = new Conteudo("Vídeo essencial", TipoConteudo.VIDEO, "url2", Plano.ESSENCIAL);
+        Conteudo maisAntigo2 = new Conteudo("Vídeo básico", TipoConteudo.VIDEO, "url3", Plano.GRATUITO);
         when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true))
-                .thenReturn(List.of(profissionalForaDoAlcance, essencialElegivelMaisRecente, gratuitoElegivelMaisAntigo));
+                .thenReturn(List.of(maisRecente, maisAntigo1, maisAntigo2));
 
         var dashboard = service().dashboard(usuarioId);
 
-        assertThat(dashboard.dicaDestaque().titulo()).isEqualTo("Vídeo essencial");
+        assertThat(dashboard.dicaDestaque().titulo()).isEqualTo("Vídeo avançado");
     }
 
     @Test
-    void semVideoElegivelDicaDestaqueENull() {
+    void semVideoPublicadoDicaDestaqueENull() {
         UUID usuarioId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
@@ -216,8 +218,7 @@ class MentoradoDashboardServiceTest {
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
         semAvisos(usuarioId);
 
-        Conteudo profissionalForaDoAlcance = new Conteudo("Vídeo avançado", TipoConteudo.VIDEO, "url1", Plano.PROFISSIONAL);
-        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of(profissionalForaDoAlcance));
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of());
 
         assertThat(service().dashboard(usuarioId).dicaDestaque()).isNull();
     }

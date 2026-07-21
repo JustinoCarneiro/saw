@@ -41,10 +41,10 @@ test.describe('M08 — E2 Dashboard do Mentorado', () => {
   test('Avisos importantes mostra os avisos reais seedados (M17 fechou o gap do E16)', async ({ page }) => {
     await loginAs(page, 'rafael@bistrogomes.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
-    // Rafael tem plano ESSENCIAL — vê avisos seedados com planoMinimo GRATUITO/BASICO. Não
-    // hardcoda um título específico: outras specs (avisos.spec.ts) criam avisos novos que podem
-    // ocupar as 3 vagas mais recentes do card — lê o que a API realmente devolve e confirma que
-    // a UI mostra exatamente isso (mesmo padrão de "ler o estado real" já usado em M11).
+    // Não hardcoda um título específico: outras specs (avisos.spec.ts) criam avisos novos que
+    // podem ocupar as 3 vagas mais recentes do card — lê o que a API realmente devolve e
+    // confirma que a UI mostra exatamente isso (mesmo padrão de "ler o estado real" já usado em
+    // M11).
     const res = await page.request.get('/api/v1/mentorado/dashboard');
     const { avisos }: { avisos: { titulo: string }[] } = await res.json();
     expect(avisos.length).toBeGreaterThan(0);

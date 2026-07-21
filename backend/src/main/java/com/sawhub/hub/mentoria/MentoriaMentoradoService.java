@@ -42,7 +42,7 @@ public class MentoriaMentoradoService {
         Instant agora = Instant.now();
         return mentorias.stream()
                 .map(m -> MentoriaMentoradoResponse.from(m, atasPublicadasPorMentoria.get(m.getId()),
-                        materiaisVisiveis(m, mentorado), agora))
+                        materiaisVisiveis(m), agora))
                 .toList();
     }
 
@@ -64,10 +64,9 @@ public class MentoriaMentoradoService {
         return IcsGenerator.gerar(mentoria.id(), summary, mentoria.dataHora(), fim, local, Instant.now());
     }
 
-    private List<Conteudo> materiaisVisiveis(Mentoria mentoria, Mentorado mentorado) {
+    private List<Conteudo> materiaisVisiveis(Mentoria mentoria) {
         return mentoria.getMateriaisRecomendados().stream()
                 .filter(Conteudo::isPublicado)
-                .filter(c -> mentorado.getPlano().atendePlanoMinimo(c.getPlanoMinimo()))
                 .toList();
     }
 

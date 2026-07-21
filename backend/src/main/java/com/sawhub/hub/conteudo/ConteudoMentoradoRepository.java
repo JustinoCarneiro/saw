@@ -13,14 +13,12 @@ public interface ConteudoMentoradoRepository extends JpaRepository<ConteudoMento
         FROM Conteudo c
         LEFT JOIN ConteudoMentorado cm ON cm.conteudo = c AND cm.mentorado.id = :mentoradoId
         WHERE c.publicado = true
-        AND c.planoMinimo IN :planos
         AND (:tipo IS NULL OR c.tipo = :tipo)
         AND (:favorito IS NULL OR cm.favorito = :favorito)
         ORDER BY c.criadoEm DESC
     """)
     List<Object[]> buscarCatalogo(
         @Param("mentoradoId") UUID mentoradoId,
-        @Param("planos") List<com.sawhub.hub.mentorado.Plano> planos,
         @Param("tipo") TipoConteudo tipo,
         @Param("favorito") Boolean favorito
     );
@@ -30,13 +28,11 @@ public interface ConteudoMentoradoRepository extends JpaRepository<ConteudoMento
         FROM Conteudo c
         LEFT JOIN ConteudoMentorado cm ON cm.conteudo = c AND cm.mentorado.id = :mentoradoId
         WHERE c.publicado = true
-        AND c.planoMinimo IN :planos
         AND c.tipo = 'VIDEO'
         ORDER BY c.criadoEm DESC
     """)
     List<Object[]> buscarDicas(
-        @Param("mentoradoId") UUID mentoradoId,
-        @Param("planos") List<com.sawhub.hub.mentorado.Plano> planos
+        @Param("mentoradoId") UUID mentoradoId
     );
 
     // H6.3 — "dias assistidos" agrega por data de dataConsumo (ver ConteudoMentorado), não conta

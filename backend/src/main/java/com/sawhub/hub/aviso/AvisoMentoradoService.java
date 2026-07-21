@@ -4,8 +4,6 @@ import com.sawhub.hub.aviso.dto.AvisoMentoradoResponse;
 import com.sawhub.hub.aviso.dto.ResumoAvisosResponse;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
-import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -31,9 +29,8 @@ public class AvisoMentoradoService {
 
     public List<AvisoMentoradoResponse> listar(UUID usuarioId, CategoriaAviso categoria, Boolean apenasNaoLidos) {
         Mentorado mentorado = resolverMentorado(usuarioId);
-        List<Plano> planosPermitidos = planosPermitidos(mentorado.getPlano());
         List<AvisoMentoradoResponse> avisos = avisoMentoradoRepository
-                .buscarParaMentorado(mentorado.getId(), planosPermitidos, categoria).stream()
+                .buscarParaMentorado(mentorado.getId(), categoria).stream()
                 .map(this::mapToResponse)
                 .toList();
         if (Boolean.TRUE.equals(apenasNaoLidos)) {
@@ -62,8 +59,7 @@ public class AvisoMentoradoService {
     @Transactional
     public void marcarTodosLidos(UUID usuarioId) {
         Mentorado mentorado = resolverMentorado(usuarioId);
-        List<Plano> planosPermitidos = planosPermitidos(mentorado.getPlano());
-        List<Object[]> rows = avisoMentoradoRepository.buscarParaMentorado(mentorado.getId(), planosPermitidos, null);
+        List<Object[]> rows = avisoMentoradoRepository.buscarParaMentorado(mentorado.getId(), null);
 
         for (Object[] row : rows) {
             Aviso aviso = (Aviso) row[0];
@@ -82,13 +78,6 @@ public class AvisoMentoradoService {
         Aviso a = (Aviso) row[0];
         AvisoMentorado am = (AvisoMentorado) row[1];
         return AvisoMentoradoResponse.from(a, am);
-    }
-
-    // Mesma centralização de Plano.atendePlanoMinimo() já usada em ConteudoMentoradoService (M11).
-    private List<Plano> planosPermitidos(Plano planoAtual) {
-        return Arrays.stream(Plano.values())
-                .filter(planoAtual::atendePlanoMinimo)
-                .toList();
     }
 
     private Mentorado resolverMentorado(UUID usuarioId) {

@@ -64,7 +64,7 @@ public class MentoradoDashboardService {
                 null, // meta semanal — E3 não construído nesta leva (ver Blueprint M08)
                 proximaReuniao,
                 compromissos,
-                dicaDestaque(mentorado),
+                dicaDestaque(),
                 avisoMentoradoService.listar(usuarioId, null, null).stream().limit(MAX_AVISOS_DASHBOARD).toList()
         );
     }
@@ -79,14 +79,11 @@ public class MentoradoDashboardService {
                 .toList();
     }
 
-    private DicaDestaque dicaDestaque(Mentorado mentorado) {
-        // buscarComFiltro já devolve ordenado DESC por criadoEm — primeiro elegível é o mais
-        // recente dentro do plano do mentorado. Comparação de plano centralizada em
-        // Plano.atendePlanoMinimo() (achado do revisor-seguranca no M11: esta lógica tinha sido
-        // duplicada independentemente em ConteudoMentoradoService, invalidando a nota antiga de
-        // "único ponto do backend").
+    private DicaDestaque dicaDestaque() {
+        // buscarComFiltro já devolve ordenado DESC por criadoEm — primeiro elegível é o vídeo
+        // publicado mais recente (M28 — gating por Plano removido, "não existem planos, mas sim
+        // produtos", docs/reuniao-2026-07-17-atualizacoes.md).
         return conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true).stream()
-                .filter(c -> mentorado.getPlano().atendePlanoMinimo(c.getPlanoMinimo()))
                 .findFirst()
                 .map(DicaDestaque::from)
                 .orElse(null);

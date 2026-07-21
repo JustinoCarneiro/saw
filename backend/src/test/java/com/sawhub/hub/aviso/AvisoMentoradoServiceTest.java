@@ -60,8 +60,7 @@ class AvisoMentoradoServiceTest {
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
         Aviso a1 = aviso("Aviso 1", CategoriaAviso.GERAL, Plano.GRATUITO);
-        when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()),
-                eq(List.of(Plano.GRATUITO, Plano.BASICO)), isNull()))
+        when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), isNull()))
                 .thenReturn(List.<Object[]>of(new Object[]{a1, null}));
 
         List<AvisoMentoradoResponse> resposta = service().listar(usuarioId, null, null);
@@ -81,7 +80,7 @@ class AvisoMentoradoServiceTest {
         Aviso naoLido = aviso("Não lido", CategoriaAviso.GERAL, Plano.GRATUITO);
         AvisoMentorado am = new AvisoMentorado(mentorado, lido);
         am.marcarLido();
-        when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), eq(List.of(Plano.GRATUITO)), isNull()))
+        when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), isNull()))
                 .thenReturn(List.<Object[]>of(new Object[]{lido, am}, new Object[]{naoLido, null}));
 
         List<AvisoMentoradoResponse> resposta = service().listar(usuarioId, null, true);
@@ -101,7 +100,7 @@ class AvisoMentoradoServiceTest {
         Aviso naoLido2 = aviso("Não lido 2", CategoriaAviso.GERAL, Plano.GRATUITO);
         AvisoMentorado am = new AvisoMentorado(mentorado, lido);
         am.marcarLido();
-        when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), eq(List.of(Plano.GRATUITO)), isNull()))
+        when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), isNull()))
                 .thenReturn(List.<Object[]>of(
                         new Object[]{lido, am}, new Object[]{naoLido1, null}, new Object[]{naoLido2, null}));
 
@@ -149,7 +148,7 @@ class AvisoMentoradoServiceTest {
         Aviso pendente = aviso("Pendente", CategoriaAviso.GERAL, Plano.GRATUITO);
         AvisoMentorado amLido = new AvisoMentorado(mentorado, jaLido);
         amLido.marcarLido();
-        when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), eq(List.of(Plano.GRATUITO)), isNull()))
+        when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), isNull()))
                 .thenReturn(List.<Object[]>of(new Object[]{jaLido, amLido}, new Object[]{pendente, null}));
         when(avisoMentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

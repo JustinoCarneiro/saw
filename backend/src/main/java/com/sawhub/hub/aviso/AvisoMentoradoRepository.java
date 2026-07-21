@@ -1,6 +1,5 @@
 package com.sawhub.hub.aviso;
 
-import com.sawhub.hub.mentorado.Plano;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,13 +17,11 @@ public interface AvisoMentoradoRepository extends JpaRepository<AvisoMentorado, 
         SELECT a, am
         FROM Aviso a
         LEFT JOIN AvisoMentorado am ON am.aviso = a AND am.mentorado.id = :mentoradoId
-        WHERE a.planoMinimo IN :planos
-        AND (:categoria IS NULL OR a.categoria = :categoria)
+        WHERE (:categoria IS NULL OR a.categoria = :categoria)
         ORDER BY a.criadoEm DESC
     """)
     List<Object[]> buscarParaMentorado(
         @Param("mentoradoId") UUID mentoradoId,
-        @Param("planos") List<Plano> planos,
         @Param("categoria") CategoriaAviso categoria
     );
 

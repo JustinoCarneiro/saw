@@ -38,7 +38,7 @@ class ConteudoMentoradoServiceTest {
     }
 
     @Test
-    void buscarCatalogoVerificaPlanosEInjetaJoin() {
+    void buscarCatalogoRepassaFiltrosEInjetaJoin() {
         UUID usuarioId = UUID.randomUUID();
         Mentorado mentorado = new Mentorado(null, "Mentorado 1", "123", Plano.BASICO, null, null, null);
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
@@ -47,8 +47,8 @@ class ConteudoMentoradoServiceTest {
         Conteudo conteudo = new Conteudo("Video", TipoConteudo.VIDEO, "url", Plano.GRATUITO);
         ReflectionTestUtils.setField(conteudo, "id", UUID.randomUUID());
         Object[] row = new Object[]{conteudo, null};
-        
-        when(conteudoMentoradoRepository.buscarCatalogo(eq(mentorado.getId()), eq(List.of(Plano.GRATUITO, Plano.BASICO)), eq(TipoConteudo.VIDEO), eq(true)))
+
+        when(conteudoMentoradoRepository.buscarCatalogo(eq(mentorado.getId()), eq(TipoConteudo.VIDEO), eq(true)))
                 .thenReturn(List.<Object[]>of(row));
 
         List<ConteudoMentoradoResponse> resp = service().buscarCatalogo(usuarioId, TipoConteudo.VIDEO, true);
@@ -79,27 +79,6 @@ class ConteudoMentoradoServiceTest {
         assertThat(resp.favorito()).isTrue();
         assertThat(resp.assistido()).isTrue();
         verify(conteudoMentoradoRepository).save(any());
-    }
-
-    @Test
-    void atualizarStatusRejeitaConteudoForaDoPlano() {
-        UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.GRATUITO, null, null, null);
-        ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
-        when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
-
-        Conteudo conteudo = new Conteudo("Doc", TipoConteudo.DOCUMENTO, "url", Plano.PROFISSIONAL);
-        conteudo.publicar();
-        ReflectionTestUtils.setField(conteudo, "id", UUID.randomUUID());
-        when(conteudoRepository.findById(conteudo.getId())).thenReturn(Optional.of(conteudo));
-
-        var req = new AtualizarConteudoMentoradoRequest(true, null);
-
-        // 403, não 409 — é uma negação de autorização (plano insuficiente), não conflito de
-        // estado; mesmo padrão de GlobalExceptionHandler.handleAccessDenied já usado no projeto.
-        assertThatThrownBy(() -> service().atualizarStatus(usuarioId, conteudo.getId(), req))
-                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
-                .hasMessageContaining("Seu plano não permite");
     }
 
     @Test

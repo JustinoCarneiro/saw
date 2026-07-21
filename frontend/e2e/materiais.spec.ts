@@ -3,8 +3,8 @@ import { loginAs } from './helpers';
 
 test.describe('M11 — E6 Materiais & Dicas do Brayan', () => {
   test('mentorado favorita e assiste uma dica, e o filtro "Apenas favoritos" reflete isso', async ({ page }) => {
-    // Carlos (PROFISSIONAL) enxerga toda a biblioteca — usa Carlos pra não colidir com dado
-    // criado nas verificações ao vivo desta leva, que usaram Rafael/Fernanda.
+    // Usa Carlos pra não colidir com dado criado nas verificações ao vivo desta leva, que
+    // usaram Rafael/Fernanda.
     await loginAs(page, 'carlos@pointdocarlos.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
 
@@ -97,19 +97,6 @@ test.describe('M11 — E6 Materiais & Dicas do Brayan', () => {
     } else {
       expect(depois.minutosAssistidos).toBe(antes.minutosAssistidos + 12);
     }
-  });
-
-  test('mentorado com plano insuficiente não vê nem consegue favoritar conteúdo acima do próprio plano', async ({ page }) => {
-    // Marina (BASICO) não deve ver "Apresentação: Precificação estratégica" (ESSENCIAL).
-    await loginAs(page, 'marina@sabordamarina.com.br');
-    await expect(page).toHaveURL(/\/mentorado/);
-    await page.getByRole('link', { name: 'Materiais & Dicas' }).click();
-
-    await expect(page.getByText('Apresentação: Precificação estratégica')).toHaveCount(0);
-
-    const res = await page.request.get('/api/v1/mentorado/conteudos');
-    const catalogo: { titulo: string }[] = await res.json();
-    expect(catalogo.some((c) => c.titulo === 'Apresentação: Precificação estratégica')).toBe(false);
   });
 
   test('isolamento por tenant: favorito de um mentorado não aparece pra outro', async ({ page }) => {
