@@ -117,7 +117,21 @@ export function MentoradoDetalhePage() {
   return (
     <div className={styles.page}>
       <button className={styles.backLink} onClick={() => navigate('/admin/mentorados/lista')}>
-        ← Gestão de Performance
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M19 12H5" />
+          <path d="M11 18L5 12L11 6" />
+        </svg>
+        Mentorados
       </button>
 
       <div className={styles.header}>

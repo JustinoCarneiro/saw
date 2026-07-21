@@ -33,10 +33,11 @@ test.describe('RBAC por área', () => {
     await loginAs(page, 'lucas@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
-    // getByRole('navigation') de propósito no link "Gestão de Performance": a MentoradosShell
-    // (M06) tem sua própria aba "Gestão de Performance" (M28, renomeada de "Mentorados"), texto
-    // igual ao link da sidebar E ao nome da própria área RBAC testada aqui — coincidência aceita
-    // pelo cliente (ver ROADMAP.md § M28) — sem escopo, os três batem.
+    // getByRole('navigation') de propósito no link "Gestão de Performance": o nome da área RBAC
+    // testada aqui coincide com o label da sidebar (M28) — coincidência aceita pelo cliente (ver
+    // ROADMAP.md § M28). A aba "lista" dentro da MentoradosShell continua dizendo "Mentorados"
+    // (achado do Marcos revisando o dev, revertido depois do M28), então escopar pra sidebar
+    // evita ambiguidade entre os dois textos.
     const sidebar = page.getByRole('navigation');
     await expect(sidebar.getByRole('link', { name: 'Gestão de Performance' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Time' })).toHaveCount(0);

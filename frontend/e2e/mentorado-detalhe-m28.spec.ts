@@ -43,7 +43,7 @@ test.describe('M28 — Página dedicada de mentorado', () => {
     await expect(page).toHaveURL(/\/mentorias\/.+\/ata$/);
   });
 
-  test('Voltar pro Gestão de Performance e acesso direto por URL', async ({ page }) => {
+  test('Voltar pra lista de Mentorados e acesso direto por URL', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
@@ -54,7 +54,7 @@ test.describe('M28 — Página dedicada de mentorado', () => {
     await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
     const url = page.url();
 
-    await page.getByRole('button', { name: '← Gestão de Performance' }).click();
+    await page.getByRole('button', { name: 'Mentorados', exact: true }).click();
     await expect(page).toHaveURL(/\/admin\/mentorados\/lista$/);
 
     // Acesso direto por URL (bookmark/reload) — GET /admin/mentorados/{id}, endpoint novo do M28

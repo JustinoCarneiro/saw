@@ -1,26 +1,31 @@
 .page {
-  max-width: 900px;
+  max-width: 1240px;
   padding: 24px 32px;
 }
 
 /* M28 (change request, 21/07/2026) — "página dedicada de mentorado": rota própria fora da
    MentoradosShell (sem as abas Painel Consolidado/Gestão de Performance/Mentorias/Metas/Tarefas
-   por cima), pra dar foco total ao mentorado selecionado, como uma página do Notion dele. */
+   por cima), pra dar foco total ao mentorado selecionado, como uma página do Notion dele.
+   max-width alinhado com o resto do Admin (lista/shell não têm cap) — 900px sobrava muito espaço
+   morto em telas desktop largas (achado do Marcos revisando o dev). */
 .backLink {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  color: var(--text-soft);
-  font: 500 12.5px var(--font-ui);
+  gap: 8px;
+  height: 38px;
+  padding: 0 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  color: var(--text);
+  font: 600 14px var(--font-ui);
   cursor: pointer;
-  padding: 0;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .backLink:hover {
-  color: var(--text);
+  border-color: var(--gold);
+  color: var(--gold);
 }
 
 .header {
@@ -63,11 +68,17 @@
 }
 
 .metricCard {
+  display: flex;
+  flex-direction: column;
   padding: 14px 16px;
 }
 
 .metricLabel {
+  display: flex;
+  align-items: flex-end;
+  min-height: 30px;
   font-size: 11.5px;
+  line-height: 1.35;
   color: var(--text-soft);
   margin-bottom: 6px;
 }
