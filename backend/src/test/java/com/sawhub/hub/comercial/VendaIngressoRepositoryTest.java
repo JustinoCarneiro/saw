@@ -49,7 +49,7 @@ class VendaIngressoRepositoryTest {
     private Lead leadFechadoComIngresso(String sufixo) {
         Usuario usuario = usuarioRepository.save(new Usuario("vendedor" + sufixo + "@sawhub.com.br", "hash", Perfil.ADMIN));
         Colaborador vendedor = colaboradorRepository.save(new Colaborador(usuario, "Paula" + sufixo, Area.COMERCIAL));
-        Lead lead = new Lead("Comprador " + sufixo, "comprador" + sufixo + "@example.com", null, null, null);
+        Lead lead = new Lead("Comprador " + sufixo, "comprador" + sufixo + "@example.com", null, null);
         lead.moverParaEmContato(vendedor);
         lead.moverParaProposta();
         lead.fecharVenda(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA, new BigDecimal("300.00"),

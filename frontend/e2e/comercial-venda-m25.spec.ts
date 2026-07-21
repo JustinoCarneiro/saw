@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 import { loginAs } from './helpers';
 
 // M25 (change request pós-MVP, 17/07/2026) — "formulário único de venda": produto/origem/valor/
-// forma de pagamento substituindo o "planoFechado" solto, com etapa Diagnóstico opcional no funil
-// e distribuição automática de parcelamento (Financeiro) e venda de ingresso (credenciamento).
+// forma de pagamento (o antigo "planoFechado" solto foi removido no M28 junto com Plano), com
+// etapa Diagnóstico opcional no funil e distribuição automática de parcelamento (Financeiro) e
+// venda de ingresso (credenciamento).
 test.describe('Comercial — formulário único de venda (M25)', () => {
   async function criarLeadAteProposta(page: import('@playwright/test').Page, nome: string): Promise<import('@playwright/test').Locator> {
     await page.goto('/solicitar-acesso');

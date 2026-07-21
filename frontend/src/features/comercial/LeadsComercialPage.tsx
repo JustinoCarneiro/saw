@@ -14,7 +14,6 @@ import type {
   Lead,
   OrigemVenda,
   ParcelaVendaRequest,
-  Plano,
   ProdutoVenda,
   StatusLead,
   VendaIngressoRequest,
@@ -22,7 +21,7 @@ import type {
 } from '../../shared/lib/types';
 import styles from './LeadsComercialPage.module.css';
 
-const COLUMNS = '1.4fr 1.6fr 1fr 1fr 1.3fr 1.6fr';
+const COLUMNS = '1.4fr 1.6fr 1fr 1.3fr 1.6fr';
 
 const STATUS_LABEL: Record<StatusLead, { label: string; bg: string; color: string }> = {
   SOLICITACAO: { label: 'Solicitação', bg: 'var(--line)', color: 'var(--text-soft)' },
@@ -31,13 +30,6 @@ const STATUS_LABEL: Record<StatusLead, { label: string; bg: string; color: strin
   PROPOSTA: { label: 'Proposta', bg: 'var(--warning-bg)', color: 'var(--warning)' },
   FECHADO: { label: 'Fechado', bg: 'var(--success-bg)', color: 'var(--success)' },
   PERDIDO: { label: 'Perdido', bg: 'var(--danger-bg)', color: 'var(--danger)' },
-};
-
-const PLANO_LABEL: Record<Plano, string> = {
-  GRATUITO: 'Gratuito',
-  BASICO: 'Básico',
-  ESSENCIAL: 'Essencial',
-  PROFISSIONAL: 'Profissional',
 };
 
 // M25 — catálogo confirmado via raio-x nas planilhas reais (docs/reuniao-2026-07-17-atualizacoes.md).
@@ -167,7 +159,7 @@ export function LeadsComercialPage() {
 
       {error && <div className={styles.error}>{error}</div>}
 
-      <DataGrid columns={COLUMNS} headers={['Lead', 'Contato', 'Plano de interesse', 'Status', 'Vendedor', 'Ações']}>
+      <DataGrid columns={COLUMNS} headers={['Lead', 'Contato', 'Status', 'Vendedor', 'Ações']}>
         {leads === null && !error && <div className={styles.loading}>Carregando…</div>}
         {leads?.length === 0 && <div className={styles.loading}>Nenhum lead encontrado.</div>}
         {leads?.map((lead) => {
@@ -184,7 +176,6 @@ export function LeadsComercialPage() {
                 <div>{lead.email}</div>
                 {lead.telefone && <div>{lead.telefone}</div>}
               </div>
-              <div className={styles.muted}>{lead.planoInteresse ? PLANO_LABEL[lead.planoInteresse] : '—'}</div>
               <div>
                 <Pill bg={st.bg} color={st.color}>{st.label}</Pill>
                 {lead.status === 'PERDIDO' && lead.motivoPerdido && (
@@ -246,7 +237,6 @@ function CriarLeadForm({ onCriado, onCancelar }: {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [planoInteresse, setPlanoInteresse] = useState<Plano | ''>('');
   const [mensagem, setMensagem] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -258,7 +248,6 @@ function CriarLeadForm({ onCriado, onCancelar }: {
     try {
       await apiClient.post('/admin/comercial/leads', {
         nome, email, telefone: telefone || undefined, mensagem: mensagem || undefined,
-        planoInteresse: planoInteresse || undefined,
       });
       onCriado();
     } catch (err) {
@@ -284,17 +273,6 @@ function CriarLeadForm({ onCriado, onCancelar }: {
           <label className={styles.formField}>
             Telefone
             <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(e.target.value)} maxLength={20} />
-          </label>
-        </div>
-        <div className={styles.formRow}>
-          <label className={styles.formField}>
-            Plano de interesse
-            <select className={styles.select} value={planoInteresse} onChange={(e) => setPlanoInteresse(e.target.value as Plano | '')}>
-              <option value="">Não informado</option>
-              {(Object.keys(PLANO_LABEL) as Plano[]).map((p) => (
-                <option key={p} value={p}>{PLANO_LABEL[p]}</option>
-              ))}
-            </select>
           </label>
         </div>
         <label className={styles.formField}>

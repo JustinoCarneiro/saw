@@ -2,7 +2,6 @@ package com.sawhub.hub.comercial;
 
 import com.sawhub.hub.common.BaseEntity;
 import com.sawhub.hub.mentorado.Mentorado;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentorado.TipoContrato;
 import com.sawhub.hub.team.Colaborador;
 import jakarta.persistence.Column;
@@ -56,20 +55,12 @@ public class Lead extends BaseEntity {
     private String mensagem;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "plano_interesse")
-    private Plano planoInteresse;
-
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusLead status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vendedor_id")
     private Colaborador vendedor;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "plano_fechado")
-    private Plano planoFechado;
 
     @Column(name = "motivo_perdido", columnDefinition = "bytea")
     @ColumnTransformer(
@@ -132,12 +123,11 @@ public class Lead extends BaseEntity {
     protected Lead() {
     }
 
-    public Lead(String nome, String email, String telefone, String mensagem, Plano planoInteresse) {
+    public Lead(String nome, String email, String telefone, String mensagem) {
         this.nome = nome;
         this.email = email;
         this.telefone = telefone;
         this.mensagem = mensagem;
-        this.planoInteresse = planoInteresse;
         this.status = StatusLead.SOLICITACAO;
     }
 
@@ -147,7 +137,7 @@ public class Lead extends BaseEntity {
      * (Solicitação->Em contato->Proposta), mas continua sendo um Lead FECHADO de verdade: o
      * mesmo {@link #vincularMentorado} de sempre funciona a partir daqui. */
     public static Lead criarJaFechado(String nome, String email, String telefone, TipoContrato tipoContrato) {
-        Lead lead = new Lead(nome, email, telefone, null, null);
+        Lead lead = new Lead(nome, email, telefone, null);
         lead.status = StatusLead.FECHADO;
         lead.tipoContratoFechado = tipoContrato;
         lead.dataFechamento = Instant.now();
@@ -178,19 +168,9 @@ public class Lead extends BaseEntity {
         this.status = StatusLead.PROPOSTA;
     }
 
-    /** Só a partir de PROPOSTA — venda fechada. Não cria conta de mentorado (isso é do E11,
-     * ver ROADMAP.md M05), só registra o resultado comercial. */
-    public void fechar(Plano planoFechado) {
-        exigirStatus(StatusLead.PROPOSTA);
-        this.status = StatusLead.FECHADO;
-        this.planoFechado = planoFechado;
-        this.dataFechamento = Instant.now();
-    }
-
-    /** M25 — "formulário único de venda". Só a partir de PROPOSTA, mesma guarda de
-     * {@link #fechar(Plano)} — os dois convivem, nenhum lead-fechamento existente precisa migrar
-     * pra este caminho. Overload sem taxaPlataformaRetida (gap 7) — todo chamador que não conhece
-     * taxa de plataforma continua funcionando sem mudar nada. */
+    /** M25 — "formulário único de venda". Só a partir de PROPOSTA. Overload sem
+     * taxaPlataformaRetida (gap 7) — todo chamador que não conhece taxa de plataforma continua
+     * funcionando sem mudar nada. */
     public void fecharVenda(ProdutoVenda produtoVenda, OrigemVenda origemVenda, BigDecimal valorTotalVenda,
                              BigDecimal valorPagoNoAto, FormaPagamento formaPagamento) {
         fecharVenda(produtoVenda, origemVenda, valorTotalVenda, valorPagoNoAto, formaPagamento, null);
@@ -264,20 +244,12 @@ public class Lead extends BaseEntity {
         return mensagem;
     }
 
-    public Plano getPlanoInteresse() {
-        return planoInteresse;
-    }
-
     public StatusLead getStatus() {
         return status;
     }
 
     public Colaborador getVendedor() {
         return vendedor;
-    }
-
-    public Plano getPlanoFechado() {
-        return planoFechado;
     }
 
     public String getMotivoPerdido() {

@@ -13,7 +13,7 @@ class VendaIngressoTest {
 
     @Test
     void nasceSemCheckInEDepoisPodeMarcar() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         Evento evento = new Evento("Receita do Sucesso", TipoEvento.PRESENCIAL, "Gestão", Instant.now(), "Recife", null, 100);
 
         VendaIngresso venda = new VendaIngresso(lead, evento, CategoriaIngresso.VIP, "João Comprador", "Financeiro", true,
@@ -35,7 +35,7 @@ class VendaIngressoTest {
     // Gap 3 (raio-x, 19/07/2026) — nem toda venda real tem empresa/telefone/e-mail preenchidos.
     @Test
     void nomeEmpresaTelefoneEEmailSaoOpcionais() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         Evento evento = new Evento("Receita do Sucesso", TipoEvento.PRESENCIAL, "Gestão", Instant.now(), "Recife", null, 100);
 
         VendaIngresso venda = new VendaIngresso(lead, evento, CategoriaIngresso.ESSENCIAL, "Ana Sócia", null, false,

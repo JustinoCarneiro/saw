@@ -3,10 +3,13 @@ package com.sawhub.hub.security;
 import com.sawhub.hub.aviso.Aviso;
 import com.sawhub.hub.aviso.AvisoRepository;
 import com.sawhub.hub.aviso.CategoriaAviso;
+import com.sawhub.hub.comercial.FormaPagamento;
 import com.sawhub.hub.comercial.Lead;
 import com.sawhub.hub.comercial.LeadRepository;
 import com.sawhub.hub.comercial.MetaComercial;
 import com.sawhub.hub.comercial.MetaComercialRepository;
+import com.sawhub.hub.comercial.OrigemVenda;
+import com.sawhub.hub.comercial.ProdutoVenda;
 import com.sawhub.hub.comercial.StatusLead;
 import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.ConteudoRepository;
@@ -288,34 +291,44 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .orElse(null);
 
         // Funil com leads em todos os estágios (H13.2) — fechados/perdidos ficam com
-        // dataFechamento = agora (Lead.fechar/perder não aceita data injetada, ver ROADMAP.md M05),
-        // o que cai dentro do mês corrente por construção, exatamente como o dashboard espera.
-        seedLead("Beatriz Ramos", "beatriz@padariaramos.com.br", Plano.ESSENCIAL, paula, StatusLead.FECHADO, Plano.ESSENCIAL, null);
-        seedLead("Diego Martins", "diego@churrascariamartins.com.br", Plano.PROFISSIONAL, paula, StatusLead.FECHADO, Plano.PROFISSIONAL, null);
-        seedLead("Sandra Nunes", "sandra@cafesandra.com.br", Plano.BASICO, paula, StatusLead.PERDIDO, null, "Optou por concorrente");
-        seedLead("Fábio Teixeira", "fabio@pizzariateixeira.com.br", Plano.BASICO, paula, StatusLead.PROPOSTA, null, null);
-        seedLead("Renata Alves", "renata@barelvas.com.br", null, paula, StatusLead.EM_CONTATO, null, null);
-        seedLead("Marcelo Duarte", "marcelo@duartegrill.com.br", Plano.ESSENCIAL, null, StatusLead.SOLICITACAO, null, null);
+        // dataFechamento = agora (Lead.fecharVenda/perder não aceita data injetada, ver
+        // ROADMAP.md M05), o que cai dentro do mês corrente por construção, exatamente como o
+        // dashboard espera.
+        seedLeadFechado("Beatriz Ramos", "beatriz@padariaramos.com.br", paula,
+                ProdutoVenda.MENTORIA_CONTINUA, new BigDecimal("18000"));
+        seedLeadFechado("Diego Martins", "diego@churrascariamartins.com.br", paula,
+                ProdutoVenda.MENTORIA_INDIVIDUAL, new BigDecimal("24000"));
+        seedLead("Sandra Nunes", "sandra@cafesandra.com.br", paula, StatusLead.PERDIDO, "Optou por concorrente");
+        seedLead("Fábio Teixeira", "fabio@pizzariateixeira.com.br", paula, StatusLead.PROPOSTA, null);
+        seedLead("Renata Alves", "renata@barelvas.com.br", paula, StatusLead.EM_CONTATO, null);
+        seedLead("Marcelo Duarte", "marcelo@duartegrill.com.br", null, StatusLead.SOLICITACAO, null);
 
         if (paula != null) {
             metaComercialRepository.save(new MetaComercial(paula, 2026, 7, 5));
         }
     }
 
-    private void seedLead(String nome, String email, Plano planoInteresse, Colaborador vendedor, StatusLead statusAlvo,
-                           Plano planoFechado, String motivoPerdido) {
-        Lead lead = new Lead(nome, email, null, null, planoInteresse);
+    private void seedLead(String nome, String email, Colaborador vendedor, StatusLead statusAlvo, String motivoPerdido) {
+        Lead lead = new Lead(nome, email, null, null);
         if (statusAlvo != StatusLead.SOLICITACAO) {
             lead.moverParaEmContato(vendedor);
             if (statusAlvo == StatusLead.PERDIDO) {
                 lead.perder(motivoPerdido);
             } else if (statusAlvo != StatusLead.EM_CONTATO) {
                 lead.moverParaProposta();
-                if (statusAlvo == StatusLead.FECHADO) {
-                    lead.fechar(planoFechado);
-                }
             }
         }
+        leadRepository.save(lead);
+    }
+
+    // M28 — os 2 leads FECHADO do seed passam a nascer via fecharVenda() (M25, formulário único
+    // de venda) em vez do caminho legado Lead.fechar(Plano), removido junto com Plano.
+    private void seedLeadFechado(String nome, String email, Colaborador vendedor,
+                                  ProdutoVenda produtoVenda, BigDecimal valorTotalVenda) {
+        Lead lead = new Lead(nome, email, null, null);
+        lead.moverParaEmContato(vendedor);
+        lead.moverParaProposta();
+        lead.fecharVenda(produtoVenda, OrigemVenda.DIRETA, valorTotalVenda, null, FormaPagamento.PIX);
         leadRepository.save(lead);
     }
 

@@ -33,7 +33,7 @@ class ConciliacaoServiceTest {
 
     private static Lead leadFechado(String nome, BigDecimal valorTotalVenda, BigDecimal valorPagoNoAto,
                                      BigDecimal taxaPlataformaRetida) {
-        Lead lead = new Lead(nome, nome.toLowerCase(java.util.Locale.ROOT) + "@restaurante.com", null, null, null);
+        Lead lead = new Lead(nome, nome.toLowerCase(java.util.Locale.ROOT) + "@restaurante.com", null, null);
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
         lead.fecharVenda(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA, valorTotalVenda, valorPagoNoAto,

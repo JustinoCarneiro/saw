@@ -16,7 +16,7 @@ class ParcelaVendaTest {
 
     @Test
     void nasceSemLancamentoVinculadoEDepoisPodeVincular() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         ParcelaVenda parcela = new ParcelaVenda(lead, 1, new BigDecimal("2000.00"), LocalDate.of(2026, 8, 17));
 
         assertThat(parcela.getLancamento()).isNull();

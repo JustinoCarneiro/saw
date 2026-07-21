@@ -72,8 +72,7 @@ public class LeadService {
 
     @Transactional
     public Lead criar(CriarLeadRequest request) {
-        Lead lead = new Lead(request.nome(), request.email(), request.telefone(), request.mensagem(),
-                request.planoInteresse());
+        Lead lead = new Lead(request.nome(), request.email(), request.telefone(), request.mensagem());
         return leadRepository.save(lead);
     }
 
@@ -92,16 +91,12 @@ public class LeadService {
             // de EM_CONTATO pra PROPOSTA (ver Lead.moverParaProposta).
             case DIAGNOSTICO -> lead.moverParaDiagnostico();
             case PROPOSTA -> lead.moverParaProposta();
-            // Achado L2 da revisão de segurança: sem exigir plano/motivo aqui, um FECHADO sem
-            // plano quebra silenciosamente "vendas por plano" (H13.1), e um PERDIDO sem motivo
-            // perde o dado que justifica a decisão pro time comercial revisar depois.
-            case FECHADO -> {
-                if (request.planoFechado() == null) {
-                    throw new IllegalArgumentException("Plano fechado é obrigatório para mover o lead para Fechado.");
-                }
-                lead.fechar(request.planoFechado());
-                atividadeLogService.registrar("LEAD_FECHADO", "Lead fechado: " + lead.getNome());
-            }
+            // M28 — o caminho legado de fechar um lead por aqui (Plano) foi removido junto com
+            // Plano ("não existem planos, mas sim produtos"); fechar venda de verdade é só via
+            // fecharVenda() (M25, formulário único). FECHADO continua existindo como StatusLead
+            // (estado terminal real do funil), só não é mais alcançável por avancar().
+            case FECHADO -> throw new IllegalArgumentException(
+                    "Não é possível fechar um lead por aqui — use o endpoint de fechar venda.");
             case PERDIDO -> {
                 if (request.motivoPerdido() == null || request.motivoPerdido().isBlank()) {
                     throw new IllegalArgumentException("Motivo é obrigatório para marcar o lead como Perdido.");
@@ -116,11 +111,11 @@ public class LeadService {
     }
 
     /** M25 — "formulário único de venda": fecha o Lead com produto/origem/valor/forma de
-     * pagamento (em vez de só o plano legado), e distribui automaticamente o dado que hoje vive
-     * em planilhas separadas: parcelamento vira lançamentos a receber, ingresso de evento vira
-     * credenciamento. Endpoint dedicado, não substitui avancar()/FECHADO (que continua existindo
-     * pra quem só precisa registrar o plano). M26 — valor pago no ato também passa a gerar um
-     * lançamento REALIZADO (antes só ficava gravado no Lead, sem rastro nenhum no financeiro). */
+     * pagamento, e distribui automaticamente o dado que hoje vive em planilhas separadas:
+     * parcelamento vira lançamentos a receber, ingresso de evento vira credenciamento. M28 —
+     * único caminho pra fechar um lead de verdade (o legado via avancar()/FECHADO foi removido
+     * junto com Plano). M26 — valor pago no ato também passa a gerar um lançamento REALIZADO
+     * (antes só ficava gravado no Lead, sem rastro nenhum no financeiro). */
     @Transactional
     public Lead fecharVenda(UUID leadId, FecharVendaRequest request) {
         Lead lead = leadRepository.buscarPorIdComVendedor(leadId)

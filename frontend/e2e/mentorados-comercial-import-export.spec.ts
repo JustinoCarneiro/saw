@@ -115,8 +115,8 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
     await page.goto('/admin/comercial/leads');
 
     const nome = `Lead CSV Import E2E ${Date.now()}`;
-    const csv = `nome;email;telefone;mensagem;planoInteresse\n`
-        + `${nome};leadcsv.${Date.now()}@example.com;;Quero saber mais;ESSENCIAL\n`;
+    const csv = `nome;email;telefone;mensagem\n`
+        + `${nome};leadcsv.${Date.now()}@example.com;;Quero saber mais\n`;
 
     const main = page.getByRole('main');
     await main.getByTestId('csv-importar-input').setInputFiles({
@@ -136,9 +136,9 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
     await page.goto('/admin/comercial/leads');
 
     const nomeValido = `Nao deveria entrar M22 ${Date.now()}`;
-    const csv = `nome;email;telefone;mensagem;planoInteresse\n`
-        + `${nomeValido};valido.${Date.now()}@example.com;;;\n`
-        + `Sem email;;;;\n`;
+    const csv = `nome;email;telefone;mensagem\n`
+        + `${nomeValido};valido.${Date.now()}@example.com;;\n`
+        + `Sem email;;;\n`;
 
     const main = page.getByRole('main');
     await main.getByTestId('csv-importar-input').setInputFiles({

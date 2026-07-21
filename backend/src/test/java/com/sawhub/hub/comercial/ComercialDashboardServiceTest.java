@@ -165,7 +165,7 @@ class ComercialDashboardServiceTest {
         when(eventoRepository.buscarPorStatusEDataHoraBetween(eq(StatusEvento.REALIZADO), any(), any()))
                 .thenReturn(List.of(evento));
 
-        Lead lead = new Lead("João Comprador", "joao@example.com", null, null, null);
+        Lead lead = new Lead("João Comprador", "joao@example.com", null, null);
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
         lead.fecharVenda(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA, new BigDecimal("600.00"),

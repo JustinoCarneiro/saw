@@ -8,9 +8,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.common.dto.ImportResultResponse;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -43,34 +43,35 @@ class LeadCsvServiceTest {
 
     @Test
     void exportarLeadEmSolicitacaoDeixaColunasDeFunilVazias() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", "11999998888", "Quero saber mais", Plano.ESSENCIAL);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", "11999998888", "Quero saber mais");
         when(leadService.listar(null, null)).thenReturn(List.of(lead));
 
         String csv = service().exportar(null, null);
 
-        assertThat(csv).contains("nome;email;telefone;mensagem;planoInteresse;status;vendedor;planoFechado;motivoPerdido;dataFechamento");
-        assertThat(csv).contains("Maria Souza;maria@restaurante.com;11999998888;Quero saber mais;ESSENCIAL;SOLICITACAO;;;;");
+        assertThat(csv).contains("nome;email;telefone;mensagem;status;vendedor;motivoPerdido;dataFechamento");
+        assertThat(csv).contains("Maria Souza;maria@restaurante.com;11999998888;Quero saber mais;SOLICITACAO;;;");
     }
 
     @Test
     void exportarLeadFechadoTrazVendedorEDataFormatadaEmPtBr() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, Plano.ESSENCIAL);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         Colaborador vendedor = new Colaborador(null, "Paula Mendes", Area.COMERCIAL);
         lead.moverParaEmContato(vendedor);
         lead.moverParaProposta();
-        lead.fechar(Plano.ESSENCIAL);
+        lead.fecharVenda(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA, new BigDecimal("18000.00"),
+                null, FormaPagamento.PIX);
         ReflectionTestUtils.setField(lead, "dataFechamento", Instant.parse("2026-07-10T15:30:00Z"));
         when(leadService.listar(any(), any())).thenReturn(List.of(lead));
 
         String csv = service().exportar(null, null);
 
-        assertThat(csv).contains("FECHADO;Paula Mendes;ESSENCIAL;;");
+        assertThat(csv).contains("FECHADO;Paula Mendes;;");
         assertThat(csv).contains("10/07/2026");
     }
 
     @Test
     void exportarNeutralizaNomeQueComecaComSinalDeFormula() {
-        Lead lead = new Lead("=SOMA(A1:A2)", "x@x.com", null, null, null);
+        Lead lead = new Lead("=SOMA(A1:A2)", "x@x.com", null, null);
         when(leadService.listar(any(), any())).thenReturn(List.of(lead));
 
         String csv = service().exportar(null, null);
@@ -83,9 +84,9 @@ class LeadCsvServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void importarCriaLeadsNovosSempreEmSolicitacao() {
-        String conteudo = "nome;email;telefone;mensagem;planoInteresse\n"
-                + "Maria Souza;maria@restaurante.com;11999998888;Quero saber mais;ESSENCIAL\n"
-                + "Carlos Lima;carlos@bistro.com;;;\n";
+        String conteudo = "nome;email;telefone;mensagem\n"
+                + "Maria Souza;maria@restaurante.com;11999998888;Quero saber mais\n"
+                + "Carlos Lima;carlos@bistro.com;;\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
@@ -98,7 +99,6 @@ class LeadCsvServiceTest {
         assertThat(captor.getValue()).hasSize(2);
         assertThat(captor.getValue().get(0).getStatus()).isEqualTo(StatusLead.SOLICITACAO);
         assertThat(captor.getValue().get(0).getNome()).isEqualTo("Maria Souza");
-        assertThat(captor.getValue().get(0).getPlanoInteresse()).isEqualTo(Plano.ESSENCIAL);
         assertThat(captor.getValue().get(1).getTelefone()).isNull();
     }
 
@@ -106,9 +106,9 @@ class LeadCsvServiceTest {
 
     @Test
     void importarNaoPersisteNadaQuandoUmaLinhaEhInvalida() {
-        String conteudo = "nome;email;telefone;mensagem;planoInteresse\n"
-                + "Maria Souza;maria@restaurante.com;;;\n"
-                + "Carlos Lima;email-invalido;;;\n";
+        String conteudo = "nome;email;telefone;mensagem\n"
+                + "Maria Souza;maria@restaurante.com;;\n"
+                + "Carlos Lima;email-invalido;;\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
@@ -122,24 +122,13 @@ class LeadCsvServiceTest {
 
     @Test
     void importarRejeitaNomeEmBranco() {
-        String conteudo = "nome;email;telefone;mensagem;planoInteresse\n"
-                + ";maria@restaurante.com;;;\n";
+        String conteudo = "nome;email;telefone;mensagem\n"
+                + ";maria@restaurante.com;;\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 
         assertThat(resultado.erros()).hasSize(1);
         assertThat(resultado.erros().get(0).motivo()).contains("Nome em branco");
-    }
-
-    @Test
-    void importarRejeitaPlanoInteresseInvalido() {
-        String conteudo = "nome;email;telefone;mensagem;planoInteresse\n"
-                + "Maria Souza;maria@restaurante.com;;;PLANO_INEXISTENTE\n";
-
-        ImportResultResponse resultado = service().importar(csv(conteudo));
-
-        assertThat(resultado.erros()).hasSize(1);
-        assertThat(resultado.erros().get(0).motivo()).contains("Plano de interesse");
     }
 
     @Test
@@ -154,8 +143,8 @@ class LeadCsvServiceTest {
     @Test
     void importarRejeitaMensagemAcimaDe500Caracteres() {
         String mensagemGigante = "x".repeat(501);
-        String conteudo = "nome;email;telefone;mensagem;planoInteresse\n"
-                + "Maria Souza;maria@restaurante.com;;" + mensagemGigante + ";\n";
+        String conteudo = "nome;email;telefone;mensagem\n"
+                + "Maria Souza;maria@restaurante.com;;" + mensagemGigante + "\n";
 
         ImportResultResponse resultado = service().importar(csv(conteudo));
 

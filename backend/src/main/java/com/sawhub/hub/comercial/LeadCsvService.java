@@ -3,7 +3,6 @@ package com.sawhub.hub.comercial;
 import com.sawhub.hub.common.CsvUtils;
 import com.sawhub.hub.common.dto.ImportErro;
 import com.sawhub.hub.common.dto.ImportResultResponse;
-import com.sawhub.hub.mentorado.Plano;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
@@ -12,7 +11,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.apache.commons.csv.CSVFormat;
@@ -31,10 +29,10 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class LeadCsvService {
 
-    private static final String[] CABECALHO_IMPORT = {"nome", "email", "telefone", "mensagem", "planoInteresse"};
+    private static final String[] CABECALHO_IMPORT = {"nome", "email", "telefone", "mensagem"};
     private static final String[] CABECALHO_EXPORT = {
-            "nome", "email", "telefone", "mensagem", "planoInteresse",
-            "status", "vendedor", "planoFechado", "motivoPerdido", "dataFechamento"
+            "nome", "email", "telefone", "mensagem",
+            "status", "vendedor", "motivoPerdido", "dataFechamento"
     };
     private static final int LIMITE_LINHAS = 5000;
     private static final Pattern EMAIL_SIMPLES = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
@@ -60,10 +58,8 @@ public class LeadCsvService {
                         l.getEmail(),
                         l.getTelefone() == null ? "" : l.getTelefone(),
                         CsvUtils.neutralizarFormula(l.getMensagem() == null ? "" : l.getMensagem()),
-                        l.getPlanoInteresse() == null ? "" : l.getPlanoInteresse().name(),
                         l.getStatus().name(),
                         l.getVendedor() == null ? "" : CsvUtils.neutralizarFormula(l.getVendedor().getNome()),
-                        l.getPlanoFechado() == null ? "" : l.getPlanoFechado().name(),
                         l.getMotivoPerdido() == null ? "" : CsvUtils.neutralizarFormula(l.getMotivoPerdido()),
                         l.getDataFechamento() == null ? "" : DATA_HORA_PT_BR.format(l.getDataFechamento()));
             }
@@ -145,21 +141,9 @@ public class LeadCsvService {
         if (mensagem != null && mensagem.length() > 500) {
             throw new IllegalArgumentException("Mensagem excede 500 caracteres.");
         }
-        Plano planoInteresse = parsePlanoOpcional(registro.get("planoInteresse"));
 
         return new Lead(nome.trim(), email.trim(), telefone == null || telefone.isBlank() ? null : telefone,
-                mensagem == null || mensagem.isBlank() ? null : mensagem, planoInteresse);
-    }
-
-    private static Plano parsePlanoOpcional(String bruto) {
-        if (bruto == null || bruto.isBlank()) {
-            return null;
-        }
-        try {
-            return Plano.valueOf(bruto.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Plano de interesse \"" + bruto + "\" inválido.");
-        }
+                mensagem == null || mensagem.isBlank() ? null : mensagem);
     }
 
     private static void exigirColunas(List<String> cabecalhoEncontrado) {

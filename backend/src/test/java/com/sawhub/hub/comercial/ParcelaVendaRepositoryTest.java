@@ -55,7 +55,7 @@ class ParcelaVendaRepositoryTest {
     private Lead criarLeadFechado(String sufixo) {
         Usuario usuario = usuarioRepository.save(new Usuario("vendedor" + sufixo + "@sawhub.com.br", "hash", Perfil.ADMIN));
         Colaborador vendedor = colaboradorRepository.save(new Colaborador(usuario, "Paula" + sufixo, Area.COMERCIAL));
-        Lead lead = new Lead("Comprador " + sufixo, "comprador" + sufixo + "@example.com", null, null, null);
+        Lead lead = new Lead("Comprador " + sufixo, "comprador" + sufixo + "@example.com", null, null);
         lead.moverParaEmContato(vendedor);
         lead.moverParaProposta();
         lead.fecharVenda(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA, new BigDecimal("10000.00"),

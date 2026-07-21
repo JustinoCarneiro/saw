@@ -54,13 +54,14 @@ class MentoradoAdminServiceTest {
                 diagnosticoInicialRepository, contratoDocumentoStorageService, passwordEncoder);
     }
 
-    private static Lead leadFechado(Plano planoFechado) {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+    private static Lead leadFechado() {
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         Usuario vendedorUsuario = null;
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(vendedorUsuario, "Paula",
                 com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
-        lead.fechar(planoFechado);
+        lead.fecharVenda(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA, new BigDecimal("18000.00"),
+                null, FormaPagamento.PIX);
         return lead;
     }
 
@@ -134,7 +135,7 @@ class MentoradoAdminServiceTest {
     @Test
     void criarAPartirDeLeadFechadoFuncionaEVinculaOLead() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = leadFechado(Plano.ESSENCIAL);
+        Lead lead = leadFechado();
         when(leadRepository.findById(leadId)).thenReturn(Optional.of(lead));
         when(usuarioRepository.findByEmail(lead.getEmail())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(anyString())).thenReturn("hash");
@@ -145,7 +146,9 @@ class MentoradoAdminServiceTest {
         var resultado = service().criarAPartirDeLead(leadId);
 
         assertThat(resultado.mentorado().getNome()).isEqualTo("Maria Souza");
-        assertThat(resultado.mentorado().getPlano()).isEqualTo(Plano.ESSENCIAL);
+        // M28 — Lead.planoFechado removido junto com Plano; todo mentorado criado a partir de
+        // lead nasce com o mesmo default GRATUITO de criarDireto()/criarDiretoDeImportacao().
+        assertThat(resultado.mentorado().getPlano()).isEqualTo(Plano.GRATUITO);
         assertThat(resultado.senhaTemporaria()).isNotBlank();
         assertThat(lead.getMentorado()).isEqualTo(resultado.mentorado());
     }
@@ -157,7 +160,7 @@ class MentoradoAdminServiceTest {
     @Test
     void criarAPartirDeLeadPropagaDadosDeVendaParaTipoContrato() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
         lead.fecharVenda(ProdutoVenda.MENTORIA_CONTINUA, OrigemVenda.DIRETA, new BigDecimal("26000.00"),
@@ -182,7 +185,7 @@ class MentoradoAdminServiceTest {
     @Test
     void criarAPartirDeLeadDeVendaDeIngressoNaoPreencheTipoContrato() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
         lead.fecharVenda(ProdutoVenda.INGRESSO_EVENTO, OrigemVenda.DIRETA, new BigDecimal("300.00"),
@@ -203,7 +206,7 @@ class MentoradoAdminServiceTest {
     @Test
     void criarAPartirDeLeadNaoFechadoLancaErro() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         when(leadRepository.findById(leadId)).thenReturn(Optional.of(lead));
 
         assertThatThrownBy(() -> service().criarAPartirDeLead(leadId))
@@ -214,7 +217,7 @@ class MentoradoAdminServiceTest {
     @Test
     void criarAPartirDeLeadJaVinculadoLancaErro() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = leadFechado(Plano.BASICO);
+        Lead lead = leadFechado();
         Mentorado jaVinculado = new Mentorado(null, "X", null, Plano.BASICO, java.math.BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(jaVinculado, "id", UUID.randomUUID());
         lead.vincularMentorado(jaVinculado);
@@ -228,7 +231,7 @@ class MentoradoAdminServiceTest {
     @Test
     void criarAPartirDeLeadComEmailJaCadastradoLancaErro() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = leadFechado(Plano.BASICO);
+        Lead lead = leadFechado();
         when(leadRepository.findById(leadId)).thenReturn(Optional.of(lead));
         when(usuarioRepository.findByEmail(lead.getEmail()))
                 .thenReturn(Optional.of(new Usuario(lead.getEmail(), "hash", com.sawhub.hub.security.Perfil.MENTORADO)));

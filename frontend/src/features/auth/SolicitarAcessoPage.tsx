@@ -3,22 +3,13 @@ import { Link } from 'react-router-dom';
 import logoSaw from '../../assets/logo-saw.png';
 import { apiClient } from '../../shared/lib/apiClient';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
-import type { Plano } from '../../shared/lib/types';
 import styles from './SolicitarAcessoPage.module.css';
-
-const PLANO_LABEL: Record<Plano, string> = {
-  GRATUITO: 'Gratuito',
-  BASICO: 'Básico',
-  ESSENCIAL: 'Essencial',
-  PROFISSIONAL: 'Profissional',
-};
 
 export function SolicitarAcessoPage() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [mensagem, setMensagem] = useState('');
-  const [planoInteresse, setPlanoInteresse] = useState<Plano | ''>('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [enviado, setEnviado] = useState(false);
@@ -33,7 +24,6 @@ export function SolicitarAcessoPage() {
         email,
         telefone: telefone || null,
         mensagem: mensagem || null,
-        planoInteresse: planoInteresse || null,
       });
       setEnviado(true);
     } catch (err) {
@@ -94,19 +84,6 @@ export function SolicitarAcessoPage() {
               onChange={(e) => setTelefone(e.target.value)}
               maxLength={20}
             />
-
-            <label className={styles.label} htmlFor="plano">Plano de interesse (opcional)</label>
-            <select
-              id="plano"
-              className={styles.input}
-              value={planoInteresse}
-              onChange={(e) => setPlanoInteresse(e.target.value as Plano | '')}
-            >
-              <option value="">Não sei ainda</option>
-              {(Object.keys(PLANO_LABEL) as Plano[]).map((p) => (
-                <option key={p} value={p}>{PLANO_LABEL[p]}</option>
-              ))}
-            </select>
 
             <label className={styles.label} htmlFor="mensagem">Mensagem (opcional)</label>
             <textarea

@@ -41,7 +41,7 @@ class LeadTest {
     // schema com mudança de comportamento existente).
     @Test
     void moverParaDiagnosticoSoAPartirDeEmContato() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
 
         lead.moverParaDiagnostico();
@@ -51,19 +51,19 @@ class LeadTest {
 
     @Test
     void moverParaDiagnosticoDeStatusErradoLancaErro() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
 
         assertThatThrownBy(lead::moverParaDiagnostico).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void moverParaPropostaFuncionaTantoDeEmContatoQuantoDeDiagnostico() {
-        Lead direto = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead direto = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         direto.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         direto.moverParaProposta();
         assertThat(direto.getStatus()).isEqualTo(StatusLead.PROPOSTA);
 
-        Lead comDiagnostico = new Lead("João Souza", "joao@restaurante.com", null, null, null);
+        Lead comDiagnostico = new Lead("João Souza", "joao@restaurante.com", null, null);
         comDiagnostico.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         comDiagnostico.moverParaDiagnostico();
         comDiagnostico.moverParaProposta();
@@ -74,7 +74,7 @@ class LeadTest {
     // paralelo a planoFechado/tipoContratoFechado (M23), mesma cisão sem substituir o legado.
     @Test
     void fecharVendaSoAPartirDePropostaEGravaTudo() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
 
@@ -92,7 +92,7 @@ class LeadTest {
 
     @Test
     void fecharVendaDeStatusErradoLancaErro() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
 
         assertThatThrownBy(() -> lead.fecharVenda(ProdutoVenda.CONSULTORIA, OrigemVenda.DIRETA,
                 BigDecimal.TEN, BigDecimal.ONE, FormaPagamento.PIX))
@@ -103,7 +103,7 @@ class LeadTest {
     // plataforma retida é um terceiro conceito, distinto de valorPagoNoAto.
     @Test
     void fecharVendaComTaxaPlataformaRetidaGravaOTerceiroConceito() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
 
@@ -118,7 +118,7 @@ class LeadTest {
 
     @Test
     void fecharVendaSemTaxaPlataformaRetidaFicaNula() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
         lead.moverParaProposta();
 

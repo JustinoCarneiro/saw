@@ -198,10 +198,10 @@ export interface VendedorResumo {
   nome: string;
 }
 
-// M25 (change request pós-MVP, 17/07/2026) — "formulário único de venda", aditivo em paralelo a
-// planoFechado (legado). TipoContrato é o mesmo enum do M23 (Mentorado.tipoContrato) — reaproveitado
-// aqui só pra MENTORIA_CONTINUA/MENTORIA_INDIVIDUAL/CONSULTORIA; INGRESSO_EVENTO/PRODUTO_DIGITAL
-// não têm TipoContrato correspondente.
+// M25 (change request pós-MVP, 17/07/2026) — "formulário único de venda". TipoContrato é o mesmo
+// enum do M23 (Mentorado.tipoContrato) — reaproveitado aqui só pra MENTORIA_CONTINUA/
+// MENTORIA_INDIVIDUAL/CONSULTORIA; INGRESSO_EVENTO/PRODUTO_DIGITAL não têm TipoContrato
+// correspondente.
 export type ProdutoVenda = 'MENTORIA_CONTINUA' | 'MENTORIA_INDIVIDUAL' | 'CONSULTORIA' | 'FORMULA_SAW' | 'FORMACAO_PROFISSIONAL' | 'FICHA_TECNICA_LUCRATIVA' | 'INGRESSO_EVENTO' | 'PRODUTO_DIGITAL';
 export type OrigemVenda = 'DIRETA' | 'HOTMART' | 'CORTESIA' | 'PATROCINIO' | 'PALESTRANTE' | 'PARCEIRO';
 export type CategoriaIngresso = 'ESSENCIAL' | 'VIP' | 'ESPECIAL' | 'BLACK';
@@ -213,10 +213,8 @@ export interface Lead {
   email: string;
   telefone: string | null;
   mensagem: string | null;
-  planoInteresse: Plano | null;
   status: StatusLead;
   vendedor: VendedorResumo | null;
-  planoFechado: Plano | null;
   tipoContratoFechado: TipoContrato | null;
   motivoPerdido: string | null;
   dataFechamento: string | null;

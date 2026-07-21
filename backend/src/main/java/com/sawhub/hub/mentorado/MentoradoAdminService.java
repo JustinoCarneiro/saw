@@ -108,8 +108,9 @@ public class MentoradoAdminService {
         String senhaTemporaria = gerarSenhaTemporaria();
         Usuario usuario = usuarioRepository.save(
                 new Usuario(lead.getEmail(), passwordEncoder.encode(senhaTemporaria), Perfil.MENTORADO));
-        Plano plano = lead.getPlanoFechado() != null ? lead.getPlanoFechado() : Plano.GRATUITO;
-        Mentorado mentorado = new Mentorado(usuario, lead.getNome(), null, plano, BigDecimal.ZERO, 0, 0);
+        // M28 — Lead.planoFechado removido junto com Plano ("não existem planos, mas sim
+        // produtos"); mesmo default GRATUITO já usado em criarDireto()/criarDiretoDeImportacao().
+        Mentorado mentorado = new Mentorado(usuario, lead.getNome(), null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
 
         // M25 — Suposição 6 do Blueprint: quando o lead foi fechado via fecharVenda() (formulário
         // único de venda) com produto de mentoria/consultoria, propaga pro Mentorado em vez de

@@ -25,7 +25,6 @@ import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
 import com.sawhub.hub.financeiro.GrupoDre;
 import com.sawhub.hub.financeiro.LancamentoFinanceiroRepository;
 import com.sawhub.hub.financeiro.TipoLancamento;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
@@ -72,7 +71,7 @@ class LeadServiceTest {
     }
 
     private static Lead leadEmProposta() {
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(colaborador(UUID.randomUUID(), "Paula"));
         lead.moverParaProposta();
         return lead;
@@ -98,13 +97,12 @@ class LeadServiceTest {
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarLeadRequest("Maria Souza", "maria@restaurante.com", "11999998888",
-                "Quero saber mais", Plano.ESSENCIAL);
+                "Quero saber mais");
 
         Lead lead = service().criar(request);
 
         assertThat(lead.getStatus()).isEqualTo(StatusLead.SOLICITACAO);
         assertThat(lead.getNome()).isEqualTo("Maria Souza");
-        assertThat(lead.getPlanoInteresse()).isEqualTo(Plano.ESSENCIAL);
     }
 
     @Test
@@ -132,13 +130,13 @@ class LeadServiceTest {
     void avancarParaEmContatoAtribuiVendedor() {
         UUID leadId = UUID.randomUUID();
         UUID vendedorId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         Colaborador vendedor = colaborador(vendedorId, "Paula");
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(colaboradorRepository.findById(vendedorId)).thenReturn(Optional.of(vendedor));
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Lead avancado = service().avancar(leadId, new AvancarLeadRequest(StatusLead.EM_CONTATO, vendedorId, null, null));
+        Lead avancado = service().avancar(leadId, new AvancarLeadRequest(StatusLead.EM_CONTATO, vendedorId, null));
 
         assertThat(avancado.getStatus()).isEqualTo(StatusLead.EM_CONTATO);
         assertThat(avancado.getVendedor()).isSameAs(vendedor);
@@ -147,10 +145,10 @@ class LeadServiceTest {
     @Test
     void avancarParaEmContatoSemVendedorLancaErro() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
 
-        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.EM_CONTATO, null, null, null)))
+        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.EM_CONTATO, null, null)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Vendedor");
     }
@@ -159,11 +157,11 @@ class LeadServiceTest {
     void avancarParaEmContatoComVendedorInexistenteLancaErro() {
         UUID leadId = UUID.randomUUID();
         UUID vendedorId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(colaboradorRepository.findById(vendedorId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.EM_CONTATO, vendedorId, null, null)))
+        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.EM_CONTATO, vendedorId, null)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("não encontrado");
     }
@@ -171,55 +169,41 @@ class LeadServiceTest {
     @Test
     void avancarParaPropostaExigeEmContato() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(colaborador(UUID.randomUUID(), "Paula"));
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Lead avancado = service().avancar(leadId, new AvancarLeadRequest(StatusLead.PROPOSTA, null, null, null));
+        Lead avancado = service().avancar(leadId, new AvancarLeadRequest(StatusLead.PROPOSTA, null, null));
 
         assertThat(avancado.getStatus()).isEqualTo(StatusLead.PROPOSTA);
     }
 
     @Test
-    void avancarParaFechadoRegistraPlanoFechado() {
-        UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
-        lead.moverParaEmContato(colaborador(UUID.randomUUID(), "Paula"));
-        lead.moverParaProposta();
-        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
-        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        Lead avancado = service().avancar(leadId, new AvancarLeadRequest(StatusLead.FECHADO, null, Plano.ESSENCIAL, null));
-
-        assertThat(avancado.getStatus()).isEqualTo(StatusLead.FECHADO);
-        assertThat(avancado.getPlanoFechado()).isEqualTo(Plano.ESSENCIAL);
-        assertThat(avancado.getDataFechamento()).isNotNull();
-        verify(atividadeLogService).registrar("LEAD_FECHADO", "Lead fechado: Maria Souza");
-    }
-
-    @Test
     void avancarParaPerdidoRegistraMotivo() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         Lead avancado = service().avancar(leadId,
-                new AvancarLeadRequest(StatusLead.PERDIDO, null, null, "Optou por concorrente"));
+                new AvancarLeadRequest(StatusLead.PERDIDO, null, "Optou por concorrente"));
 
         assertThat(avancado.getStatus()).isEqualTo(StatusLead.PERDIDO);
         assertThat(avancado.getMotivoPerdido()).isEqualTo("Optou por concorrente");
         verify(atividadeLogService).registrar("LEAD_PERDIDO", "Lead perdido: Maria Souza");
     }
 
+    // M28 — pulando etapa continua protegido pela máquina de estado da entidade (Lead.
+    // exigirStatus), independente do caminho legado de FECHADO ter sido removido: SOLICITACAO ->
+    // PROPOSTA direto (sem passar por EM_CONTATO) ainda é uma transição inválida.
     @Test
     void avancarPulandoEtapaLancaErro() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
 
-        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.FECHADO, null, Plano.ESSENCIAL, null)))
+        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.PROPOSTA, null, null)))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -228,33 +212,36 @@ class LeadServiceTest {
         UUID leadId = UUID.randomUUID();
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.PERDIDO, null, null, "x")))
+        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.PERDIDO, null, "x")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("não encontrado");
     }
 
+    // M28 — o caminho legado de fechar um lead por avancar()/FECHADO foi removido junto com Plano
+    // ("não existem planos, mas sim produtos"); fechar venda de verdade é só via fecharVenda()
+    // (M25). Sempre lança erro, mesmo com o lead numa etapa válida (PROPOSTA) — substitui os
+    // testes antigos avancarParaFechadoRegistraPlanoFechado/avancarParaFechadoSemPlanoLancaErro.
     @Test
-    void avancarParaFechadoSemPlanoLancaErro() {
-        // Achado L2 da revisão de segurança: sem esta checagem, um FECHADO sem plano quebra a
-        // atribuição de "vendas por plano" (H13.1) silenciosamente.
+    void avancarParaFechadoSempreLancaErro() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         lead.moverParaEmContato(colaborador(UUID.randomUUID(), "Paula"));
         lead.moverParaProposta();
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
 
-        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.FECHADO, null, null, null)))
+        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.FECHADO, null, null)))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Plano");
+                .hasMessageContaining("fechar venda");
+        verifyNoInteractions(atividadeLogService);
     }
 
     @Test
     void avancarParaPerdidoSemMotivoLancaErro() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
 
-        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.PERDIDO, null, null, null)))
+        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.PERDIDO, null, null)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Motivo");
     }
@@ -262,10 +249,10 @@ class LeadServiceTest {
     @Test
     void avancarParaPerdidoComMotivoEmBrancoLancaErro() {
         UUID leadId = UUID.randomUUID();
-        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null, null);
+        Lead lead = new Lead("Maria Souza", "maria@restaurante.com", null, null);
         when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
 
-        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.PERDIDO, null, null, "   ")))
+        assertThatThrownBy(() -> service().avancar(leadId, new AvancarLeadRequest(StatusLead.PERDIDO, null, "   ")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Motivo");
     }

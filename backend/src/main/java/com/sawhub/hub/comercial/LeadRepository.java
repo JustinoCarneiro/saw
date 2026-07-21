@@ -41,9 +41,10 @@ public interface LeadRepository extends JpaRepository<Lead, UUID> {
     long countByVendedorIdAndStatusAndDataFechamentoBetween(UUID vendedorId, StatusLead status, Instant de, Instant ate);
 
     /** M25 (Suposição 7) — "novos mentorados no mês" exclui um produto (venda de ingresso é
-     * contabilizada à parte, ver ComercialDashboardService). produtoVenda IS NULL cobre o caminho
-     * legado (Lead.fechar(Plano) nunca seta produtoVenda) — continua contando normalmente. Produto
-     * é parâmetro, não literal — mesmo padrão do resto do projeto pra enum em JPQL. */
+     * contabilizada à parte, ver ComercialDashboardService). produtoVenda IS NULL cobre leads
+     * fechados antes do M25 existir, ou pelo caminho legado via Plano (removido no M28, nunca
+     * setava produtoVenda) — continuam contando normalmente. Produto é parâmetro, não literal —
+     * mesmo padrão do resto do projeto pra enum em JPQL. */
     @Query("SELECT COUNT(l) FROM Lead l WHERE l.status = :status AND l.dataFechamento BETWEEN :de AND :ate "
             + "AND (l.produtoVenda IS NULL OR l.produtoVenda <> :produtoExcluido)")
     long countByStatusAndDataFechamentoBetweenExcluindoProduto(@Param("status") StatusLead status,
@@ -57,9 +58,10 @@ public interface LeadRepository extends JpaRepository<Lead, UUID> {
             @Param("status") StatusLead status, @Param("de") Instant de, @Param("ate") Instant ate,
             @Param("produtoExcluido") ProdutoVenda produtoExcluido);
 
-    /** Change request 17/07/2026 ("conciliação") — toda venda fechada via {@link Lead#fecharVenda}
-     * (nunca via {@link Lead#fechar} legado, que não seta valorTotalVenda). IS NOT NULL numa
-     * coluna pgcrypto funciona normal — criptografia não afeta nulidade, só o conteúdo. */
+    /** Change request 17/07/2026 ("conciliação") — toda venda fechada de verdade passa por
+     * {@link Lead#fecharVenda}, único caminho que seta valorTotalVenda (o caminho legado via
+     * Plano nunca setava esse campo, e foi removido no M28). IS NOT NULL numa coluna pgcrypto
+     * funciona normal — criptografia não afeta nulidade, só o conteúdo. */
     @Query("SELECT l FROM Lead l WHERE l.valorTotalVenda IS NOT NULL ORDER BY l.dataFechamento DESC")
     List<Lead> buscarComVendaFechada();
 }

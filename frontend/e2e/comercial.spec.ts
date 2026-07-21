@@ -6,7 +6,6 @@ test.describe('Comercial (E13)', () => {
     await page.goto('/solicitar-acesso');
     await page.getByLabel('Nome').fill(`Lead Confirmação E2E ${Date.now()}`);
     await page.getByLabel('E-mail').fill(`lead.confirmacao.${Date.now()}@example.com`);
-    await page.getByLabel('Plano de interesse (opcional)').selectOption({ label: 'Essencial' });
     await page.getByRole('button', { name: 'Enviar solicitação' }).click();
 
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
@@ -50,9 +49,9 @@ test.describe('Comercial (E13)', () => {
     await page.getByRole('button', { name: 'Confirmar' }).click();
     await expect(linha.getByText('Proposta', { exact: true })).toBeVisible();
 
-    // M25 — "Fechar venda" agora abre o formulário único de venda (POST .../fechar-venda),
-    // substituindo o antigo "Plano fechado" (planoFechado legado continua existindo no backend,
-    // só não é mais o caminho da UI).
+    // M25 — "Fechar venda" abre o formulário único de venda (POST .../fechar-venda). M28 — o
+    // antigo caminho "Plano fechado" foi removido junto com Plano; fechar venda de verdade
+    // sempre passa por aqui agora.
     await linha.getByRole('button', { name: 'Fechar venda' }).click();
     await page.getByLabel('Produto vendido').selectOption({ label: 'Consultoria' });
     await page.getByLabel('Origem da venda').selectOption({ label: 'Direta' });
@@ -82,7 +81,6 @@ test.describe('Comercial (E13)', () => {
     await main.getByLabel('Nome').fill(nome);
     await main.getByLabel('E-mail').fill(email);
     await main.getByLabel('Telefone').fill('11988887777');
-    await main.getByLabel('Plano de interesse').selectOption({ label: 'Essencial' });
     await main.getByRole('button', { name: 'Salvar lead' }).click();
 
     const linha = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
