@@ -71,7 +71,7 @@ class ParcelaVendaRepositoryTest {
                 new CategoriaFinanceira("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
         LancamentoFinanceiro lancamento = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA,
                 categoria, "Parcela 1", new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17),
-                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 17)));
+                StatusLancamento.PREVISTO, null, LocalDate.of(2026, 8, 17)));
         ParcelaVenda parcela = new ParcelaVenda(lead, 1, new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17));
         parcela.vincularLancamento(lancamento);
         parcelaVendaRepository.save(parcela);
@@ -92,7 +92,7 @@ class ParcelaVendaRepositoryTest {
                 new CategoriaFinanceira("Assinaturas2", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
         LancamentoFinanceiro lancamento = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA,
                 categoria, "Parcela 1", new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17),
-                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 17)));
+                StatusLancamento.PREVISTO, null, LocalDate.of(2026, 8, 17)));
         ParcelaVenda parcela = new ParcelaVenda(lead, 1, new BigDecimal("8000.00"), LocalDate.of(2026, 8, 17));
         parcela.vincularLancamento(lancamento);
         parcelaVendaRepository.save(parcela);

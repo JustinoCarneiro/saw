@@ -2,7 +2,6 @@ package com.sawhub.hub.financeiro;
 
 import com.sawhub.hub.common.BaseEntity;
 import com.sawhub.hub.evento.Evento;
-import com.sawhub.hub.mentorado.Plano;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -54,10 +53,6 @@ public class LancamentoFinanceiro extends BaseEntity {
     @Column(nullable = false)
     private StatusLancamento status;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "plano_referencia")
-    private Plano planoReferencia;
-
     // Change request 17/07/2026 ("evento rastreado no financeiro") — nullable, mesmo critério de
     // ContaPagarReceber.evento. Setado sobretudo pela liquidação automática de uma conta ligada a
     // evento (ver ContaPagarReceberService.liquidar), não pela criação manual de lançamento.
@@ -83,28 +78,26 @@ public class LancamentoFinanceiro extends BaseEntity {
     }
 
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
-                                 BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
-                                 Plano planoReferencia) {
-        this(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia, null, null);
+                                 BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status) {
+        this(tipo, categoria, descricao, valor, dataCompetencia, status, null, null);
     }
 
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
                                  BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
-                                 Plano planoReferencia, Evento evento) {
-        this(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia, evento, null);
+                                 Evento evento) {
+        this(tipo, categoria, descricao, valor, dataCompetencia, status, evento, null);
     }
 
     /** M26 — construtor canônico, ganha {@code dataVencimento} (nullable, ver Javadoc da classe). */
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
                                  BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
-                                 Plano planoReferencia, Evento evento, LocalDate dataVencimento) {
+                                 Evento evento, LocalDate dataVencimento) {
         this.tipo = tipo;
         this.categoria = categoria;
         this.descricao = descricao;
         this.valor = valor;
         this.dataCompetencia = dataCompetencia;
         this.status = status;
-        this.planoReferencia = planoReferencia;
         this.evento = evento;
         this.dataVencimento = dataVencimento;
     }
@@ -177,10 +170,6 @@ public class LancamentoFinanceiro extends BaseEntity {
 
     public StatusLancamento getStatus() {
         return status;
-    }
-
-    public Plano getPlanoReferencia() {
-        return planoReferencia;
     }
 
     public Evento getEvento() {

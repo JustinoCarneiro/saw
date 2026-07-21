@@ -43,7 +43,7 @@ public class LancamentoService {
                 : eventoRepository.findById(request.eventoId())
                         .orElseThrow(() -> new IllegalArgumentException("Evento não encontrado."));
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(request.tipo(), categoria, request.descricao(),
-                request.valor(), request.dataCompetencia(), request.status(), request.planoReferencia(), evento,
+                request.valor(), request.dataCompetencia(), request.status(), evento,
                 request.dataVencimento());
         return lancamentoRepository.save(lancamento);
     }

@@ -122,7 +122,6 @@ export interface Lancamento {
   valor: number;
   dataCompetencia: string;
   status: StatusLancamento;
-  planoReferencia: Plano | null;
   eventoId: string | null;
   eventoTitulo: string | null;
   dataVencimento: string | null;

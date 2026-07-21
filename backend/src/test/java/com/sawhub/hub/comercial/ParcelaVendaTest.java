@@ -24,7 +24,7 @@ class ParcelaVendaTest {
         assertThat(parcela.getValor()).isEqualByComparingTo("2000.00");
 
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, null, "Parcela 1",
-                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 17), StatusLancamento.PREVISTO, null, null,
+                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 17), StatusLancamento.PREVISTO, null,
                 LocalDate.of(2026, 8, 17));
         parcela.vincularLancamento(lancamento);
 

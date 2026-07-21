@@ -56,7 +56,7 @@ class LancamentoFinanceiroRepositoryTest {
     private LancamentoFinanceiro salvarComVencimento(CategoriaFinanceira categoria, String descricao,
                                                        String valor, LocalDate dataVencimento) {
         return lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, categoria, descricao,
-                new BigDecimal(valor), dataVencimento, StatusLancamento.PREVISTO, null, null, dataVencimento));
+                new BigDecimal(valor), dataVencimento, StatusLancamento.PREVISTO, null, dataVencimento));
     }
 
     @Test
@@ -86,7 +86,7 @@ class LancamentoFinanceiroRepositoryTest {
                 Instant.now(), "Recife", null, 100));
         lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
                 "Ingresso Workshop teste", new BigDecimal("300.00"), LocalDate.of(2026, 8, 20),
-                StatusLancamento.REALIZADO, null, evento));
+                StatusLancamento.REALIZADO, evento));
         entityManager.flush();
         entityManager.clear();
 
@@ -176,7 +176,7 @@ class LancamentoFinanceiroRepositoryTest {
         Evento evento = criarEvento("1");
         LancamentoFinanceiro salvo = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA,
                 categoria, "Buffet do evento", new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20),
-                StatusLancamento.PREVISTO, null, evento, LocalDate.of(2026, 8, 20)));
+                StatusLancamento.PREVISTO, evento, LocalDate.of(2026, 8, 20)));
         entityManager.flush();
         entityManager.clear();
 
@@ -193,10 +193,10 @@ class LancamentoFinanceiroRepositoryTest {
         Evento eventoB = criarEvento("B");
         LancamentoFinanceiro doEventoA = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA,
                 categoria, "Do evento A", new BigDecimal("100.00"), LocalDate.of(2026, 8, 1), StatusLancamento.PREVISTO,
-                null, eventoA, LocalDate.of(2026, 8, 1)));
+                eventoA, LocalDate.of(2026, 8, 1)));
         LancamentoFinanceiro doEventoB = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA,
                 categoria, "Do evento B", new BigDecimal("100.00"), LocalDate.of(2026, 8, 1), StatusLancamento.PREVISTO,
-                null, eventoB, LocalDate.of(2026, 8, 1)));
+                eventoB, LocalDate.of(2026, 8, 1)));
         entityManager.flush();
         entityManager.clear();
 
@@ -238,7 +238,7 @@ class LancamentoFinanceiroRepositoryTest {
                 "Mensalidades teste " + UUID.randomUUID(), TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
         LancamentoFinanceiro salvo = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA,
                 categoria, "Mensalidade parcial", new BigDecimal("1000.00"), LocalDate.of(2026, 8, 20),
-                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 20)));
+                StatusLancamento.PREVISTO, null, LocalDate.of(2026, 8, 20)));
         salvo.liquidarParcial(new BigDecimal("400.00"), LocalDate.of(2026, 7, 19));
         lancamentoRepository.save(salvo);
         entityManager.flush();

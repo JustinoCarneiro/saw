@@ -90,6 +90,6 @@ public class PedidoPagamentoService {
                         "Categoria financeira de origem LOJA não encontrada — verifique o seed/migração do Financeiro."));
         String descricao = "Pedido " + pedido.getId();
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, categoriaLoja, descricao,
-                pedido.getValorTotal(), LocalDate.now(), StatusLancamento.REALIZADO, null));
+                pedido.getValorTotal(), LocalDate.now(), StatusLancamento.REALIZADO));
     }
 }

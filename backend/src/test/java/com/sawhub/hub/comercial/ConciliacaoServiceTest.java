@@ -47,21 +47,21 @@ class ConciliacaoServiceTest {
 
     private static LancamentoFinanceiro lancamentoLiquidado(BigDecimal valor) {
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria(), "Parcela",
-                valor, LocalDate.of(2026, 8, 1), StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 1));
+                valor, LocalDate.of(2026, 8, 1), StatusLancamento.PREVISTO, null, LocalDate.of(2026, 8, 1));
         lancamento.liquidar(LocalDate.of(2026, 7, 20));
         return lancamento;
     }
 
     private static LancamentoFinanceiro lancamentoParcial(BigDecimal valorTotal, BigDecimal valorPago) {
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria(), "Parcela",
-                valorTotal, LocalDate.of(2026, 9, 1), StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 9, 1));
+                valorTotal, LocalDate.of(2026, 9, 1), StatusLancamento.PREVISTO, null, LocalDate.of(2026, 9, 1));
         lancamento.liquidarParcial(valorPago, LocalDate.of(2026, 7, 20));
         return lancamento;
     }
 
     private static LancamentoFinanceiro lancamentoPrevisto(BigDecimal valor) {
         return new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria(), "Parcela", valor,
-                LocalDate.of(2026, 10, 1), StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 10, 1));
+                LocalDate.of(2026, 10, 1), StatusLancamento.PREVISTO, null, LocalDate.of(2026, 10, 1));
     }
 
     @Test

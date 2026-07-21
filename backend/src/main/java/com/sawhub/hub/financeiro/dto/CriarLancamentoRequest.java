@@ -2,7 +2,6 @@ package com.sawhub.hub.financeiro.dto;
 
 import com.sawhub.hub.financeiro.StatusLancamento;
 import com.sawhub.hub.financeiro.TipoLancamento;
-import com.sawhub.hub.mentorado.Plano;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,12 +21,11 @@ public record CriarLancamentoRequest(
         @NotNull @DecimalMin(value = "0.01", message = "Valor deve ser positivo") BigDecimal valor,
         @NotNull LocalDate dataCompetencia,
         @NotNull StatusLancamento status,
-        Plano planoReferencia,
         UUID eventoId,
         LocalDate dataVencimento
 ) {
     public CriarLancamentoRequest(TipoLancamento tipo, UUID categoriaId, String descricao, BigDecimal valor,
-                                   LocalDate dataCompetencia, StatusLancamento status, Plano planoReferencia) {
-        this(tipo, categoriaId, descricao, valor, dataCompetencia, status, planoReferencia, null, null);
+                                   LocalDate dataCompetencia, StatusLancamento status) {
+        this(tipo, categoriaId, descricao, valor, dataCompetencia, status, null, null);
     }
 }

@@ -60,7 +60,7 @@ class LancamentoServiceTest {
         UUID categoriaId = UUID.randomUUID();
         when(categoriaRepository.findById(categoriaId)).thenReturn(Optional.empty());
         var request = new CriarLancamentoRequest(TipoLancamento.RECEITA, categoriaId, "Assinatura João Silva",
-                new BigDecimal("397.00"), LocalDate.of(2026, 7, 1), StatusLancamento.REALIZADO, null);
+                new BigDecimal("397.00"), LocalDate.of(2026, 7, 1), StatusLancamento.REALIZADO);
 
         assertThatThrownBy(() -> service().criar(request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -75,7 +75,7 @@ class LancamentoServiceTest {
         when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarLancamentoRequest(TipoLancamento.RECEITA, categoriaId, "Assinatura João Silva",
-                new BigDecimal("397.00"), LocalDate.of(2026, 7, 1), StatusLancamento.REALIZADO, null);
+                new BigDecimal("397.00"), LocalDate.of(2026, 7, 1), StatusLancamento.REALIZADO);
 
         LancamentoFinanceiro criado = service().criar(request);
 
@@ -99,7 +99,7 @@ class LancamentoServiceTest {
         when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarLancamentoRequest(TipoLancamento.DESPESA, categoriaId, "Buffet do evento",
-                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), StatusLancamento.PREVISTO, null, eventoId,
+                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), StatusLancamento.PREVISTO, eventoId,
                 LocalDate.of(2026, 8, 25));
         LancamentoFinanceiro criado = service().criar(request);
 
@@ -115,7 +115,7 @@ class LancamentoServiceTest {
         when(eventoRepository.findById(eventoId)).thenReturn(Optional.empty());
 
         var request = new CriarLancamentoRequest(TipoLancamento.DESPESA, categoriaId, "Buffet do evento",
-                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), StatusLancamento.PREVISTO, null, eventoId, null);
+                new BigDecimal("2000.00"), LocalDate.of(2026, 8, 20), StatusLancamento.PREVISTO, eventoId, null);
 
         assertThatThrownBy(() -> service().criar(request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -199,7 +199,7 @@ class LancamentoServiceTest {
         UUID id = UUID.randomUUID();
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.DESPESA, categoriaInfra(),
                 "Servidor Hostinger", new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), StatusLancamento.PREVISTO,
-                null, null, LocalDate.of(2026, 7, 10));
+                null, LocalDate.of(2026, 7, 10));
         when(lancamentoRepository.buscarPorIdComEvento(id)).thenReturn(Optional.of(lancamento));
         when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -216,7 +216,7 @@ class LancamentoServiceTest {
         UUID id = UUID.randomUUID();
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.DESPESA, categoriaInfra(),
                 "Servidor", new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), StatusLancamento.PREVISTO,
-                null, null, LocalDate.of(2026, 7, 10));
+                null, LocalDate.of(2026, 7, 10));
         lancamento.liquidar(LocalDate.of(2026, 7, 9));
         when(lancamentoRepository.buscarPorIdComEvento(id)).thenReturn(Optional.of(lancamento));
 
@@ -239,7 +239,7 @@ class LancamentoServiceTest {
         UUID id = UUID.randomUUID();
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoriaAssinatura(),
                 "Mensalidade João Silva", new BigDecimal("1000.00"), LocalDate.of(2026, 8, 5), StatusLancamento.PREVISTO,
-                null, null, LocalDate.of(2026, 8, 5));
+                null, LocalDate.of(2026, 8, 5));
         when(lancamentoRepository.buscarPorIdComEvento(id)).thenReturn(Optional.of(lancamento));
         when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -255,7 +255,7 @@ class LancamentoServiceTest {
         UUID id = UUID.randomUUID();
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.DESPESA, categoriaInfra(),
                 "Servidor Hostinger", new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), StatusLancamento.PREVISTO,
-                null, null, LocalDate.of(2026, 7, 10));
+                null, LocalDate.of(2026, 7, 10));
         when(lancamentoRepository.buscarPorIdComEvento(id)).thenReturn(Optional.of(lancamento));
         when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -272,7 +272,7 @@ class LancamentoServiceTest {
         UUID id = UUID.randomUUID();
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.DESPESA, categoriaInfra(),
                 "Servidor", new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), StatusLancamento.PREVISTO,
-                null, null, LocalDate.of(2026, 7, 10));
+                null, LocalDate.of(2026, 7, 10));
         when(lancamentoRepository.buscarPorIdComEvento(id)).thenReturn(Optional.of(lancamento));
 
         assertThatThrownBy(() -> service().liquidarParcial(id,
@@ -285,7 +285,7 @@ class LancamentoServiceTest {
         UUID id = UUID.randomUUID();
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.DESPESA, categoriaInfra(),
                 "Servidor", new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), StatusLancamento.PREVISTO,
-                null, null, LocalDate.of(2026, 7, 10));
+                null, LocalDate.of(2026, 7, 10));
         lancamento.liquidar(LocalDate.of(2026, 7, 9));
         when(lancamentoRepository.buscarPorIdComEvento(id)).thenReturn(Optional.of(lancamento));
 
@@ -302,7 +302,7 @@ class LancamentoServiceTest {
         when(lancamentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarLancamentoRequest(TipoLancamento.DESPESA, categoriaId, "Servidor",
-                new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), StatusLancamento.PREVISTO, null);
+                new BigDecimal("180.00"), LocalDate.of(2026, 7, 10), StatusLancamento.PREVISTO);
         service().criar(request);
 
         ArgumentCaptor<LancamentoFinanceiro> captor = ArgumentCaptor.forClass(LancamentoFinanceiro.class);

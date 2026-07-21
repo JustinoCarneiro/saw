@@ -250,10 +250,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         // dataVencimento (melhor palpite disponível antes de liquidar — ver LancamentoFinanceiro).
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, infra,
                 "Servidor Hostinger — agosto", new BigDecimal("180.00"), LocalDate.of(2026, 8, 10),
-                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 8, 10)));
+                StatusLancamento.PREVISTO, null, LocalDate.of(2026, 8, 10)));
         LancamentoFinanceiro vencida = new LancamentoFinanceiro(TipoLancamento.RECEITA, assinaturas,
                 "Mensalidade em atraso — Rafael Gomes", new BigDecimal("297.00"), LocalDate.of(2026, 7, 1),
-                StatusLancamento.PREVISTO, null, null, LocalDate.of(2026, 7, 1));
+                StatusLancamento.PREVISTO, null, LocalDate.of(2026, 7, 1));
         vencida.marcarVencida();
         lancamentoFinanceiroRepository.save(vencida);
     }
@@ -264,21 +264,21 @@ public class DemoDataSeeder implements ApplicationRunner {
                                     String valorAssinaturas, String valorLoja, String valorEventos, String valorImpostos,
                                     String valorInfra, String valorMarketing, String valorEquipe) {
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, assinaturas,
-                "Assinaturas do mês", new BigDecimal(valorAssinaturas), data, StatusLancamento.REALIZADO, null));
+                "Assinaturas do mês", new BigDecimal(valorAssinaturas), data, StatusLancamento.REALIZADO));
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, loja,
-                "Vendas Loja SAW", new BigDecimal(valorLoja), data, StatusLancamento.REALIZADO, null));
+                "Vendas Loja SAW", new BigDecimal(valorLoja), data, StatusLancamento.REALIZADO));
         if (new BigDecimal(valorEventos).compareTo(BigDecimal.ZERO) > 0) {
             lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, eventos,
-                    "Inscrições em eventos", new BigDecimal(valorEventos), data, StatusLancamento.REALIZADO, null));
+                    "Inscrições em eventos", new BigDecimal(valorEventos), data, StatusLancamento.REALIZADO));
         }
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, impostos,
-                "Impostos sobre vendas", new BigDecimal(valorImpostos), data, StatusLancamento.REALIZADO, null));
+                "Impostos sobre vendas", new BigDecimal(valorImpostos), data, StatusLancamento.REALIZADO));
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, infra,
-                "Servidor e ferramentas", new BigDecimal(valorInfra), data, StatusLancamento.REALIZADO, null));
+                "Servidor e ferramentas", new BigDecimal(valorInfra), data, StatusLancamento.REALIZADO));
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, marketing,
-                "Campanhas e anúncios", new BigDecimal(valorMarketing), data, StatusLancamento.REALIZADO, null));
+                "Campanhas e anúncios", new BigDecimal(valorMarketing), data, StatusLancamento.REALIZADO));
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, equipe,
-                "Folha de pagamento", new BigDecimal(valorEquipe), data, StatusLancamento.REALIZADO, null));
+                "Folha de pagamento", new BigDecimal(valorEquipe), data, StatusLancamento.REALIZADO));
     }
 
     private void seedComercial() {
@@ -560,7 +560,7 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         categoriaFinanceiraRepository.findByOrigemReceita(OrigemReceita.LOJA).ifPresent(categoriaLoja ->
                 lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, categoriaLoja,
-                        "Pedido " + pedido.getId(), pedido.getValorTotal(), LocalDate.now(), StatusLancamento.REALIZADO, null)));
+                        "Pedido " + pedido.getId(), pedido.getValorTotal(), LocalDate.now(), StatusLancamento.REALIZADO)));
     }
 
     private Produto criarProduto(String titulo, String descricao, CategoriaProduto categoria, String preco,

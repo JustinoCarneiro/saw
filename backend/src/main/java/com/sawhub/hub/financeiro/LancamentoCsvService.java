@@ -3,7 +3,6 @@ package com.sawhub.hub.financeiro;
 import com.sawhub.hub.common.CsvUtils;
 import com.sawhub.hub.common.dto.ImportErro;
 import com.sawhub.hub.common.dto.ImportResultResponse;
-import com.sawhub.hub.mentorado.Plano;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
@@ -32,7 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class LancamentoCsvService {
 
     private static final String[] CABECALHO = {
-            "tipo", "categoria", "descricao", "valor", "dataCompetencia", "dataVencimento", "status", "planoReferencia"
+            "tipo", "categoria", "descricao", "valor", "dataCompetencia", "dataVencimento", "status"
     };
     private static final int LIMITE_LINHAS = 5000;
 
@@ -70,8 +69,7 @@ public class LancamentoCsvService {
                         l.getValor().toPlainString().replace('.', ','),
                         CsvUtils.formatarData(l.getDataCompetencia()),
                         l.getDataVencimento() == null ? "" : CsvUtils.formatarData(l.getDataVencimento()),
-                        l.getStatus().name(),
-                        l.getPlanoReferencia() == null ? "" : l.getPlanoReferencia().name());
+                        l.getStatus().name());
             }
         } catch (IOException e) {
             throw new UncheckedIOException("Não foi possível gerar o CSV.", e);
@@ -142,9 +140,8 @@ public class LancamentoCsvService {
         LocalDate dataCompetencia = CsvUtils.parseData(registro.get("dataCompetencia"));
         LocalDate dataVencimento = CsvUtils.parseDataOpcional(registro.get("dataVencimento"));
         StatusLancamento status = parseEnum(StatusLancamento.class, registro.get("status"), "Status");
-        Plano planoReferencia = parsePlanoOpcional(registro.get("planoReferencia"));
 
-        return new LancamentoFinanceiro(tipo, categoria, descricao, valor, dataCompetencia, status, planoReferencia,
+        return new LancamentoFinanceiro(tipo, categoria, descricao, valor, dataCompetencia, status,
                 null, dataVencimento);
     }
 
@@ -168,13 +165,6 @@ public class LancamentoCsvService {
                     + ", incompatível com o tipo " + tipo + " da linha.");
         }
         return categoria;
-    }
-
-    private static Plano parsePlanoOpcional(String bruto) {
-        if (bruto == null || bruto.isBlank()) {
-            return null;
-        }
-        return parseEnum(Plano.class, bruto, "Plano de referência");
     }
 
     private static <E extends Enum<E>> E parseEnum(Class<E> tipo, String bruto, String rotulo) {

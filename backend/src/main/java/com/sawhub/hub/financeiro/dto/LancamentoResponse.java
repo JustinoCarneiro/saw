@@ -4,7 +4,6 @@ import com.sawhub.hub.financeiro.LancamentoFinanceiro;
 import com.sawhub.hub.financeiro.OrigemReceita;
 import com.sawhub.hub.financeiro.StatusLancamento;
 import com.sawhub.hub.financeiro.TipoLancamento;
-import com.sawhub.hub.mentorado.Plano;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -17,7 +16,6 @@ public record LancamentoResponse(
         BigDecimal valor,
         LocalDate dataCompetencia,
         StatusLancamento status,
-        Plano planoReferencia,
         UUID eventoId,
         String eventoTitulo,
         LocalDate dataVencimento,
@@ -33,7 +31,7 @@ public record LancamentoResponse(
         UUID eventoId = l.getEvento() != null ? l.getEvento().getId() : null;
         String eventoTitulo = l.getEvento() != null ? l.getEvento().getTitulo() : null;
         return new LancamentoResponse(l.getId(), l.getTipo(), categoria, l.getDescricao(), l.getValor(),
-                l.getDataCompetencia(), l.getStatus(), l.getPlanoReferencia(), eventoId, eventoTitulo,
+                l.getDataCompetencia(), l.getStatus(), eventoId, eventoTitulo,
                 l.getDataVencimento(), l.getDataPagamento(), l.getValorPago());
     }
 }

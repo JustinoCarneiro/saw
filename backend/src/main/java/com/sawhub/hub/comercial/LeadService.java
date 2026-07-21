@@ -181,7 +181,7 @@ public class LeadService {
         CategoriaFinanceira categoria = resolverCategoriaVenda(produtoVenda);
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
                 "Pago no ato - " + lead.getNome(), valorPagoNoAto, LocalDate.now(), StatusLancamento.REALIZADO,
-                null, null, null);
+                null, null);
         lancamentoFinanceiroRepository.save(lancamento);
     }
 
@@ -191,7 +191,7 @@ public class LeadService {
             ParcelaVenda parcela = parcelaVendaRepository.save(new ParcelaVenda(lead, p.numero(), p.valor(), p.dataPrevista()));
             LancamentoFinanceiro lancamento = lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(
                     TipoLancamento.RECEITA, categoria, "Parcela " + p.numero() + " - " + lead.getNome(), p.valor(),
-                    p.dataPrevista(), StatusLancamento.PREVISTO, null, null, p.dataPrevista()));
+                    p.dataPrevista(), StatusLancamento.PREVISTO, null, p.dataPrevista()));
             parcela.vincularLancamento(lancamento);
             parcelaVendaRepository.save(parcela);
         }
