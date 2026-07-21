@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.aviso.dto.CriarAvisoRequest;
-import com.sawhub.hub.mentorado.Plano;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,12 +37,11 @@ class AvisoAdminServiceTest {
         when(avisoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarAvisoRequest("Nova mentoria em grupo", "Inscrições abertas.",
-                CategoriaAviso.MENTORIAS, Plano.BASICO);
+                CategoriaAviso.MENTORIAS);
         Aviso criado = service().criar(request);
 
         assertThat(criado.getTitulo()).isEqualTo("Nova mentoria em grupo");
         assertThat(criado.getCategoria()).isEqualTo(CategoriaAviso.MENTORIAS);
-        assertThat(criado.getPlanoMinimo()).isEqualTo(Plano.BASICO);
 
         ArgumentCaptor<Aviso> captor = ArgumentCaptor.forClass(Aviso.class);
         verify(avisoRepository).save(captor.capture());
@@ -52,7 +50,7 @@ class AvisoAdminServiceTest {
 
     @Test
     void listarDelegaParaRepositorioOrdenadoPorMaisRecente() {
-        Aviso a = new Aviso("Título", "Desc", CategoriaAviso.GERAL, Plano.GRATUITO);
+        Aviso a = new Aviso("Título", "Desc", CategoriaAviso.GERAL);
         when(avisoRepository.findAllByOrderByCriadoEmDesc()).thenReturn(List.of(a));
 
         assertThat(service().listar()).containsExactly(a);
@@ -61,16 +59,15 @@ class AvisoAdminServiceTest {
     @Test
     void atualizarAlteraCamposDoAvisoExistente() {
         UUID id = UUID.randomUUID();
-        Aviso existente = new Aviso("Antigo", "Desc antiga", CategoriaAviso.GERAL, Plano.GRATUITO);
+        Aviso existente = new Aviso("Antigo", "Desc antiga", CategoriaAviso.GERAL);
         when(avisoRepository.findById(id)).thenReturn(Optional.of(existente));
 
-        var request = new CriarAvisoRequest("Novo título", "Nova descrição", CategoriaAviso.EVENTOS, Plano.PROFISSIONAL);
+        var request = new CriarAvisoRequest("Novo título", "Nova descrição", CategoriaAviso.EVENTOS);
         Aviso atualizado = service().atualizar(id, request);
 
         assertThat(atualizado.getTitulo()).isEqualTo("Novo título");
         assertThat(atualizado.getDescricao()).isEqualTo("Nova descrição");
         assertThat(atualizado.getCategoria()).isEqualTo(CategoriaAviso.EVENTOS);
-        assertThat(atualizado.getPlanoMinimo()).isEqualTo(Plano.PROFISSIONAL);
     }
 
     @Test
@@ -78,7 +75,7 @@ class AvisoAdminServiceTest {
         UUID id = UUID.randomUUID();
         when(avisoRepository.findById(id)).thenReturn(Optional.empty());
 
-        var request = new CriarAvisoRequest("Título", "Desc", CategoriaAviso.GERAL, Plano.GRATUITO);
+        var request = new CriarAvisoRequest("Título", "Desc", CategoriaAviso.GERAL);
         assertThatThrownBy(() -> service().atualizar(id, request)).isInstanceOf(IllegalArgumentException.class);
     }
 

@@ -70,7 +70,7 @@ class MentoradoDashboardServiceTest {
 
     private void semCompromissosNemDica(Mentorado mentorado) {
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
-        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of());
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, true)).thenReturn(List.of());
     }
 
     @Test
@@ -139,7 +139,7 @@ class MentoradoDashboardServiceTest {
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
-        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of());
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, true)).thenReturn(List.of());
         semAvisos(usuarioId);
 
         Colaborador mentor = mentor();
@@ -198,10 +198,10 @@ class MentoradoDashboardServiceTest {
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
         semAvisos(usuarioId);
 
-        Conteudo maisRecente = new Conteudo("Vídeo avançado", TipoConteudo.VIDEO, "url1", Plano.PROFISSIONAL);
-        Conteudo maisAntigo1 = new Conteudo("Vídeo essencial", TipoConteudo.VIDEO, "url2", Plano.ESSENCIAL);
-        Conteudo maisAntigo2 = new Conteudo("Vídeo básico", TipoConteudo.VIDEO, "url3", Plano.GRATUITO);
-        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true))
+        Conteudo maisRecente = new Conteudo("Vídeo avançado", TipoConteudo.VIDEO, "url1");
+        Conteudo maisAntigo1 = new Conteudo("Vídeo essencial", TipoConteudo.VIDEO, "url2");
+        Conteudo maisAntigo2 = new Conteudo("Vídeo básico", TipoConteudo.VIDEO, "url3");
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, true))
                 .thenReturn(List.of(maisRecente, maisAntigo1, maisAntigo2));
 
         var dashboard = service().dashboard(usuarioId);
@@ -218,7 +218,7 @@ class MentoradoDashboardServiceTest {
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
         semAvisos(usuarioId);
 
-        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true)).thenReturn(List.of());
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, true)).thenReturn(List.of());
 
         assertThat(service().dashboard(usuarioId).dicaDestaque()).isNull();
     }

@@ -407,30 +407,30 @@ public class DemoDataSeeder implements ApplicationRunner {
             return;
         }
         avisoRepository.save(new Aviso("Nova mentoria em grupo disponível", "Inscrições abertas pra Liderança que Gera Resultados.",
-                CategoriaAviso.MENTORIAS, Plano.GRATUITO));
+                CategoriaAviso.MENTORIAS));
         avisoRepository.save(new Aviso("Novo material na biblioteca", "Planilha de Fluxo de Caixa Diário já disponível pra download.",
-                CategoriaAviso.MATERIAIS, Plano.GRATUITO));
+                CategoriaAviso.MATERIAIS));
         avisoRepository.save(new Aviso("Workshop de Precificação Estratégica", "Vagas limitadas — garanta a sua.",
-                CategoriaAviso.EVENTOS, Plano.BASICO));
+                CategoriaAviso.EVENTOS));
         avisoRepository.save(new Aviso("Manutenção programada", "A plataforma ficará indisponível por 30 minutos no domingo às 2h.",
-                CategoriaAviso.GERAL, Plano.GRATUITO));
+                CategoriaAviso.GERAL));
     }
 
     private void seedConteudos() {
         if (conteudoRepository.count() > 0) {
             return;
         }
-        criarConteudo("Ficha técnica — modelo", TipoConteudo.PLANILHA, Plano.GRATUITO, true, null);
-        criarConteudo("Manual da Cultura SAW", TipoConteudo.DOCUMENTO, Plano.GRATUITO, true, null);
+        criarConteudo("Ficha técnica — modelo", TipoConteudo.PLANILHA, true, null);
+        criarConteudo("Manual da Cultura SAW", TipoConteudo.DOCUMENTO, true, null);
         // H6.3 — duração real (não fictícia por acaso): "Como calcular seu DRE" é o único vídeo
         // seedado, dá pro indicador "minutos assistidos" mostrar um número plausível em demo.
-        criarConteudo("Como calcular seu DRE", TipoConteudo.VIDEO, Plano.BASICO, true, 12);
-        criarConteudo("Apresentação: Precificação estratégica", TipoConteudo.APRESENTACAO, Plano.ESSENCIAL, false, null);
+        criarConteudo("Como calcular seu DRE", TipoConteudo.VIDEO, true, 12);
+        criarConteudo("Apresentação: Precificação estratégica", TipoConteudo.APRESENTACAO, false, null);
     }
 
     // Devolve o Conteudo salvo (M12: seedMentoriasEAtas usa o retorno pra associar materiaisRecomendados).
-    private Conteudo criarConteudo(String titulo, TipoConteudo tipo, Plano planoMinimo, boolean publicado, Integer duracaoMinutos) {
-        Conteudo conteudo = new Conteudo(titulo, tipo, "https://cdn.sawhub.com.br/conteudos/" + tipo.name().toLowerCase(), planoMinimo);
+    private Conteudo criarConteudo(String titulo, TipoConteudo tipo, boolean publicado, Integer duracaoMinutos) {
+        Conteudo conteudo = new Conteudo(titulo, tipo, "https://cdn.sawhub.com.br/conteudos/" + tipo.name().toLowerCase());
         if (publicado) {
             conteudo.publicar();
         }

@@ -54,7 +54,7 @@ class MentoriaServiceTest {
     }
 
     private static Conteudo conteudo(UUID id) {
-        Conteudo c = new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x", Plano.GRATUITO);
+        Conteudo c = new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x");
         ReflectionTestUtils.setField(c, "id", id);
         return c;
     }

@@ -83,7 +83,7 @@ public class MentoradoDashboardService {
         // buscarComFiltro já devolve ordenado DESC por criadoEm — primeiro elegível é o vídeo
         // publicado mais recente (M28 — gating por Plano removido, "não existem planos, mas sim
         // produtos", docs/reuniao-2026-07-17-atualizacoes.md).
-        return conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, null, true).stream()
+        return conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, true).stream()
                 .findFirst()
                 .map(DicaDestaque::from)
                 .orElse(null);

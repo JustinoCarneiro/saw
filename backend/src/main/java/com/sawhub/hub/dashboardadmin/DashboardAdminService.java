@@ -151,7 +151,7 @@ public class DashboardAdminService {
     // transição que contam como marco (ver AtividadeLogService e Achado 1 desta leva — antes
     // dessas transições não tinham NENHUM timestamp pra ordenar/exibir).
     private List<AtividadeRecente> atividadesRecentes(List<Mentorado> mentorados, List<Evento> eventos) {
-        List<Conteudo> conteudosPublicados = conteudoRepository.buscarComFiltro(null, null, true);
+        List<Conteudo> conteudosPublicados = conteudoRepository.buscarComFiltro(null, true);
 
         Stream<AtividadeRecente> deMentorados = mentorados.stream()
                 .map(m -> new AtividadeRecente("MENTORADO_CADASTRADO", "Novo mentorado: " + m.getNome(), m.getCriadoEm()));

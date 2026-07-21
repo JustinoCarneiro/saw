@@ -6,17 +6,13 @@ import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
-import type { Aviso, CategoriaAviso, Plano } from '../../shared/lib/types';
+import type { Aviso, CategoriaAviso } from '../../shared/lib/types';
 import styles from './ConteudosPage.module.css';
 
-const COLUMNS = '1.8fr .9fr .9fr 1fr 1.2fr';
+const COLUMNS = '1.8fr .9fr 1fr 1.2fr';
 
 const CATEGORIA_LABEL: Record<CategoriaAviso, string> = {
   GERAL: 'Geral', MENTORIAS: 'Mentorias', MATERIAIS: 'Materiais', EVENTOS: 'Eventos',
-};
-
-const PLANO_LABEL: Record<Plano, string> = {
-  GRATUITO: 'Gratuito', BASICO: 'Básico', ESSENCIAL: 'Essencial', PROFISSIONAL: 'Profissional',
 };
 
 function formatarData(iso: string): string {
@@ -81,14 +77,13 @@ export function AvisosAdminPage() {
 
       {error && <div className={styles.error}>{error}</div>}
 
-      <DataGrid columns={COLUMNS} headers={['Título', 'Categoria', 'Plano mínimo', 'Publicado em', 'Ações']}>
+      <DataGrid columns={COLUMNS} headers={['Título', 'Categoria', 'Publicado em', 'Ações']}>
         {avisos === null && !error && <div className={styles.loading}>Carregando…</div>}
         {avisos?.length === 0 && <div className={styles.loading}>Nenhum aviso publicado ainda.</div>}
         {avisos?.map((a) => (
           <DataGridRow key={a.id} columns={COLUMNS} testId={`aviso-row-${a.id}`}>
             <div className={styles.strong}>{a.titulo}</div>
             <div><Pill bg="var(--elevated)" color="var(--text-soft)">{CATEGORIA_LABEL[a.categoria]}</Pill></div>
-            <div className={styles.muted}>{PLANO_LABEL[a.planoMinimo]}</div>
             <div className={styles.muted}>{formatarData(a.criadoEm)}</div>
             <div className={styles.acoes}>
               <button className={styles.actionButton} onClick={() => setEditando(a)}>Editar</button>
@@ -119,7 +114,6 @@ function AvisoForm({ avisoExistente, onSalvo, onCancelar }: {
   const [titulo, setTitulo] = useState(avisoExistente?.titulo ?? '');
   const [descricao, setDescricao] = useState(avisoExistente?.descricao ?? '');
   const [categoria, setCategoria] = useState<CategoriaAviso>(avisoExistente?.categoria ?? 'GERAL');
-  const [planoMinimo, setPlanoMinimo] = useState<Plano>(avisoExistente?.planoMinimo ?? 'GRATUITO');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -129,9 +123,9 @@ function AvisoForm({ avisoExistente, onSalvo, onCancelar }: {
     setSubmitting(true);
     try {
       if (avisoExistente) {
-        await apiClient.put(`/admin/avisos/${avisoExistente.id}`, { titulo, descricao, categoria, planoMinimo });
+        await apiClient.put(`/admin/avisos/${avisoExistente.id}`, { titulo, descricao, categoria });
       } else {
-        await apiClient.post('/admin/avisos', { titulo, descricao, categoria, planoMinimo });
+        await apiClient.post('/admin/avisos', { titulo, descricao, categoria });
       }
       onSalvo();
     } catch (err) {
@@ -159,14 +153,6 @@ function AvisoForm({ avisoExistente, onSalvo, onCancelar }: {
             <select className={styles.select} value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaAviso)}>
               {(Object.keys(CATEGORIA_LABEL) as CategoriaAviso[]).map((c) => (
                 <option key={c} value={c}>{CATEGORIA_LABEL[c]}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.formField}>
-            Visível a partir do plano
-            <select className={styles.select} value={planoMinimo} onChange={(e) => setPlanoMinimo(e.target.value as Plano)}>
-              {(Object.keys(PLANO_LABEL) as Plano[]).map((p) => (
-                <option key={p} value={p}>{PLANO_LABEL[p]}</option>
               ))}
             </select>
           </label>

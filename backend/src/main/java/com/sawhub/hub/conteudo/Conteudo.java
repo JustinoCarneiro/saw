@@ -1,15 +1,13 @@
 package com.sawhub.hub.conteudo;
 
 import com.sawhub.hub.common.BaseEntity;
-import com.sawhub.hub.mentorado.Plano;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
-/** H11.3 — biblioteca de conteúdos curada pelo Admin; acesso do mentorado (E6, futuro) é
- * controlado por {@code planoMinimo}. */
+/** H11.3 — biblioteca de conteúdos curada pelo Admin. */
 @Entity
 @Table(name = "conteudo")
 public class Conteudo extends BaseEntity {
@@ -24,10 +22,6 @@ public class Conteudo extends BaseEntity {
     @Column(nullable = false)
     private String url;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "plano_minimo", nullable = false)
-    private Plano planoMinimo = Plano.GRATUITO;
-
     @Column(nullable = false)
     private boolean publicado = false;
 
@@ -41,18 +35,16 @@ public class Conteudo extends BaseEntity {
     protected Conteudo() {
     }
 
-    public Conteudo(String titulo, TipoConteudo tipo, String url, Plano planoMinimo) {
+    public Conteudo(String titulo, TipoConteudo tipo, String url) {
         this.titulo = titulo;
         this.tipo = tipo;
         this.url = url;
-        this.planoMinimo = planoMinimo == null ? Plano.GRATUITO : planoMinimo;
     }
 
-    public void atualizar(String titulo, TipoConteudo tipo, String url, Plano planoMinimo) {
+    public void atualizar(String titulo, TipoConteudo tipo, String url) {
         this.titulo = titulo;
         this.tipo = tipo;
         this.url = url;
-        this.planoMinimo = planoMinimo == null ? Plano.GRATUITO : planoMinimo;
     }
 
     public void definirDuracaoMinutos(Integer duracaoMinutos) {
@@ -77,10 +69,6 @@ public class Conteudo extends BaseEntity {
 
     public String getUrl() {
         return url;
-    }
-
-    public Plano getPlanoMinimo() {
-        return planoMinimo;
     }
 
     public boolean isPublicado() {

@@ -24,8 +24,8 @@ test.describe('Avisos — Import/Export CSV (M23)', () => {
     await page.goto('/admin/conteudos/avisos');
 
     const titulo = `Aviso CSV E2E ${Date.now()}`;
-    const csv = `titulo;descricao;categoria;planoMinimo\n`
-        + `${titulo};Publicado via import CSV E2E.;GERAL;GRATUITO\n`;
+    const csv = `titulo;descricao;categoria\n`
+        + `${titulo};Publicado via import CSV E2E.;GERAL\n`;
 
     await page.getByTestId('csv-importar-input').setInputFiles({
       name: 'avisos.csv',
@@ -43,9 +43,9 @@ test.describe('Avisos — Import/Export CSV (M23)', () => {
     await page.goto('/admin/conteudos/avisos');
 
     const tituloValido = `Nao deveria publicar ${Date.now()}`;
-    const csv = `titulo;descricao;categoria;planoMinimo\n`
-        + `${tituloValido};Descrição válida.;GERAL;GRATUITO\n`
-        + `Linha ruim;Descrição.;CATEGORIA_FALSA;GRATUITO\n`;
+    const csv = `titulo;descricao;categoria\n`
+        + `${tituloValido};Descrição válida.;GERAL\n`
+        + `Linha ruim;Descrição.;CATEGORIA_FALSA\n`;
 
     await page.getByTestId('csv-importar-input').setInputFiles({
       name: 'avisos.csv',

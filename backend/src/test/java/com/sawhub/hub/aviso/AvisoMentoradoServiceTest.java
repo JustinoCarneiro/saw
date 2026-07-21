@@ -47,8 +47,8 @@ class AvisoMentoradoServiceTest {
         return m;
     }
 
-    private static Aviso aviso(String titulo, CategoriaAviso categoria, Plano planoMinimo) {
-        Aviso a = new Aviso(titulo, "desc", categoria, planoMinimo);
+    private static Aviso aviso(String titulo, CategoriaAviso categoria) {
+        Aviso a = new Aviso(titulo, "desc", categoria);
         ReflectionTestUtils.setField(a, "id", UUID.randomUUID());
         return a;
     }
@@ -59,7 +59,7 @@ class AvisoMentoradoServiceTest {
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.BASICO);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
-        Aviso a1 = aviso("Aviso 1", CategoriaAviso.GERAL, Plano.GRATUITO);
+        Aviso a1 = aviso("Aviso 1", CategoriaAviso.GERAL);
         when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), isNull()))
                 .thenReturn(List.<Object[]>of(new Object[]{a1, null}));
 
@@ -76,8 +76,8 @@ class AvisoMentoradoServiceTest {
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
-        Aviso lido = aviso("Lido", CategoriaAviso.GERAL, Plano.GRATUITO);
-        Aviso naoLido = aviso("Não lido", CategoriaAviso.GERAL, Plano.GRATUITO);
+        Aviso lido = aviso("Lido", CategoriaAviso.GERAL);
+        Aviso naoLido = aviso("Não lido", CategoriaAviso.GERAL);
         AvisoMentorado am = new AvisoMentorado(mentorado, lido);
         am.marcarLido();
         when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), isNull()))
@@ -95,9 +95,9 @@ class AvisoMentoradoServiceTest {
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
-        Aviso lido = aviso("Lido", CategoriaAviso.GERAL, Plano.GRATUITO);
-        Aviso naoLido1 = aviso("Não lido 1", CategoriaAviso.GERAL, Plano.GRATUITO);
-        Aviso naoLido2 = aviso("Não lido 2", CategoriaAviso.GERAL, Plano.GRATUITO);
+        Aviso lido = aviso("Lido", CategoriaAviso.GERAL);
+        Aviso naoLido1 = aviso("Não lido 1", CategoriaAviso.GERAL);
+        Aviso naoLido2 = aviso("Não lido 2", CategoriaAviso.GERAL);
         AvisoMentorado am = new AvisoMentorado(mentorado, lido);
         am.marcarLido();
         when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), isNull()))
@@ -111,7 +111,7 @@ class AvisoMentoradoServiceTest {
     void marcarLidoCriaLinhaNovaQuandoMentoradoNuncaInteragiu() {
         UUID usuarioId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
-        Aviso a = aviso("Aviso", CategoriaAviso.GERAL, Plano.GRATUITO);
+        Aviso a = aviso("Aviso", CategoriaAviso.GERAL);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(avisoRepository.findById(a.getId())).thenReturn(Optional.of(a));
         when(avisoMentoradoRepository.findByMentoradoIdAndAvisoId(mentorado.getId(), a.getId())).thenReturn(Optional.empty());
@@ -126,7 +126,7 @@ class AvisoMentoradoServiceTest {
     void marcarLidoReaproveitaLinhaExistente() {
         UUID usuarioId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
-        Aviso a = aviso("Aviso", CategoriaAviso.GERAL, Plano.GRATUITO);
+        Aviso a = aviso("Aviso", CategoriaAviso.GERAL);
         AvisoMentorado existente = new AvisoMentorado(mentorado, a);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(avisoRepository.findById(a.getId())).thenReturn(Optional.of(a));
@@ -144,8 +144,8 @@ class AvisoMentoradoServiceTest {
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
-        Aviso jaLido = aviso("Já lido", CategoriaAviso.GERAL, Plano.GRATUITO);
-        Aviso pendente = aviso("Pendente", CategoriaAviso.GERAL, Plano.GRATUITO);
+        Aviso jaLido = aviso("Já lido", CategoriaAviso.GERAL);
+        Aviso pendente = aviso("Pendente", CategoriaAviso.GERAL);
         AvisoMentorado amLido = new AvisoMentorado(mentorado, jaLido);
         amLido.marcarLido();
         when(avisoMentoradoRepository.buscarParaMentorado(eq(mentorado.getId()), isNull()))

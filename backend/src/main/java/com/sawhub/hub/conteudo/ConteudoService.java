@@ -2,7 +2,6 @@ package com.sawhub.hub.conteudo;
 
 import com.sawhub.hub.conteudo.dto.AtualizarConteudoRequest;
 import com.sawhub.hub.conteudo.dto.CriarConteudoRequest;
-import com.sawhub.hub.mentorado.Plano;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -20,19 +19,19 @@ public class ConteudoService {
 
     @Transactional
     public Conteudo criar(CriarConteudoRequest request) {
-        Conteudo conteudo = new Conteudo(request.titulo(), request.tipo(), request.url(), request.planoMinimo());
+        Conteudo conteudo = new Conteudo(request.titulo(), request.tipo(), request.url());
         conteudo.definirDuracaoMinutos(request.duracaoMinutos());
         return conteudoRepository.save(conteudo);
     }
 
-    public List<Conteudo> listar(TipoConteudo tipo, Plano planoMinimo, Boolean publicado) {
-        return conteudoRepository.buscarComFiltro(tipo, planoMinimo, publicado);
+    public List<Conteudo> listar(TipoConteudo tipo, Boolean publicado) {
+        return conteudoRepository.buscarComFiltro(tipo, publicado);
     }
 
     @Transactional
     public Conteudo atualizar(UUID id, AtualizarConteudoRequest request) {
         Conteudo conteudo = buscar(id);
-        conteudo.atualizar(request.titulo(), request.tipo(), request.url(), request.planoMinimo());
+        conteudo.atualizar(request.titulo(), request.tipo(), request.url());
         conteudo.definirDuracaoMinutos(request.duracaoMinutos());
         return conteudoRepository.save(conteudo);
     }

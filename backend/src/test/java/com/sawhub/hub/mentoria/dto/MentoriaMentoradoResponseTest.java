@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.TipoConteudo;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentoria.Ata;
 import com.sawhub.hub.mentoria.Mentoria;
 import com.sawhub.hub.mentoria.StatusMentoria;
@@ -124,7 +123,7 @@ class MentoriaMentoradoResponseTest {
 
     @Test
     void materiaisVisiveisSaoMapeadosNaResposta() {
-        Conteudo c = new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x", Plano.GRATUITO);
+        Conteudo c = new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x");
         ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
 
         var r = MentoriaMentoradoResponse.from(mentoriaOnline(StatusMentoria.AGENDADA), null, List.of(c), DATA_HORA);

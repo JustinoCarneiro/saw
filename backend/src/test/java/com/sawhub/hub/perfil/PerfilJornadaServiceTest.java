@@ -240,7 +240,7 @@ class PerfilJornadaServiceTest {
 
     private static ConteudoMentoradoResponse conteudo(TipoConteudo tipo, boolean favorito, boolean assistido) {
         return new ConteudoMentoradoResponse(UUID.randomUUID(), "Título", tipo, "https://x.com/a",
-                Plano.GRATUITO, true, java.time.Instant.now(), favorito, assistido);
+                true, java.time.Instant.now(), favorito, assistido);
     }
 
     private static InscricaoEvento inscricao(StatusInscricao status) {

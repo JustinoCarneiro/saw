@@ -3,7 +3,6 @@ package com.sawhub.hub.conteudo;
 import com.sawhub.hub.common.CsvUtils;
 import com.sawhub.hub.common.dto.ImportErro;
 import com.sawhub.hub.common.dto.ImportResultResponse;
-import com.sawhub.hub.mentorado.Plano;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
@@ -21,8 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ConteudoCsvService {
 
-    private static final String[] CABECALHO_EXPORT = {"titulo", "tipo", "url", "planoMinimo", "duracaoMinutos", "publicado"};
-    private static final String[] CABECALHO_IMPORT = {"titulo", "tipo", "url", "planoMinimo", "duracaoMinutos"};
+    private static final String[] CABECALHO_EXPORT = {"titulo", "tipo", "url", "duracaoMinutos", "publicado"};
+    private static final String[] CABECALHO_IMPORT = {"titulo", "tipo", "url", "duracaoMinutos"};
     private static final int LIMITE_LINHAS = 5000;
 
     private final ConteudoRepository conteudoRepository;
@@ -31,10 +30,9 @@ public class ConteudoCsvService {
         this.conteudoRepository = conteudoRepository;
     }
 
-    public String exportar(TipoConteudo tipo, Plano planoMinimo, Boolean publicado) {
+    public String exportar(TipoConteudo tipo, Boolean publicado) {
         List<Conteudo> conteudos = conteudoRepository.findAll().stream()
                 .filter(c -> tipo == null || c.getTipo() == tipo)
-                .filter(c -> planoMinimo == null || c.getPlanoMinimo() == planoMinimo)
                 .filter(c -> publicado == null || c.isPublicado() == publicado)
                 .toList();
         StringWriter destino = new StringWriter();
@@ -45,7 +43,6 @@ public class ConteudoCsvService {
                         CsvUtils.neutralizarFormula(c.getTitulo()),
                         c.getTipo().name(),
                         c.getUrl(),
-                        c.getPlanoMinimo().name(),
                         c.getDuracaoMinutos() == null ? "" : c.getDuracaoMinutos(),
                         c.isPublicado());
             }
@@ -113,11 +110,9 @@ public class ConteudoCsvService {
         String url = registro.get("url");
         CsvUtils.exigirUrl(url, "URL");
 
-        Plano planoMinimo = CsvUtils.parseEnumOpcional(Plano.class, registro.get("planoMinimo"), "Plano mínimo", Plano.GRATUITO);
-
         Integer duracaoMinutos = CsvUtils.parseIntOpcional(registro.get("duracaoMinutos"), "Duração (minutos)");
 
-        Conteudo conteudo = new Conteudo(titulo.trim(), tipo, url.trim(), planoMinimo);
+        Conteudo conteudo = new Conteudo(titulo.trim(), tipo, url.trim());
         conteudo.definirDuracaoMinutos(duracaoMinutos);
         return conteudo;
     }

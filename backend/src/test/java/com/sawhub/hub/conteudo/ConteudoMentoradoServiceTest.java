@@ -44,7 +44,7 @@ class ConteudoMentoradoServiceTest {
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
-        Conteudo conteudo = new Conteudo("Video", TipoConteudo.VIDEO, "url", Plano.GRATUITO);
+        Conteudo conteudo = new Conteudo("Video", TipoConteudo.VIDEO, "url");
         ReflectionTestUtils.setField(conteudo, "id", UUID.randomUUID());
         Object[] row = new Object[]{conteudo, null};
 
@@ -65,7 +65,7 @@ class ConteudoMentoradoServiceTest {
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
-        Conteudo conteudo = new Conteudo("Doc", TipoConteudo.DOCUMENTO, "url", Plano.BASICO);
+        Conteudo conteudo = new Conteudo("Doc", TipoConteudo.DOCUMENTO, "url");
         conteudo.publicar();
         ReflectionTestUtils.setField(conteudo, "id", UUID.randomUUID());
         when(conteudoRepository.findById(conteudo.getId())).thenReturn(Optional.of(conteudo));
@@ -105,7 +105,7 @@ class ConteudoMentoradoServiceTest {
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
-        Conteudo naoPublicado = new Conteudo("Rascunho em curadoria", TipoConteudo.DOCUMENTO, "url", Plano.GRATUITO);
+        Conteudo naoPublicado = new Conteudo("Rascunho em curadoria", TipoConteudo.DOCUMENTO, "url");
         ReflectionTestUtils.setField(naoPublicado, "id", UUID.randomUUID());
         when(conteudoRepository.findById(naoPublicado.getId())).thenReturn(Optional.of(naoPublicado));
 
@@ -180,7 +180,7 @@ class ConteudoMentoradoServiceTest {
     }
 
     private ConteudoMentorado criarAssistido(Mentorado mentorado, Instant quando, Integer duracaoMinutos) {
-        Conteudo conteudo = new Conteudo("Doc", TipoConteudo.DOCUMENTO, "url", Plano.GRATUITO);
+        Conteudo conteudo = new Conteudo("Doc", TipoConteudo.DOCUMENTO, "url");
         ReflectionTestUtils.setField(conteudo, "id", UUID.randomUUID());
         conteudo.definirDuracaoMinutos(duracaoMinutos);
         ConteudoMentorado cm = new ConteudoMentorado(mentorado, conteudo);

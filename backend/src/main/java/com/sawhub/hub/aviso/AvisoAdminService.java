@@ -20,7 +20,7 @@ public class AvisoAdminService {
 
     @Transactional
     public Aviso criar(CriarAvisoRequest request) {
-        Aviso aviso = new Aviso(request.titulo(), request.descricao(), request.categoria(), request.planoMinimo());
+        Aviso aviso = new Aviso(request.titulo(), request.descricao(), request.categoria());
         return avisoRepository.save(aviso);
     }
 
@@ -32,7 +32,7 @@ public class AvisoAdminService {
     public Aviso atualizar(UUID id, CriarAvisoRequest request) {
         Aviso aviso = avisoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Aviso não encontrado: " + id));
-        aviso.atualizar(request.titulo(), request.descricao(), request.categoria(), request.planoMinimo());
+        aviso.atualizar(request.titulo(), request.descricao(), request.categoria());
         return aviso;
     }
 

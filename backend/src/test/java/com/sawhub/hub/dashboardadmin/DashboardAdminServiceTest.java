@@ -78,7 +78,7 @@ class DashboardAdminServiceTest {
         when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(List.of());
         when(mentoriaRepository.buscarPorStatus(null)).thenReturn(List.of());
         when(eventoRepository.buscarComFiltro(null, null)).thenReturn(List.of());
-        when(conteudoRepository.buscarComFiltro(null, null, true)).thenReturn(List.of());
+        when(conteudoRepository.buscarComFiltro(null, true)).thenReturn(List.of());
         when(atividadeLogService.listarRecentes()).thenReturn(List.of());
         var faturamento = new DashboardFaturamentoResponse(BigDecimal.ZERO, BigDecimal.ZERO, 0.0, List.of());
         when(relatorioFinanceiroService.dashboardFaturamento(atual.getYear(), atual.getMonthValue())).thenReturn(faturamento);

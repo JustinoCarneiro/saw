@@ -63,7 +63,7 @@ class MentoriaRepositoryTest {
 
     private Mentoria criarMentoriaComMaterial(Colaborador mentor, Mentorado mentorado) {
         Conteudo conteudo = conteudoRepository.save(
-                new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x", Plano.GRATUITO));
+                new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x"));
         Mentoria mentoria = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(mentorado),
                 Instant.parse("2026-07-15T14:00:00Z"), 60, "https://meet.google.com/x", null);
         mentoria.atualizarMateriaisRecomendados(Set.of(conteudo));

@@ -69,8 +69,8 @@ class MentoriaMentoradoServiceTest {
         return m;
     }
 
-    private static Conteudo conteudo(UUID id, Plano planoMinimo, boolean publicado) {
-        Conteudo c = new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x", planoMinimo);
+    private static Conteudo conteudo(UUID id, boolean publicado) {
+        Conteudo c = new Conteudo("Ficha técnica", TipoConteudo.PLANILHA, "https://cdn.sawhub.com.br/x");
         ReflectionTestUtils.setField(c, "id", id);
         if (publicado) {
             c.publicar();
@@ -130,7 +130,7 @@ class MentoriaMentoradoServiceTest {
         UUID usuarioId = UUID.randomUUID();
         UUID mentoriaId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.PROFISSIONAL);
-        Conteudo rascunho = conteudo(UUID.randomUUID(), Plano.GRATUITO, false);
+        Conteudo rascunho = conteudo(UUID.randomUUID(), false);
         Mentoria m = mentoria(mentoriaId, StatusMentoria.AGENDADA, Set.of(rascunho));
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(m));
@@ -149,7 +149,7 @@ class MentoriaMentoradoServiceTest {
         UUID usuarioId = UUID.randomUUID();
         UUID mentoriaId = UUID.randomUUID();
         Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.BASICO);
-        Conteudo material = conteudo(UUID.randomUUID(), Plano.GRATUITO, true);
+        Conteudo material = conteudo(UUID.randomUUID(), true);
         Mentoria m = mentoria(mentoriaId, StatusMentoria.AGENDADA, Set.of(material));
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(m));

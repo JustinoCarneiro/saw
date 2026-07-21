@@ -3,7 +3,6 @@ package com.sawhub.hub.conteudo;
 import com.sawhub.hub.conteudo.dto.AtualizarConteudoRequest;
 import com.sawhub.hub.conteudo.dto.ConteudoResponse;
 import com.sawhub.hub.conteudo.dto.CriarConteudoRequest;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;
 import com.sawhub.hub.common.dto.ImportResultResponse;
@@ -48,9 +47,8 @@ public class ConteudoController {
 
     @GetMapping
     public List<ConteudoResponse> listar(@RequestParam(required = false) TipoConteudo tipo,
-                                          @RequestParam(required = false) Plano planoMinimo,
                                           @RequestParam(required = false) Boolean publicado) {
-        return conteudoService.listar(tipo, planoMinimo, publicado).stream().map(ConteudoResponse::from).toList();
+        return conteudoService.listar(tipo, publicado).stream().map(ConteudoResponse::from).toList();
     }
 
     @PutMapping("/{id}")
@@ -70,9 +68,8 @@ public class ConteudoController {
 
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportarCsv(@RequestParam(required = false) TipoConteudo tipo,
-                                               @RequestParam(required = false) Plano planoMinimo,
                                                @RequestParam(required = false) Boolean publicado) {
-        String csv = conteudoCsvService.exportar(tipo, planoMinimo, publicado);
+        String csv = conteudoCsvService.exportar(tipo, publicado);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"conteudos.csv\"")
                 .contentType(MediaType.parseMediaType("text/csv"))

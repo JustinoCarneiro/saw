@@ -37,7 +37,6 @@ test.describe('M17 — E16 Avisos & Notificações', () => {
     await page.getByLabel('Título').fill(titulo);
     await page.getByLabel('Descrição').fill('Publicado pelo teste E2E.');
     await page.getByLabel('Categoria').selectOption('GERAL');
-    await page.getByLabel(/Visível a partir do plano/).selectOption('GRATUITO');
     await page.getByRole('button', { name: 'Publicar' }).click();
 
     await expect(page.locator('[data-testid^="aviso-row-"]', { hasText: titulo })).toBeVisible();
@@ -53,7 +52,6 @@ test.describe('M17 — E16 Avisos & Notificações', () => {
     await page.getByLabel('Título').fill(titulo);
     await page.getByLabel('Descrição').fill('Original.');
     await page.getByLabel('Categoria').selectOption('GERAL');
-    await page.getByLabel(/Visível a partir do plano/).selectOption('GRATUITO');
     await page.getByRole('button', { name: 'Publicar' }).click();
 
     const linha = page.locator('[data-testid^="aviso-row-"]', { hasText: titulo });
@@ -86,7 +84,6 @@ test.describe('M17 — E16 Avisos & Notificações', () => {
     await page.getByLabel('Título').fill(TITULO_LEITURA);
     await page.getByLabel('Descrição').fill('Testando marcar como lido.');
     await page.getByLabel('Categoria').selectOption('GERAL');
-    await page.getByLabel(/Visível a partir do plano/).selectOption('GRATUITO');
     await page.getByRole('button', { name: 'Publicar' }).click();
 
     await expect(page.locator('[data-testid^="aviso-row-"]', { hasText: TITULO_LEITURA })).toBeVisible();

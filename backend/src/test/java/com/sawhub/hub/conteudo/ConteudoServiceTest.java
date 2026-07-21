@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.conteudo.dto.AtualizarConteudoRequest;
 import com.sawhub.hub.conteudo.dto.CriarConteudoRequest;
-import com.sawhub.hub.mentorado.Plano;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,12 +32,11 @@ class ConteudoServiceTest {
         when(conteudoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarConteudoRequest("Ficha técnica modelo", TipoConteudo.PLANILHA,
-                "https://cdn.sawhub.com.br/ficha.xlsx", Plano.BASICO, null);
+                "https://cdn.sawhub.com.br/ficha.xlsx", null);
 
         Conteudo conteudo = service().criar(request);
 
         assertThat(conteudo.getTitulo()).isEqualTo("Ficha técnica modelo");
-        assertThat(conteudo.getPlanoMinimo()).isEqualTo(Plano.BASICO);
         assertThat(conteudo.isPublicado()).isFalse();
     }
 
@@ -47,7 +45,7 @@ class ConteudoServiceTest {
         when(conteudoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CriarConteudoRequest("Como calcular seu DRE", TipoConteudo.VIDEO,
-                "https://cdn.sawhub.com.br/dre.mp4", Plano.BASICO, 12);
+                "https://cdn.sawhub.com.br/dre.mp4", 12);
 
         Conteudo conteudo = service().criar(request);
 
@@ -55,30 +53,18 @@ class ConteudoServiceTest {
     }
 
     @Test
-    void criarSemPlanoUsaGratuitoComoDefault() {
-        when(conteudoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        var request = new CriarConteudoRequest("Manual da cultura", TipoConteudo.DOCUMENTO,
-                "https://cdn.sawhub.com.br/manual.pdf", null, null);
-
-        Conteudo conteudo = service().criar(request);
-
-        assertThat(conteudo.getPlanoMinimo()).isEqualTo(Plano.GRATUITO);
-    }
-
-    @Test
     void listarDelegaFiltroParaOBanco() {
-        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, Plano.ESSENCIAL, true)).thenReturn(List.of());
+        when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, true)).thenReturn(List.of());
 
-        service().listar(TipoConteudo.VIDEO, Plano.ESSENCIAL, true);
+        service().listar(TipoConteudo.VIDEO, true);
 
-        verify(conteudoRepository).buscarComFiltro(TipoConteudo.VIDEO, Plano.ESSENCIAL, true);
+        verify(conteudoRepository).buscarComFiltro(TipoConteudo.VIDEO, true);
     }
 
     @Test
     void publicarMudaFlag() {
         UUID id = UUID.randomUUID();
-        Conteudo conteudo = new Conteudo("DRE modelo", TipoConteudo.PLANILHA, "https://x", Plano.GRATUITO);
+        Conteudo conteudo = new Conteudo("DRE modelo", TipoConteudo.PLANILHA, "https://x");
         when(conteudoRepository.findById(id)).thenReturn(Optional.of(conteudo));
         when(conteudoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -92,7 +78,7 @@ class ConteudoServiceTest {
         UUID id = UUID.randomUUID();
         when(conteudoRepository.findById(id)).thenReturn(Optional.empty());
 
-        var request = new AtualizarConteudoRequest("X", TipoConteudo.OUTRO, "https://x", Plano.GRATUITO, null);
+        var request = new AtualizarConteudoRequest("X", TipoConteudo.OUTRO, "https://x", null);
 
         assertThatThrownBy(() -> service().atualizar(id, request))
                 .isInstanceOf(IllegalArgumentException.class)

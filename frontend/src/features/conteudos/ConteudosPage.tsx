@@ -5,17 +5,13 @@ import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
-import type { Conteudo, Plano, TipoConteudo } from '../../shared/lib/types';
+import type { Conteudo, TipoConteudo } from '../../shared/lib/types';
 import styles from './ConteudosPage.module.css';
 
-const COLUMNS = '2fr 1fr 1fr 1fr 1.6fr';
+const COLUMNS = '2fr 1fr 1fr 1.6fr';
 
 const TIPO_LABEL: Record<TipoConteudo, string> = {
   DOCUMENTO: 'Documento', VIDEO: 'Vídeo', PLANILHA: 'Planilha', APRESENTACAO: 'Apresentação', OUTRO: 'Outro',
-};
-
-const PLANO_LABEL: Record<Plano, string> = {
-  GRATUITO: 'Gratuito', BASICO: 'Básico', ESSENCIAL: 'Essencial', PROFISSIONAL: 'Profissional',
 };
 
 export function ConteudosPage() {
@@ -66,14 +62,13 @@ export function ConteudosPage() {
 
       {error && <div className={styles.error}>{error}</div>}
 
-      <DataGrid columns={COLUMNS} headers={['Título', 'Tipo', 'Plano mínimo', 'Status', 'Ações']}>
+      <DataGrid columns={COLUMNS} headers={['Título', 'Tipo', 'Status', 'Ações']}>
         {conteudos === null && !error && <div className={styles.loading}>Carregando…</div>}
         {conteudos?.length === 0 && <div className={styles.loading}>Nenhum conteúdo encontrado.</div>}
         {conteudos?.map((c) => (
           <DataGridRow key={c.id} columns={COLUMNS}>
             <div className={styles.strong}>{c.titulo}</div>
             <div className={styles.muted}>{TIPO_LABEL[c.tipo]}</div>
-            <div className={styles.muted}>{PLANO_LABEL[c.planoMinimo]}</div>
             <div>
               <Pill bg={c.publicado ? 'var(--success-bg)' : 'var(--line)'} color={c.publicado ? 'var(--success)' : 'var(--text-soft)'}>
                 {c.publicado ? 'Publicado' : 'Rascunho'}
@@ -95,7 +90,6 @@ function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState<TipoConteudo>('DOCUMENTO');
   const [url, setUrl] = useState('');
-  const [planoMinimo, setPlanoMinimo] = useState<Plano>('GRATUITO');
   const [duracaoMinutos, setDuracaoMinutos] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -106,7 +100,7 @@ function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar
     setSubmitting(true);
     try {
       await apiClient.post('/admin/conteudos', {
-        titulo, tipo, url, planoMinimo,
+        titulo, tipo, url,
         duracaoMinutos: duracaoMinutos ? Number(duracaoMinutos) : null,
       });
       onSalvo();
@@ -131,14 +125,6 @@ function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar
             <select className={styles.select} value={tipo} onChange={(e) => setTipo(e.target.value as TipoConteudo)}>
               {(Object.keys(TIPO_LABEL) as TipoConteudo[]).map((t) => (
                 <option key={t} value={t}>{TIPO_LABEL[t]}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.formField}>
-            Plano mínimo
-            <select className={styles.select} value={planoMinimo} onChange={(e) => setPlanoMinimo(e.target.value as Plano)}>
-              {(Object.keys(PLANO_LABEL) as Plano[]).map((p) => (
-                <option key={p} value={p}>{PLANO_LABEL[p]}</option>
               ))}
             </select>
           </label>

@@ -459,7 +459,6 @@ export interface Conteudo {
   titulo: string;
   tipo: TipoConteudo;
   url: string;
-  planoMinimo: Plano;
   publicado: boolean;
   criadoEm: string;
   favorito?: boolean;
@@ -507,7 +506,6 @@ export interface Aviso {
   titulo: string;
   descricao: string;
   categoria: CategoriaAviso;
-  planoMinimo: Plano;
   criadoEm: string;
 }
 

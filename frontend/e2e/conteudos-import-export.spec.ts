@@ -24,8 +24,8 @@ test.describe('Conteúdos — Import/Export CSV (M23)', () => {
     await page.goto('/admin/conteudos/lista');
 
     const titulo = `Conteúdo CSV E2E ${Date.now()}`;
-    const csv = `titulo;tipo;url;planoMinimo;duracaoMinutos\n`
-        + `${titulo};DOCUMENTO;https://cdn.sawhub.com.br/e2e-material.pdf;GRATUITO;\n`;
+    const csv = `titulo;tipo;url;duracaoMinutos\n`
+        + `${titulo};DOCUMENTO;https://cdn.sawhub.com.br/e2e-material.pdf;\n`;
 
     const main = page.getByRole('main');
     await main.getByTestId('csv-importar-input').setInputFiles({
@@ -45,9 +45,9 @@ test.describe('Conteúdos — Import/Export CSV (M23)', () => {
     await page.goto('/admin/conteudos/lista');
 
     const tituloValido = `Nao deveria entrar ${Date.now()}`;
-    const csv = `titulo;tipo;url;planoMinimo;duracaoMinutos\n`
-        + `${tituloValido};DOCUMENTO;https://cdn.sawhub.com.br/valido.pdf;GRATUITO;\n`
-        + `Linha ruim;DOCUMENTO;ftp://link-sem-http;GRATUITO;\n`;
+    const csv = `titulo;tipo;url;duracaoMinutos\n`
+        + `${tituloValido};DOCUMENTO;https://cdn.sawhub.com.br/valido.pdf;\n`
+        + `Linha ruim;DOCUMENTO;ftp://link-sem-http;\n`;
 
     const main = page.getByRole('main');
     await main.getByTestId('csv-importar-input').setInputFiles({
