@@ -17,7 +17,6 @@ import com.sawhub.hub.financeiro.OrigemReceita;
 import com.sawhub.hub.financeiro.TipoLancamento;
 import com.sawhub.hub.loja.pagamento.MercadoPagoGatewayService;
 import com.sawhub.hub.mentorado.Mentorado;
-import com.sawhub.hub.mentorado.Plano;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,7 +51,7 @@ class PedidoPagamentoServiceTest {
     }
 
     private static Mentorado mentorado() {
-        return new Mentorado(null, "Maria", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        return new Mentorado(null, "Maria", null, BigDecimal.ZERO, 0, 0);
     }
 
     // vendaEmAtacado=true de propósito: usado com quantidade 2 numa das linhas abaixo.

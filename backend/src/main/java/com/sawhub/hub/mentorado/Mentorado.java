@@ -27,10 +27,6 @@ public class Mentorado extends BaseEntity {
 
     private String negocio;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Plano plano = Plano.GRATUITO;
-
     // Pass transversal de pgcrypto (Fase 5): é literalmente "financeiro do mentorado" (CLAUDE.md
     // § Criptografia), ao contrário do DRE interno da SAW (M04, deliberadamente fora de escopo).
     // Nunca aparece em SUM()/ORDER BY do Postgres — o ranking do E17 (ConsolidatedService) ordena
@@ -68,9 +64,6 @@ public class Mentorado extends BaseEntity {
 
     @Column(name = "foto_url", length = 500)
     private String fotoUrl;
-
-    @Column(name = "vencimento_plano")
-    private LocalDate vencimentoPlano;
 
     // H9.2 — marca a primeira vez que a jornada (XP/conquistas) deste mentorado foi computada
     // depois da migração V18. Distingue "essa conquista já era verdadeira antes de rastrearmos"
@@ -114,8 +107,9 @@ public class Mentorado extends BaseEntity {
     @Column(name = "documento_contrato_url", length = 500)
     private String documentoContratoUrl;
 
-    // Nullable de propósito: TipoContrato é aditivo, não substitui Plano (ver Suposição 1 do
-    // Blueprint M23) — dado legado/seed não tem essa informação real.
+    // Nullable de propósito: vendas de INGRESSO_EVENTO/PRODUTO_DIGITAL/FORMULA_SAW/
+    // FORMACAO_PROFISSIONAL/FICHA_TECNICA_LUCRATIVA (MentoradoAdminService.mapearTipoContrato)
+    // legitimamente não têm tipo de contrato de mentoria.
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_contrato")
     private TipoContrato tipoContrato;
@@ -160,23 +154,21 @@ public class Mentorado extends BaseEntity {
     protected Mentorado() {
     }
 
-    public Mentorado(Usuario usuario, String nome, String negocio, Plano plano,
+    public Mentorado(Usuario usuario, String nome, String negocio,
                       BigDecimal crescimentoFaturamentoPct, Integer ferramentasConcluidas, Integer ferramentasTotal) {
         this.usuario = usuario;
         this.nome = nome;
         this.negocio = negocio;
-        this.plano = plano;
         this.crescimentoFaturamentoPct = crescimentoFaturamentoPct;
         this.ferramentasConcluidas = ferramentasConcluidas;
         this.ferramentasTotal = ferramentasTotal;
         this.status = StatusMentorado.ATIVO;
     }
 
-    /** H11.1 — edição administrativa (nome, negócio, plano); status muda por {@link #ativar()}/{@link #desativar()}. */
-    public void atualizar(String nome, String negocio, Plano plano) {
+    /** H11.1 — edição administrativa (nome, negócio); status muda por {@link #ativar()}/{@link #desativar()}. */
+    public void atualizar(String nome, String negocio) {
         this.nome = nome;
         this.negocio = negocio;
-        this.plano = plano;
     }
 
     public void ativar() {
@@ -187,16 +179,11 @@ public class Mentorado extends BaseEntity {
         this.status = StatusMentorado.INATIVO;
     }
 
-    /** H9.1 — autoedição do mentorado: só contato/preferências, nunca identidade/plano (esses são admin-only via {@link #atualizar}). */
+    /** H9.1 — autoedição do mentorado: só contato/preferências, nunca identidade (esses são admin-only via {@link #atualizar}). */
     public void atualizarPerfil(String telefone, String bio, String fotoUrl) {
         this.telefone = telefone;
         this.bio = bio;
         this.fotoUrl = fotoUrl;
-    }
-
-    /** H9.3 — setado pelo Admin junto com o plano (M02/E15); ver Suposição 4 do Blueprint do M15. */
-    public void definirVencimentoPlano(LocalDate vencimentoPlano) {
-        this.vencimentoPlano = vencimentoPlano;
     }
 
     /** M23 — edição administrativa dos dados de contrato (H11.1 estendida). vencimentoContrato
@@ -280,10 +267,6 @@ public class Mentorado extends BaseEntity {
         return negocio;
     }
 
-    public Plano getPlano() {
-        return plano;
-    }
-
     public BigDecimal getCrescimentoFaturamentoPct() {
         return crescimentoFaturamentoPct;
     }
@@ -306,10 +289,6 @@ public class Mentorado extends BaseEntity {
 
     public String getFotoUrl() {
         return fotoUrl;
-    }
-
-    public LocalDate getVencimentoPlano() {
-        return vencimentoPlano;
     }
 
     public Instant getConquistasObservadasEm() {

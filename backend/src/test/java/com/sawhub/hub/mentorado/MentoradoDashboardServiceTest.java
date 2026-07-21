@@ -56,8 +56,8 @@ class MentoradoDashboardServiceTest {
         lenient().when(avisoMentoradoService.listar(eq(usuarioId), isNull(), isNull())).thenReturn(List.of());
     }
 
-    private static Mentorado mentorado(UUID id, Plano plano) {
-        Mentorado m = new Mentorado(null, "Maria", "Restaurante da Maria", plano, BigDecimal.ZERO, 0, 0);
+    private static Mentorado mentorado(UUID id) {
+        Mentorado m = new Mentorado(null, "Maria", "Restaurante da Maria", BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }
@@ -85,7 +85,7 @@ class MentoradoDashboardServiceTest {
     @Test
     void tarefasAbertasEEvolucaoGeralVemDoPesoDosEncaminhamentos() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         semAvisos(usuarioId);
 
@@ -106,7 +106,7 @@ class MentoradoDashboardServiceTest {
     @Test
     void metaSemanalPctSempreNullPorqueE3NaoExisteAinda() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         semCompromissosNemDica(mentorado);
@@ -118,7 +118,7 @@ class MentoradoDashboardServiceTest {
     @Test
     void avisosVemDoAvisoMentoradoServiceLimitadosATres() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         semCompromissosNemDica(mentorado);
@@ -136,7 +136,7 @@ class MentoradoDashboardServiceTest {
     @Test
     void compromissosSaoSoMentoriasFuturasAgendadasOuConfirmadasOrdenadasPorData() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         when(conteudoRepository.buscarComFiltro(TipoConteudo.VIDEO, true)).thenReturn(List.of());
@@ -173,7 +173,7 @@ class MentoradoDashboardServiceTest {
     @Test
     void semCompromissoFuturoProximaReuniaoENull() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         semCompromissosNemDica(mentorado);
@@ -192,7 +192,7 @@ class MentoradoDashboardServiceTest {
         // recente", sem filtro de tier — repositório já devolve ordenado DESC por criadoEm
         // (buscarComFiltro real), então o primeiro item da lista simulada abaixo é o esperado.
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.ESSENCIAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
@@ -212,7 +212,7 @@ class MentoradoDashboardServiceTest {
     @Test
     void semVideoPublicadoDicaDestaqueENull() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(encaminhamentoRepository.findByMentoradoIdOrderByCriadoEmDesc(mentorado.getId())).thenReturn(List.of());
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());

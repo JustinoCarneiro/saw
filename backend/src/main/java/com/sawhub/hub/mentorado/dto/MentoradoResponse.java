@@ -3,7 +3,6 @@ package com.sawhub.hub.mentorado.dto;
 import com.sawhub.hub.mentorado.EstadoImplementacao;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.NivelEngajamento;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentorado.RiscoChurn;
 import com.sawhub.hub.mentorado.StatusMentorado;
 import com.sawhub.hub.mentorado.TipoContrato;
@@ -28,8 +27,6 @@ public record MentoradoResponse(
         String nome,
         String email,
         String negocio,
-        Plano plano,
-        LocalDate vencimentoPlano,
         StatusMentorado status,
         String telefone,
         String bio,
@@ -53,7 +50,7 @@ public record MentoradoResponse(
 ) {
     public static MentoradoResponse from(Mentorado m) {
         return new MentoradoResponse(m.getId(), m.getNome(), m.getUsuario().getEmail(), m.getNegocio(),
-                m.getPlano(), m.getVencimentoPlano(), m.getStatus(), m.getTelefone(), m.getBio(),
+                m.getStatus(), m.getTelefone(), m.getBio(),
                 m.getFotoUrl(), m.getCriadoEm(),
                 m.getNomeFantasia(), m.getCnpj(), m.getSocios(), m.getTipoContrato(), m.getValorContrato(),
                 m.getDataFechamentoContrato(), m.getVencimentoContrato(), m.getDocumentoContratoUrl(),

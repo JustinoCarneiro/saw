@@ -15,7 +15,6 @@ import com.sawhub.hub.evento.StatusInscricao;
 import com.sawhub.hub.mentorado.EncaminhamentoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentoria.MentoriaRepository;
 import com.sawhub.hub.meta.MetaRepository;
 import com.sawhub.hub.perfil.dto.JornadaResponse;
@@ -60,8 +59,7 @@ class PerfilJornadaServiceTest {
 
     private static Mentorado mentorado(UUID id, BigDecimal crescimento, int ferramentasConcluidas, int ferramentasTotal) {
         Usuario usuario = new Usuario("ana@anacosta.com.br", "hash", Perfil.MENTORADO);
-        Mentorado m = new Mentorado(usuario, "Ana Costa", "Cantina Ana Costa", Plano.ESSENCIAL,
-                crescimento, ferramentasConcluidas, ferramentasTotal);
+        Mentorado m = new Mentorado(usuario, "Ana Costa", "Cantina Ana Costa", crescimento, ferramentasConcluidas, ferramentasTotal);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }

@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.mentorado.Mentorado;
-import com.sawhub.hub.mentorado.Plano;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,7 +29,7 @@ class PedidoAdminServiceTest {
     }
 
     private static Pedido pedidoLiberado() {
-        Mentorado m = new Mentorado(null, "Maria", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, "Maria", null, BigDecimal.ZERO, 0, 0);
         Produto produto = new Produto("X", "desc", CategoriaProduto.EBOOK, new BigDecimal("10.00"), null, null,
                 false, "https://cdn.sawhub.com.br/x.zip", null, false);
         Pedido pedido = new Pedido(m);
@@ -57,7 +56,7 @@ class PedidoAdminServiceTest {
     @Test
     void reembolsarCarrinhoLancaErro() {
         UUID id = UUID.randomUUID();
-        Pedido carrinho = new Pedido(new Mentorado(null, "Maria", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0));
+        Pedido carrinho = new Pedido(new Mentorado(null, "Maria", null, BigDecimal.ZERO, 0, 0));
         when(pedidoRepository.buscarPorIdComItens(id)).thenReturn(Optional.of(carrinho));
 
         assertThatThrownBy(() -> service().reembolsar(id)).isInstanceOf(IllegalStateException.class);

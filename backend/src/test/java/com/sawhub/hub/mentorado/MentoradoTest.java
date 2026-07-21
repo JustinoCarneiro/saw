@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class MentoradoTest {
 
     private static Mentorado mentorado() {
-        return new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        return new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
     }
 
     @Test

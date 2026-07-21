@@ -46,7 +46,7 @@ class EncaminhamentoRepositoryTest {
         Usuario usuario = usuarioRepository.save(
                 new Usuario("mentorado" + sufixo + "@sawhub.com.br", "hash", Perfil.MENTORADO));
         return mentoradoRepository.save(
-                new Mentorado(usuario, "Mentorado " + sufixo, null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0));
+                new Mentorado(usuario, "Mentorado " + sufixo, null, BigDecimal.ZERO, 0, 0));
     }
 
     private Meta criarMeta(Mentorado mentorado) {

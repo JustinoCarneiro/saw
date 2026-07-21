@@ -6,7 +6,6 @@ import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import com.sawhub.hub.team.ColaboradorRepository;
@@ -58,8 +57,7 @@ class CustomUserDetailsServiceTest {
     @Test
     void mentoradoMontaPrincipalComRoleMentoradoESemArea() {
         Usuario usuario = new Usuario("joao@saborearte.com.br", "hash", Perfil.MENTORADO);
-        Mentorado mentorado = new Mentorado(usuario, "João Silva", "Restaurante Sabor & Arte", Plano.PROFISSIONAL,
-                new BigDecimal("18.0"), 3, 3);
+        Mentorado mentorado = new Mentorado(usuario, "João Silva", "Restaurante Sabor & Arte", new BigDecimal("18.0"), 3, 3);
         when(usuarioRepository.findByEmail("joao@saborearte.com.br")).thenReturn(Optional.of(usuario));
         when(mentoradoRepository.findByUsuario(usuario)).thenReturn(Optional.of(mentorado));
 

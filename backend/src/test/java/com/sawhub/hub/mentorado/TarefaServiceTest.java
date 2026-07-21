@@ -39,7 +39,7 @@ class TarefaServiceTest {
     }
 
     private static Mentorado mentorado(UUID id) {
-        Mentorado m = new Mentorado(null, "Maria", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, "Maria", null, BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }

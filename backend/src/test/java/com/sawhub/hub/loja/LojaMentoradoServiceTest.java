@@ -9,7 +9,6 @@ import com.sawhub.hub.loja.dto.CarrinhoResponse;
 import com.sawhub.hub.loja.pagamento.MercadoPagoGatewayService;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -39,7 +38,7 @@ class LojaMentoradoServiceTest {
     }
 
     private static Mentorado mentorado(UUID id) {
-        Mentorado m = new Mentorado(null, "Maria", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, "Maria", null, BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }

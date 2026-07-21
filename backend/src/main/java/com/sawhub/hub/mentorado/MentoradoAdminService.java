@@ -53,8 +53,8 @@ public class MentoradoAdminService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public List<Mentorado> listar(Plano plano, StatusMentorado status, String busca) {
-        return mentoradoRepository.buscarComFiltro(plano, status, busca);
+    public List<Mentorado> listar(StatusMentorado status, String busca) {
+        return mentoradoRepository.buscarComFiltro(status, busca);
     }
 
     // M28 (change request, 21/07/2026) — "página dedicada de mentorado": até aqui a tela só
@@ -67,8 +67,7 @@ public class MentoradoAdminService {
     @Transactional
     public Mentorado atualizar(UUID id, AtualizarMentoradoRequest request) {
         Mentorado mentorado = buscar(id);
-        mentorado.atualizar(request.nome(), request.negocio(), request.plano());
-        mentorado.definirVencimentoPlano(request.vencimentoPlano());
+        mentorado.atualizar(request.nome(), request.negocio());
         // Fase 5 (H11.1) — Admin também pode preencher contato/bio/foto, além da autoedição do
         // próprio mentorado (H9.1) — mesmo método de domínio, dois chamadores.
         mentorado.atualizarPerfil(request.telefone(), request.bio(), request.fotoUrl());
@@ -108,9 +107,7 @@ public class MentoradoAdminService {
         String senhaTemporaria = gerarSenhaTemporaria();
         Usuario usuario = usuarioRepository.save(
                 new Usuario(lead.getEmail(), passwordEncoder.encode(senhaTemporaria), Perfil.MENTORADO));
-        // M28 — Lead.planoFechado removido junto com Plano ("não existem planos, mas sim
-        // produtos"); mesmo default GRATUITO já usado em criarDireto()/criarDiretoDeImportacao().
-        Mentorado mentorado = new Mentorado(usuario, lead.getNome(), null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(usuario, lead.getNome(), null, BigDecimal.ZERO, 0, 0);
 
         // M25 — Suposição 6 do Blueprint: quando o lead foi fechado via fecharVenda() (formulário
         // único de venda) com produto de mentoria/consultoria, propaga pro Mentorado em vez de
@@ -164,8 +161,7 @@ public class MentoradoAdminService {
         String senhaTemporaria = gerarSenhaTemporaria();
         Usuario usuario = usuarioRepository.save(
                 new Usuario(request.email(), passwordEncoder.encode(senhaTemporaria), Perfil.MENTORADO));
-        Mentorado mentorado = new Mentorado(usuario, request.nome(), request.negocio(), Plano.GRATUITO,
-                BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(usuario, request.nome(), request.negocio(), BigDecimal.ZERO, 0, 0);
         mentorado.atualizarPerfil(request.telefone(), null, null);
         mentorado.atualizarDadosContrato(null, null, null, request.tipoContrato(), request.valorContrato(),
                 request.dataFechamentoContrato());
@@ -195,8 +191,7 @@ public class MentoradoAdminService {
         String senhaTemporaria = gerarSenhaTemporaria();
         Usuario usuario = usuarioRepository.save(
                 new Usuario(linha.email(), passwordEncoder.encode(senhaTemporaria), Perfil.MENTORADO));
-        Mentorado mentorado = new Mentorado(usuario, linha.nome(), linha.negocio(), Plano.GRATUITO,
-                BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(usuario, linha.nome(), linha.negocio(), BigDecimal.ZERO, 0, 0);
         mentorado.atualizarPerfil(linha.telefone(), null, null);
         mentorado.atualizarDadosContrato(linha.nomeFantasia(), linha.cnpj(), linha.socios(), linha.tipoContrato(),
                 linha.valorContrato(), linha.dataFechamentoContrato());
@@ -233,12 +228,12 @@ public class MentoradoAdminService {
 
     /** M28 item 1 — "import único": atualiza um Mentorado já existente a partir de uma linha do
      * mesmo CSV de {@link #criarDiretoDeImportacao} (19 colunas), resolvida por e-mail. Não mexe
-     * em plano/status/bio/foto — só nos campos que esse CSV carrega (perfil básico + contrato +
+     * em status/bio/foto — só nos campos que esse CSV carrega (perfil básico + contrato +
      * diagnóstico), mesmo escopo de {@link #atualizar}/{@link #atualizarDadosContrato} somados. */
     @Transactional
     public Mentorado atualizarDeImportacao(UUID mentoradoId, ImportarMentoradoDiretoLinha linha) {
         Mentorado mentorado = buscar(mentoradoId);
-        mentorado.atualizar(linha.nome(), linha.negocio(), mentorado.getPlano());
+        mentorado.atualizar(linha.nome(), linha.negocio());
         mentorado.atualizarPerfil(linha.telefone(), mentorado.getBio(), mentorado.getFotoUrl());
         mentorado.atualizarDadosContrato(linha.nomeFantasia(), linha.cnpj(), linha.socios(), linha.tipoContrato(),
                 linha.valorContrato(), linha.dataFechamentoContrato());

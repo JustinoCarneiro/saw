@@ -70,7 +70,7 @@ class MentoradoAdminServiceTest {
     @Test
     void buscarPorIdDevolveOMentorado() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
 
         assertThat(service().buscarPorId(id)).isEqualTo(mentorado);
@@ -87,31 +87,27 @@ class MentoradoAdminServiceTest {
     }
 
     @Test
-    void atualizarMudaNomeNegocioEPlano() {
+    void atualizarMudaNomeENegocio() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Antigo", "Restaurante Antigo", Plano.GRATUITO,
-                java.math.BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Antigo", "Restaurante Antigo", java.math.BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var request = new AtualizarMentoradoRequest("Novo Nome", "Novo Negócio", Plano.ESSENCIAL,
-                java.time.LocalDate.of(2026, 12, 1), null, null, null);
+        var request = new AtualizarMentoradoRequest("Novo Nome", "Novo Negócio", null, null, null);
         Mentorado atualizado = service().atualizar(id, request);
 
         assertThat(atualizado.getNome()).isEqualTo("Novo Nome");
-        assertThat(atualizado.getPlano()).isEqualTo(Plano.ESSENCIAL);
-        assertThat(atualizado.getVencimentoPlano()).isEqualTo(java.time.LocalDate.of(2026, 12, 1));
+        assertThat(atualizado.getNegocio()).isEqualTo("Novo Negócio");
     }
 
     @Test
     void atualizarTambemGravaContatoBioEFoto() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Antigo", "Restaurante Antigo", Plano.GRATUITO,
-                java.math.BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Antigo", "Restaurante Antigo", java.math.BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var request = new AtualizarMentoradoRequest("Novo Nome", "Novo Negócio", Plano.ESSENCIAL, null,
+        var request = new AtualizarMentoradoRequest("Novo Nome", "Novo Negócio",
                 "11999998888", "Bio preenchida pelo Admin", "https://exemplo.com/foto.jpg");
         Mentorado atualizado = service().atualizar(id, request);
 
@@ -123,7 +119,7 @@ class MentoradoAdminServiceTest {
     @Test
     void desativarMudaStatus() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Nome", null, Plano.GRATUITO, java.math.BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Nome", null, java.math.BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -146,9 +142,6 @@ class MentoradoAdminServiceTest {
         var resultado = service().criarAPartirDeLead(leadId);
 
         assertThat(resultado.mentorado().getNome()).isEqualTo("Maria Souza");
-        // M28 — Lead.planoFechado removido junto com Plano; todo mentorado criado a partir de
-        // lead nasce com o mesmo default GRATUITO de criarDireto()/criarDiretoDeImportacao().
-        assertThat(resultado.mentorado().getPlano()).isEqualTo(Plano.GRATUITO);
         assertThat(resultado.senhaTemporaria()).isNotBlank();
         assertThat(lead.getMentorado()).isEqualTo(resultado.mentorado());
     }
@@ -218,7 +211,7 @@ class MentoradoAdminServiceTest {
     void criarAPartirDeLeadJaVinculadoLancaErro() {
         UUID leadId = UUID.randomUUID();
         Lead lead = leadFechado();
-        Mentorado jaVinculado = new Mentorado(null, "X", null, Plano.BASICO, java.math.BigDecimal.ZERO, 0, 0);
+        Mentorado jaVinculado = new Mentorado(null, "X", null, java.math.BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(jaVinculado, "id", UUID.randomUUID());
         lead.vincularMentorado(jaVinculado);
         when(leadRepository.findById(leadId)).thenReturn(Optional.of(lead));
@@ -346,7 +339,7 @@ class MentoradoAdminServiceTest {
     @Test
     void buscarPorEmailDevolveMentoradoQuandoUsuarioEstaVinculadoAUmMentorado() {
         Usuario usuario = new Usuario("dono@restaurante.com", "hash", com.sawhub.hub.security.Perfil.MENTORADO);
-        Mentorado mentorado = new Mentorado(usuario, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(usuario, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         when(usuarioRepository.findByEmail("dono@restaurante.com")).thenReturn(Optional.of(usuario));
         when(mentoradoRepository.findByUsuario(usuario)).thenReturn(Optional.of(mentorado));
 
@@ -380,11 +373,10 @@ class MentoradoAdminServiceTest {
     }
 
     @Test
-    void atualizarDeImportacaoAtualizaPerfilContratoEDiagnosticoSemMexerEmPlanoOuStatus() {
+    void atualizarDeImportacaoAtualizaPerfilContratoEDiagnosticoSemMexerEmStatus() {
         UUID id = UUID.randomUUID();
         Usuario usuario = new Usuario("dono@restaurante.com", "hash", com.sawhub.hub.security.Perfil.MENTORADO);
-        Mentorado mentorado = new Mentorado(usuario, "Nome Antigo", "Negócio Antigo", Plano.PROFISSIONAL,
-                BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(usuario, "Nome Antigo", "Negócio Antigo", BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(diagnosticoInicialRepository.findByMentoradoId(id)).thenReturn(Optional.empty());
@@ -400,7 +392,7 @@ class MentoradoAdminServiceTest {
 
         assertThat(atualizado.getNome()).isEqualTo("Nome Novo");
         assertThat(atualizado.getNegocio()).isEqualTo("Negócio Novo");
-        assertThat(atualizado.getPlano()).isEqualTo(Plano.PROFISSIONAL);
+        assertThat(atualizado.getStatus()).isEqualTo(StatusMentorado.ATIVO);
         assertThat(atualizado.getNomeFantasia()).isEqualTo("Menu Caseirinho Ltda");
         assertThat(atualizado.getTipoContrato()).isEqualTo(TipoContrato.MENTORIA_CONTINUA);
         verify(diagnosticoInicialRepository).save(any());
@@ -410,7 +402,7 @@ class MentoradoAdminServiceTest {
     void atualizarDeImportacaoSemDadosDeDiagnosticoNaoTocaNoDiagnosticoRepository() {
         UUID id = UUID.randomUUID();
         Usuario usuario = new Usuario("dono@restaurante.com", "hash", com.sawhub.hub.security.Perfil.MENTORADO);
-        Mentorado mentorado = new Mentorado(usuario, "Nome Antigo", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(usuario, "Nome Antigo", null, BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -426,7 +418,7 @@ class MentoradoAdminServiceTest {
     @Test
     void atualizarDadosContratoGravaTudoEDerivaVencimento() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -445,7 +437,7 @@ class MentoradoAdminServiceTest {
     @Test
     void atualizarDiagnosticoInicialCriaQuandoNaoExiste() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(diagnosticoInicialRepository.findByMentoradoId(id)).thenReturn(Optional.empty());
         when(diagnosticoInicialRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -471,7 +463,7 @@ class MentoradoAdminServiceTest {
     @Test
     void buscarDiagnosticoInicialRetornaOExistente() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         MentoradoDiagnosticoInicial existente = new MentoradoDiagnosticoInicial(mentorado);
         when(diagnosticoInicialRepository.findByMentoradoId(id)).thenReturn(Optional.of(existente));
 
@@ -481,7 +473,7 @@ class MentoradoAdminServiceTest {
     @Test
     void salvarDocumentoContratoGravaUrlNoMentorado() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         var arquivo = new org.springframework.mock.web.MockMultipartFile(
                 "arquivo", "contrato.pdf", "application/pdf", "conteudo-fake".getBytes());
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
@@ -496,7 +488,7 @@ class MentoradoAdminServiceTest {
     @Test
     void resolverDocumentoContratoLancaErroSeAindaNaoTemDocumento() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
 
         assertThatThrownBy(() -> service().resolverDocumentoContrato(id))
@@ -507,7 +499,7 @@ class MentoradoAdminServiceTest {
     @Test
     void atualizarDiagnosticoInicialAtualizaQuandoJaExiste() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         MentoradoDiagnosticoInicial existente = new MentoradoDiagnosticoInicial(mentorado);
         when(diagnosticoInicialRepository.findByMentoradoId(id)).thenReturn(Optional.of(existente));
@@ -526,7 +518,7 @@ class MentoradoAdminServiceTest {
     @Test
     void atualizarFerramentasObrigatoriasRecalculaOsContadoresGenericos() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -546,7 +538,7 @@ class MentoradoAdminServiceTest {
     @Test
     void atualizarAcompanhamentoPreencheOsDoisEixosEMarcaAData() {
         UUID id = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, BigDecimal.ZERO, 0, 0);
         when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
         when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
 import com.sawhub.hub.security.UsuarioRepository;
@@ -53,7 +52,7 @@ class PresencaMentoriaRepositoryTest {
 
     private Mentorado criarMentorado(String sufixo) {
         Usuario usuario = usuarioRepository.save(new Usuario("mentorado" + sufixo + "@sawhub.com.br", "hash", Perfil.MENTORADO));
-        return mentoradoRepository.save(new Mentorado(usuario, "Mentorado " + sufixo, null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0));
+        return mentoradoRepository.save(new Mentorado(usuario, "Mentorado " + sufixo, null, BigDecimal.ZERO, 0, 0));
     }
 
     private Mentoria criarMentoriaRealizada(TipoMentoria tipo, Colaborador mentor, Set<Mentorado> mentorados) {

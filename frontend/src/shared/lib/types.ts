@@ -93,7 +93,6 @@ export type TipoLancamento = 'RECEITA' | 'DESPESA';
 export type StatusLancamento = 'PREVISTO' | 'PARCIAL' | 'REALIZADO' | 'VENCIDO';
 export type GrupoDre = 'RECEITA_BRUTA' | 'DEDUCOES' | 'CUSTOS' | 'DESPESA_OPERACIONAL';
 export type OrigemReceita = 'ASSINATURA' | 'LOJA' | 'EVENTO' | 'OUTRA';
-export type Plano = 'GRATUITO' | 'BASICO' | 'ESSENCIAL' | 'PROFISSIONAL';
 
 // E14 — subcategorias fixo/variável (raio-x da planilha real "DRE Financeira Saw"). `grupo` é
 // texto livre (departamento/linha, ex. "Estrutura"/"Pessoas"); `natureza` é consistente por
@@ -303,8 +302,6 @@ export interface MentoradoAdmin {
   nome: string;
   email: string;
   negocio: string | null;
-  plano: Plano;
-  vencimentoPlano: string | null;
   status: StatusMentorado;
   telefone: string | null;
   bio: string | null;
@@ -350,9 +347,8 @@ export interface ImportMentoradoDiretoResultResponse {
   criados: MentoradoCriado[];
 }
 
-// M23 (change request pós-MVP, 17/07/2026) — "não existem planos, mas sim produtos". Conceito
-// novo e aditivo, só pro lado comercial (Mentorado/Lead); Plano continua existindo e gateando
-// conteúdo exatamente como hoje (ver Suposição 1 do Blueprint M23 no ROADMAP.md).
+// M23 (change request pós-MVP, 17/07/2026) — "não existem planos, mas sim produtos". M28 removeu
+// o Plano legado por completo; TipoContrato é o único conceito de "tipo de contrato" que sobrevive.
 export type TipoContrato = 'MENTORIA_CONTINUA' | 'MENTORIA_INDIVIDUAL' | 'CONSULTORIA';
 
 export type RespostaSimNao = 'SIM' | 'NAO';

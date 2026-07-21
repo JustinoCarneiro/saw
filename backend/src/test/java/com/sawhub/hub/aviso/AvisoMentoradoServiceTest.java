@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 import com.sawhub.hub.aviso.dto.AvisoMentoradoResponse;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
 import java.math.BigDecimal;
@@ -40,9 +39,9 @@ class AvisoMentoradoServiceTest {
         return new AvisoMentoradoService(avisoMentoradoRepository, avisoRepository, mentoradoRepository);
     }
 
-    private static Mentorado mentorado(UUID id, Plano plano) {
+    private static Mentorado mentorado(UUID id) {
         Usuario usuario = new Usuario("ana@x.com", "hash", Perfil.MENTORADO);
-        Mentorado m = new Mentorado(usuario, "Ana", "Negócio", plano, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(usuario, "Ana", "Negócio", BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }
@@ -56,7 +55,7 @@ class AvisoMentoradoServiceTest {
     @Test
     void listarIsolaPorTenantResolvendoSoPeloUsuarioAutenticado() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.BASICO);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
         Aviso a1 = aviso("Aviso 1", CategoriaAviso.GERAL);
@@ -73,7 +72,7 @@ class AvisoMentoradoServiceTest {
     @Test
     void listarApenasNaoLidosFiltraOsJaLidos() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
         Aviso lido = aviso("Lido", CategoriaAviso.GERAL);
@@ -92,7 +91,7 @@ class AvisoMentoradoServiceTest {
     @Test
     void resumoContaSoOsNaoLidos() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
         Aviso lido = aviso("Lido", CategoriaAviso.GERAL);
@@ -110,7 +109,7 @@ class AvisoMentoradoServiceTest {
     @Test
     void marcarLidoCriaLinhaNovaQuandoMentoradoNuncaInteragiu() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         Aviso a = aviso("Aviso", CategoriaAviso.GERAL);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(avisoRepository.findById(a.getId())).thenReturn(Optional.of(a));
@@ -125,7 +124,7 @@ class AvisoMentoradoServiceTest {
     @Test
     void marcarLidoReaproveitaLinhaExistente() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         Aviso a = aviso("Aviso", CategoriaAviso.GERAL);
         AvisoMentorado existente = new AvisoMentorado(mentorado, a);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
@@ -141,7 +140,7 @@ class AvisoMentoradoServiceTest {
     @Test
     void marcarTodosLidosPulaOsJaLidosESoSalvaOsPendentes() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.GRATUITO);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
         Aviso jaLido = aviso("Já lido", CategoriaAviso.GERAL);

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
 import com.sawhub.hub.security.UsuarioRepository;
@@ -46,7 +45,7 @@ class PedidoRepositoryTest {
         Usuario usuario = usuarioRepository.save(
                 new Usuario("mentoradopedido1@sawhub.com.br", "hash", Perfil.MENTORADO));
         Mentorado mentorado = mentoradoRepository.save(
-                new Mentorado(usuario, "Mentorado Pedido", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0));
+                new Mentorado(usuario, "Mentorado Pedido", null, BigDecimal.ZERO, 0, 0));
         Produto produto = produtoRepository.save(new Produto("Produto X", "desc", CategoriaProduto.EBOOK,
                 new BigDecimal("10.00"), null, null, false, "https://cdn.sawhub.com.br/x.zip", null, false));
 

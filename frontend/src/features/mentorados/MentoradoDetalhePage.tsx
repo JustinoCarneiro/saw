@@ -17,7 +17,6 @@ import type {
   MentoradoAdmin,
   MentoradoConsolidado,
   NivelEngajamento,
-  Plano,
   RespostaSimNao,
   RiscoChurn,
   StatusInscricao,
@@ -28,13 +27,6 @@ import styles from './MentoradoDetalhePage.module.css';
 // M28 (change request, 21/07/2026, "página dedicada de mentorado") — a maior parte destas
 // constantes/formulários migrou 1:1 de MentoradosListaPage.tsx (EditarMentoradoForm + suas 4
 // sub-seções, que viviam expandidas inline na mesma tela da lista). Ver ROADMAP.md § M28.
-const PLANO_LABEL: Record<Plano, string> = {
-  GRATUITO: 'Gratuito',
-  BASICO: 'Básico',
-  ESSENCIAL: 'Essencial',
-  PROFISSIONAL: 'Profissional',
-};
-
 const TIPO_CONTRATO_LABEL: Record<TipoContrato, string> = {
   MENTORIA_CONTINUA: 'Mentoria Contínua',
   MENTORIA_INDIVIDUAL: 'Mentoria Individual',
@@ -141,7 +133,9 @@ export function MentoradoDetalhePage() {
           <div className={styles.subline}>{mentorado.negocio ?? 'Sem negócio informado'} · {mentorado.email}</div>
         </div>
         <div className={styles.headerRight}>
-          <Pill bg="var(--line)" color="var(--text-soft)">{PLANO_LABEL[mentorado.plano]}</Pill>
+          <Pill bg="var(--line)" color="var(--text-soft)">
+            {mentorado.tipoContrato ? TIPO_CONTRATO_LABEL[mentorado.tipoContrato] : 'Sem tipo de contrato'}
+          </Pill>
           <StatusPill status={mentorado.status} />
           <ToggleStatusButton mentorado={mentorado} onFeito={carregar} />
         </div>
@@ -259,8 +253,6 @@ function MetricasCard({ metricas }: { metricas: MentoradoConsolidado }) {
 function PerfilSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSalvo: () => void }) {
   const [nome, setNome] = useState(mentorado.nome);
   const [negocio, setNegocio] = useState(mentorado.negocio ?? '');
-  const [plano, setPlano] = useState<Plano>(mentorado.plano);
-  const [vencimentoPlano, setVencimentoPlano] = useState(mentorado.vencimentoPlano ?? '');
   const [telefone, setTelefone] = useState(mentorado.telefone ?? '');
   const [bio, setBio] = useState(mentorado.bio ?? '');
   const [fotoUrl, setFotoUrl] = useState(mentorado.fotoUrl ?? '');
@@ -275,7 +267,7 @@ function PerfilSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSa
     setSubmitting(true);
     try {
       await apiClient.put(`/admin/mentorados/${mentorado.id}`, {
-        nome, negocio: negocio || null, plano, vencimentoPlano: vencimentoPlano || null,
+        nome, negocio: negocio || null,
         telefone: telefone || null,
         bio: bio || null,
         fotoUrl: fotoUrl || null,
@@ -301,18 +293,6 @@ function PerfilSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSa
           <label className={styles.formField}>
             Negócio
             <input className={styles.textInput} value={negocio} onChange={(e) => setNegocio(e.target.value)} />
-          </label>
-          <label className={styles.formField}>
-            Plano
-            <select className={styles.select} value={plano} onChange={(e) => setPlano(e.target.value as Plano)}>
-              {(Object.keys(PLANO_LABEL) as Plano[]).map((p) => (
-                <option key={p} value={p}>{PLANO_LABEL[p]}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.formField}>
-            Vencimento do plano
-            <input className={styles.textInput} type="date" value={vencimentoPlano} onChange={(e) => setVencimentoPlano(e.target.value)} />
           </label>
         </div>
         <div className={styles.formRow}>

@@ -27,7 +27,6 @@ import com.sawhub.hub.mentorado.Encaminhamento;
 import com.sawhub.hub.mentorado.EncaminhamentoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentoria.Ata;
 import com.sawhub.hub.mentoria.AtaEncaminhamentoSugeridoRepository;
 import com.sawhub.hub.mentoria.AtaRepository;
@@ -131,7 +130,7 @@ class DemoDataSeederTest {
     }
 
     private static Mentorado mentorado(String nome) {
-        Mentorado m = new Mentorado(null, nome, null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, nome, null, BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", java.util.UUID.randomUUID());
         return m;
     }
@@ -304,7 +303,7 @@ class DemoDataSeederTest {
 
         List<Mentorado> mentorados = List.of(mentorado("João Silva"), mentorado("Ana Costa"), mentorado("Carlos Menezes"),
                 mentorado("Rafael Gomes"), mentorado("Fernanda Lima"), mentorado("Marina Souza"));
-        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(mentorados);
+        when(mentoradoRepository.buscarComFiltro(null, null)).thenReturn(mentorados);
 
         seeder().run(null);
 

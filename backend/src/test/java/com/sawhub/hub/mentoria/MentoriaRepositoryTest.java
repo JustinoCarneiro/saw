@@ -8,7 +8,6 @@ import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.conteudo.TipoConteudo;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
 import com.sawhub.hub.security.UsuarioRepository;
@@ -58,7 +57,7 @@ class MentoriaRepositoryTest {
 
     private Mentorado criarMentorado(String sufixo) {
         Usuario usuario = usuarioRepository.save(new Usuario("mentorado" + sufixo + "@sawhub.com.br", "hash", Perfil.MENTORADO));
-        return mentoradoRepository.save(new Mentorado(usuario, "Mentorado " + sufixo, null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0));
+        return mentoradoRepository.save(new Mentorado(usuario, "Mentorado " + sufixo, null, BigDecimal.ZERO, 0, 0));
     }
 
     private Mentoria criarMentoriaComMaterial(Colaborador mentor, Mentorado mentorado) {

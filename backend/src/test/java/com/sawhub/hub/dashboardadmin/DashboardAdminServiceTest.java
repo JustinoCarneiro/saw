@@ -14,7 +14,6 @@ import com.sawhub.hub.financeiro.RelatorioFinanceiroService;
 import com.sawhub.hub.financeiro.dto.DashboardFaturamentoResponse;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentorado.TipoContrato;
 import com.sawhub.hub.mentoria.Mentoria;
 import com.sawhub.hub.mentoria.MentoriaRepository;
@@ -61,9 +60,9 @@ class DashboardAdminServiceTest {
                 conteudoRepository, relatorioFinanceiroService, atividadeLogService);
     }
 
-    private static Mentorado mentoradoEm(String nome, Plano plano, Instant criadoEm, boolean ativo) {
+    private static Mentorado mentoradoEm(String nome, Instant criadoEm, boolean ativo) {
         Usuario usuario = new Usuario(nome.toLowerCase().replace(" ", "") + "@x.com", "hash", Perfil.MENTORADO);
-        Mentorado m = new Mentorado(usuario, nome, "Negócio", plano, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(usuario, nome, "Negócio", BigDecimal.ZERO, 0, 0);
         if (!ativo) {
             m.desativar();
         }
@@ -76,7 +75,7 @@ class DashboardAdminServiceTest {
     }
 
     private void mockarVazio(YearMonth atual, YearMonth anterior) {
-        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(List.of());
+        when(mentoradoRepository.buscarComFiltro(null, null)).thenReturn(List.of());
         when(mentoriaRepository.buscarPorStatus(null)).thenReturn(List.of());
         when(eventoRepository.buscarComFiltro(null, null)).thenReturn(List.of());
         when(conteudoRepository.buscarComFiltro(null, true)).thenReturn(List.of());
@@ -92,10 +91,10 @@ class DashboardAdminServiceTest {
         YearMonth anterior = atual.minusMonths(1);
         mockarVazio(atual, anterior);
 
-        Mentorado ativo1 = mentoradoEm("Ana", Plano.ESSENCIAL, emMes(anterior, 1), true);
-        Mentorado ativo2 = mentoradoEm("Rafael", Plano.BASICO, emMes(anterior, 1), true);
-        Mentorado inativo = mentoradoEm("Carlos", Plano.BASICO, emMes(anterior, 1), false);
-        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(List.of(ativo1, ativo2, inativo));
+        Mentorado ativo1 = mentoradoEm("Ana", emMes(anterior, 1), true);
+        Mentorado ativo2 = mentoradoEm("Rafael", emMes(anterior, 1), true);
+        Mentorado inativo = mentoradoEm("Carlos", emMes(anterior, 1), false);
+        when(mentoradoRepository.buscarComFiltro(null, null)).thenReturn(List.of(ativo1, ativo2, inativo));
 
         DashboardAdminResponse resposta = service().resumo(atual.getYear(), atual.getMonthValue());
 
@@ -108,17 +107,17 @@ class DashboardAdminServiceTest {
         YearMonth anterior = atual.minusMonths(1);
         mockarVazio(atual, anterior);
 
-        Mentorado a = mentoradoEm("A", Plano.ESSENCIAL, emMes(anterior, 1), true);
-        Mentorado b = mentoradoEm("B", Plano.ESSENCIAL, emMes(anterior, 1), true);
-        Mentorado c = mentoradoEm("C", Plano.BASICO, emMes(anterior, 1), true);
-        Mentorado d = mentoradoEm("D", Plano.PROFISSIONAL, emMes(anterior, 1), false); // inativo, fora do cálculo
+        Mentorado a = mentoradoEm("A", emMes(anterior, 1), true);
+        Mentorado b = mentoradoEm("B", emMes(anterior, 1), true);
+        Mentorado c = mentoradoEm("C", emMes(anterior, 1), true);
+        Mentorado d = mentoradoEm("D", emMes(anterior, 1), false); // inativo, fora do cálculo
         ReflectionTestUtils.setField(a, "tipoContrato", TipoContrato.MENTORIA_CONTINUA);
         ReflectionTestUtils.setField(b, "tipoContrato", TipoContrato.MENTORIA_CONTINUA);
         ReflectionTestUtils.setField(c, "tipoContrato", TipoContrato.CONSULTORIA);
         // d fica sem tipoContrato de propósito — mas está inativo, então nem entraria no bucket
         // "Não informado" (ver assertThat(semInformado) abaixo).
         List<Mentorado> mentorados = List.of(a, b, c, d);
-        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(mentorados);
+        when(mentoradoRepository.buscarComFiltro(null, null)).thenReturn(mentorados);
 
         DashboardAdminResponse resposta = service().resumo(atual.getYear(), atual.getMonthValue());
 
@@ -155,7 +154,7 @@ class DashboardAdminServiceTest {
         mockarVazio(atual, anterior);
 
         Colaborador mentor = new Colaborador(null, "Brayan", Area.GESTAO_PERFORMANCE);
-        Mentorado mentorado = mentoradoEm("Ana", Plano.ESSENCIAL, emMes(anterior, 1), true);
+        Mentorado mentorado = mentoradoEm("Ana", emMes(anterior, 1), true);
 
         Mentoria realizadaEsteMes = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, Set.of(mentorado), emMes(atual, 10), 60, null, null);
         realizadaEsteMes.confirmar();
@@ -184,7 +183,7 @@ class DashboardAdminServiceTest {
         mockarVazio(atual, anterior);
 
         Colaborador mentor = new Colaborador(null, "Brayan", Area.GESTAO_PERFORMANCE);
-        Mentorado mentorado = mentoradoEm("Ana", Plano.ESSENCIAL, emMes(anterior, 1), true);
+        Mentorado mentorado = mentoradoEm("Ana", emMes(anterior, 1), true);
         Instant hojeAs10 = LocalDate.now(ZONA).atTime(10, 0).atZone(ZONA).toInstant();
         Instant amanha = LocalDate.now(ZONA).plusDays(1).atTime(10, 0).atZone(ZONA).toInstant();
 
@@ -210,9 +209,9 @@ class DashboardAdminServiceTest {
         mockarVazio(atual, anterior);
 
         List<Mentorado> mentorados = List.of(
-                mentoradoEm("Antigo", Plano.BASICO, emMes(anterior, 1), true),
-                mentoradoEm("Recente", Plano.BASICO, emMes(atual, 5), true));
-        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(mentorados);
+                mentoradoEm("Antigo", emMes(anterior, 1), true),
+                mentoradoEm("Recente", emMes(atual, 5), true));
+        when(mentoradoRepository.buscarComFiltro(null, null)).thenReturn(mentorados);
 
         DashboardAdminResponse resposta = service().resumo(atual.getYear(), atual.getMonthValue());
 
@@ -228,8 +227,8 @@ class DashboardAdminServiceTest {
         YearMonth anterior = atual.minusMonths(1);
         mockarVazio(atual, anterior);
 
-        Mentorado mentorado = mentoradoEm("Ana", Plano.BASICO, emMes(anterior, 1), true);
-        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(List.of(mentorado));
+        Mentorado mentorado = mentoradoEm("Ana", emMes(anterior, 1), true);
+        when(mentoradoRepository.buscarComFiltro(null, null)).thenReturn(List.of(mentorado));
 
         AtividadeLog logRecente = new AtividadeLog("MENTORIA_CANCELADA", "Mentoria cancelada: Carlos Menezes");
         ReflectionTestUtils.setField(logRecente, "criadoEm", emMes(atual, 20));

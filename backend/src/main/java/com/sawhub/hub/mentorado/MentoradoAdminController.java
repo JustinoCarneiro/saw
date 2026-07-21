@@ -43,10 +43,9 @@ public class MentoradoAdminController {
     }
 
     @GetMapping
-    public List<MentoradoResponse> listar(@RequestParam(required = false) Plano plano,
-                                           @RequestParam(required = false) StatusMentorado status,
+    public List<MentoradoResponse> listar(@RequestParam(required = false) StatusMentorado status,
                                            @RequestParam(required = false) String busca) {
-        return mentoradoAdminService.listar(plano, status, busca).stream().map(MentoradoResponse::from).toList();
+        return mentoradoAdminService.listar(status, busca).stream().map(MentoradoResponse::from).toList();
     }
 
     // M28 — "página dedicada de mentorado" (MentoradoDetalhePage), acessada direto por URL.
@@ -112,10 +111,9 @@ public class MentoradoAdminController {
 
     // M22 — mesmos filtros de GET /mentorados.
     @GetMapping("/export")
-    public ResponseEntity<byte[]> exportar(@RequestParam(required = false) Plano plano,
-                                            @RequestParam(required = false) StatusMentorado status,
+    public ResponseEntity<byte[]> exportar(@RequestParam(required = false) StatusMentorado status,
                                             @RequestParam(required = false) String busca) {
-        String csv = mentoradoCsvService.exportar(plano, status, busca);
+        String csv = mentoradoCsvService.exportar(status, busca);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"mentorados.csv\"")

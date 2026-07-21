@@ -67,7 +67,7 @@ public class DashboardAdminService {
         YearMonth periodo = YearMonth.of(ano, mes);
         YearMonth anterior = periodo.minusMonths(1);
 
-        List<Mentorado> mentorados = mentoradoRepository.buscarComFiltro(null, null, null);
+        List<Mentorado> mentorados = mentoradoRepository.buscarComFiltro(null, null);
         List<Mentoria> mentorias = mentoriaRepository.buscarPorStatus(null);
         List<Evento> eventos = eventoRepository.buscarComFiltro(null, null);
 

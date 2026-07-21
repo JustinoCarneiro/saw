@@ -72,8 +72,7 @@ class TeamServiceTest {
     }
 
     private static Mentorado mentorado() {
-        Mentorado m = new Mentorado(null, "Mentorado", "Negócio", com.sawhub.hub.mentorado.Plano.BASICO,
-                java.math.BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, "Mentorado", "Negócio", java.math.BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", java.util.UUID.randomUUID());
         return m;
     }

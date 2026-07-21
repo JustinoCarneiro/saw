@@ -14,7 +14,6 @@ import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.conteudo.TipoConteudo;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentoria.dto.CriarMentoriaRequest;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
@@ -66,7 +65,7 @@ class MentoriaServiceTest {
     }
 
     private static Mentorado mentorado(UUID id, String nome) {
-        Mentorado m = new Mentorado(null, nome, null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, nome, null, BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }

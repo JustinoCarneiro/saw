@@ -14,7 +14,6 @@ import type {
   Lead,
   MentoradoAdmin,
   MentoradoCriado,
-  Plano,
   StatusMentorado,
   TipoContrato,
 } from '../../shared/lib/types';
@@ -22,16 +21,8 @@ import styles from './MentoradosListaPage.module.css';
 
 const COLUMNS = '1.4fr 1.6fr 1.2fr 1fr 1fr 1.6fr';
 
-const PLANO_LABEL: Record<Plano, string> = {
-  GRATUITO: 'Gratuito',
-  BASICO: 'Básico',
-  ESSENCIAL: 'Essencial',
-  PROFISSIONAL: 'Profissional',
-};
-
-// M23 (change request pós-MVP, 17/07/2026) — TipoContrato é aditivo, não substitui Plano (ver
-// ROADMAP.md § Blueprint M23). /direto e /dados-contrato exigem Modulo.COMERCIAL (achado do
-// revisor-seguranca: CNPJ/sócios/valor de contrato não são dado de Gestão de Performance).
+// M23 (change request pós-MVP, 17/07/2026) — /direto e /dados-contrato exigem Modulo.COMERCIAL
+// (achado do revisor-seguranca: CNPJ/sócios/valor de contrato não são dado de Gestão de Performance).
 const TIPO_CONTRATO_LABEL: Record<TipoContrato, string> = {
   MENTORIA_CONTINUA: 'Mentoria Contínua',
   MENTORIA_INDIVIDUAL: 'Mentoria Individual',
@@ -50,7 +41,6 @@ export function MentoradosListaPage() {
   // área Gestão de Performance (que enxerga esta tela via Modulo.MENTORADOS) não vê esses botões.
   const podeVerContrato = user?.modulosPermitidos.includes('COMERCIAL') ?? false;
 
-  const [plano, setPlano] = useState<Plano | ''>('');
   const [status, setStatus] = useState<StatusMentorado | ''>('');
   const [busca, setBusca] = useState('');
   const [mentorados, setMentorados] = useState<MentoradoAdmin[] | null>(null);
@@ -64,23 +54,17 @@ export function MentoradosListaPage() {
   const carregar = () => {
     setMentorados(null);
     apiClient
-      .get<MentoradoAdmin[]>('/admin/mentorados', { params: { plano: plano || undefined, status: status || undefined, busca: busca || undefined } })
+      .get<MentoradoAdmin[]>('/admin/mentorados', { params: { status: status || undefined, busca: busca || undefined } })
       .then((res) => setMentorados(res.data))
       .catch(() => setError('Não foi possível carregar os mentorados.'));
   };
 
-  useEffect(carregar, [plano, status, busca]);
+  useEffect(carregar, [status, busca]);
 
   return (
     <div>
       <div className={styles.toolbar}>
         <div className={styles.filters}>
-          <select className={styles.select} value={plano} onChange={(e) => setPlano(e.target.value as Plano | '')}>
-            <option value="">Todos os planos</option>
-            {(Object.keys(PLANO_LABEL) as Plano[]).map((p) => (
-              <option key={p} value={p}>{PLANO_LABEL[p]}</option>
-            ))}
-          </select>
           <select className={styles.select} value={status} onChange={(e) => setStatus(e.target.value as StatusMentorado | '')}>
             <option value="">Todos os status</option>
             <option value="ATIVO">Ativo</option>
@@ -112,7 +96,7 @@ export function MentoradosListaPage() {
             atualiza; esta tela mantém só a exportação. */}
         <CsvImportExport
           exportUrl="/admin/mentorados/export"
-          exportParams={{ plano: plano || undefined, status: status || undefined, busca: busca || undefined }}
+          exportParams={{ status: status || undefined, busca: busca || undefined }}
           exportFilename="mentorados.csv"
           labelPrefix="Mentorados"
         />
@@ -184,7 +168,7 @@ export function MentoradosListaPage() {
 
       {error && <div className={styles.error}>{error}</div>}
 
-      <DataGrid columns={COLUMNS} headers={['Nome', 'Negócio', 'E-mail', 'Plano', 'Status', 'Ações']}>
+      <DataGrid columns={COLUMNS} headers={['Nome', 'Negócio', 'E-mail', 'Tipo de contrato', 'Status', 'Ações']}>
         {mentorados === null && !error && <div className={styles.loading}>Carregando…</div>}
         {mentorados?.length === 0 && <div className={styles.loading}>Nenhum mentorado encontrado.</div>}
         {mentorados?.map((m) => {
@@ -194,7 +178,7 @@ export function MentoradosListaPage() {
               <div className={styles.strong}>{m.nome}</div>
               <div className={styles.muted}>{m.negocio ?? '—'}</div>
               <div className={`${styles.muted} ${styles.email}`}>{m.email}</div>
-              <div className={styles.muted}>{PLANO_LABEL[m.plano]}</div>
+              <div className={styles.muted}>{m.tipoContrato ? TIPO_CONTRATO_LABEL[m.tipoContrato] : '—'}</div>
               <div><Pill bg={st.bg} color={st.color}>{st.label}</Pill></div>
               <div className={styles.acoes}>
                 {/* M28 ("página dedicada de mentorado") — antes expandia um form inline nesta

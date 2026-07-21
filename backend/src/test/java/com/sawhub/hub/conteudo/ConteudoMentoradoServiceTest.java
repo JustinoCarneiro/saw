@@ -12,7 +12,6 @@ import com.sawhub.hub.conteudo.dto.ConteudoMentoradoResponse;
 import com.sawhub.hub.conteudo.dto.IndicadoresConsumoResponse;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -40,7 +39,7 @@ class ConteudoMentoradoServiceTest {
     @Test
     void buscarCatalogoRepassaFiltrosEInjetaJoin() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "Mentorado 1", "123", Plano.BASICO, null, null, null);
+        Mentorado mentorado = new Mentorado(null, "Mentorado 1", "123", null, null, null);
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
@@ -61,7 +60,7 @@ class ConteudoMentoradoServiceTest {
     @Test
     void atualizarStatusCriaNovoVinculoSeNaoExistir() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.ESSENCIAL, null, null, null);
+        Mentorado mentorado = new Mentorado(null, "M1", "t", null, null, null);
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
@@ -84,7 +83,7 @@ class ConteudoMentoradoServiceTest {
     @Test
     void atualizarStatusRejeitaConteudoInexistenteComoNaoEncontrado() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.PROFISSIONAL, null, null, null);
+        Mentorado mentorado = new Mentorado(null, "M1", "t", null, null, null);
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         UUID conteudoInexistente = UUID.randomUUID();
@@ -101,7 +100,7 @@ class ConteudoMentoradoServiceTest {
         // mentorado que soubesse/adivinhasse o UUID de um conteúdo ainda em curadoria (rascunho
         // do Admin) conseguiria favoritar/marcar assistido, e a resposta vazaria título/url dele.
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.PROFISSIONAL, null, null, null);
+        Mentorado mentorado = new Mentorado(null, "M1", "t", null, null, null);
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
@@ -117,7 +116,7 @@ class ConteudoMentoradoServiceTest {
     @Test
     void indicadoresConsumoContaDiasDistintosNaoLinhas() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.PROFISSIONAL, null, null, null);
+        Mentorado mentorado = new Mentorado(null, "M1", "t", null, null, null);
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
@@ -141,7 +140,7 @@ class ConteudoMentoradoServiceTest {
     @Test
     void indicadoresConsumoSomaSoConteudosComDuracaoCadastrada() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.PROFISSIONAL, null, null, null);
+        Mentorado mentorado = new Mentorado(null, "M1", "t", null, null, null);
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
 
@@ -162,7 +161,7 @@ class ConteudoMentoradoServiceTest {
     @Test
     void indicadoresConsumoSemNenhumConsumoDevolveZerado() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = new Mentorado(null, "M1", "t", Plano.GRATUITO, null, null, null);
+        Mentorado mentorado = new Mentorado(null, "M1", "t", null, null, null);
         ReflectionTestUtils.setField(mentorado, "id", UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(conteudoMentoradoRepository.findByMentoradoIdAndAssistidoTrue(mentorado.getId())).thenReturn(List.of());

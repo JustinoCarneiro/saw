@@ -8,7 +8,6 @@ import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.TipoConteudo;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentoria.dto.MentoriaMentoradoResponse;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
@@ -40,8 +39,8 @@ class MentoriaMentoradoServiceTest {
         return new MentoriaMentoradoService(mentoriaRepository, ataRepository, mentoradoRepository);
     }
 
-    private static Mentorado mentorado(UUID id, Plano plano) {
-        Mentorado m = new Mentorado(null, "Maria", null, plano, BigDecimal.ZERO, 0, 0);
+    private static Mentorado mentorado(UUID id) {
+        Mentorado m = new Mentorado(null, "Maria", null, BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }
@@ -81,7 +80,7 @@ class MentoriaMentoradoServiceTest {
     @Test
     void listarResolveMentoradoAPartirDoUsuarioAutenticado() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.PROFISSIONAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
         when(ataRepository.findByMentoriaIdInAndStatus(List.of(), StatusAta.PUBLICADA)).thenReturn(List.of());
@@ -93,7 +92,7 @@ class MentoriaMentoradoServiceTest {
     void ataRascunhoNuncaApareceMesmoParaMentoriaRealizada() {
         UUID usuarioId = UUID.randomUUID();
         UUID mentoriaId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.PROFISSIONAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         Mentoria m = mentoria(mentoriaId, StatusMentoria.REALIZADA, null);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(m));
@@ -111,7 +110,7 @@ class MentoriaMentoradoServiceTest {
     void ataPublicadaApareceParaMentoriaRealizada() {
         UUID usuarioId = UUID.randomUUID();
         UUID mentoriaId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.PROFISSIONAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         Mentoria m = mentoria(mentoriaId, StatusMentoria.REALIZADA, null);
         Ata ata = new Ata(m);
         ata.concluirProcessamento("transcrição", "Resumo publicado.");
@@ -129,7 +128,7 @@ class MentoriaMentoradoServiceTest {
     void materialNaoPublicadoNuncaApareceMesmoAssociado() {
         UUID usuarioId = UUID.randomUUID();
         UUID mentoriaId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.PROFISSIONAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         Conteudo rascunho = conteudo(UUID.randomUUID(), false);
         Mentoria m = mentoria(mentoriaId, StatusMentoria.AGENDADA, Set.of(rascunho));
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
@@ -148,7 +147,7 @@ class MentoriaMentoradoServiceTest {
         // material estar publicado (ver materialNaoPublicadoNuncaApareceMesmoAssociado acima).
         UUID usuarioId = UUID.randomUUID();
         UUID mentoriaId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.BASICO);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         Conteudo material = conteudo(UUID.randomUUID(), true);
         Mentoria m = mentoria(mentoriaId, StatusMentoria.AGENDADA, Set.of(material));
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
@@ -163,7 +162,7 @@ class MentoriaMentoradoServiceTest {
     @Test
     void gerarIcsParaMentoriaQueNaoEDoMentoradoLanca404() {
         UUID usuarioId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.PROFISSIONAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of());
         when(ataRepository.findByMentoriaIdInAndStatus(List.of(), StatusAta.PUBLICADA)).thenReturn(List.of());
@@ -176,7 +175,7 @@ class MentoriaMentoradoServiceTest {
     void gerarIcsParaMentoriaPropriaDevolveBytesComSummary() {
         UUID usuarioId = UUID.randomUUID();
         UUID mentoriaId = UUID.randomUUID();
-        Mentorado mentorado = mentorado(UUID.randomUUID(), Plano.PROFISSIONAL);
+        Mentorado mentorado = mentorado(UUID.randomUUID());
         Mentoria m = mentoria(mentoriaId, StatusMentoria.CONFIRMADA, null);
         when(mentoradoRepository.findByUsuarioId(usuarioId)).thenReturn(Optional.of(mentorado));
         when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(m));

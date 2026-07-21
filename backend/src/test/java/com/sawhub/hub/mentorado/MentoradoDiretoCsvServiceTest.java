@@ -74,7 +74,7 @@ class MentoradoDiretoCsvServiceTest {
 
     private static MentoradoAdminService.MentoradoCriado criadoFake(String email, String nome) {
         Usuario usuario = new Usuario(email, "hash", Perfil.MENTORADO);
-        Mentorado mentorado = new Mentorado(usuario, nome, null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        Mentorado mentorado = new Mentorado(usuario, nome, null, BigDecimal.ZERO, 0, 0);
         return new MentoradoAdminService.MentoradoCriado(mentorado, "senha-temp-123");
     }
 

@@ -20,10 +20,8 @@ public interface MentoradoRepository extends JpaRepository<Mentorado, UUID> {
     // ("function lower(bytea) does not exist"). CAST(:busca AS string) força o tipo certo mesmo
     // quando o valor é null.
     @Query("SELECT m FROM Mentorado m "
-            + "WHERE (:plano IS NULL OR m.plano = :plano) "
-            + "AND (:status IS NULL OR m.status = :status) "
+            + "WHERE (:status IS NULL OR m.status = :status) "
             + "AND (:busca IS NULL OR LOWER(m.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%'))) "
             + "ORDER BY m.nome ASC")
-    List<Mentorado> buscarComFiltro(@Param("plano") Plano plano, @Param("status") StatusMentorado status,
-                                     @Param("busca") String busca);
+    List<Mentorado> buscarComFiltro(@Param("status") StatusMentorado status, @Param("busca") String busca);
 }

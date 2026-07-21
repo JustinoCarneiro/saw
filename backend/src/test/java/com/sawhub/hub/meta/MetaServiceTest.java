@@ -11,7 +11,6 @@ import com.sawhub.hub.meta.dto.CriarMetaRequest;
 import com.sawhub.hub.meta.dto.ResumoMetasResponse;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -38,7 +37,7 @@ class MetaServiceTest {
     }
 
     private static Mentorado mentorado(UUID id) {
-        Mentorado m = new Mentorado(null, "Maria", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, "Maria", null, BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }

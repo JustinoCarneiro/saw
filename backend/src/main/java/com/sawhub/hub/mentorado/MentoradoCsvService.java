@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class MentoradoCsvService {
 
-    private static final String[] CABECALHO = {"email", "nome", "negocio", "plano", "vencimentoPlano", "status"};
+    private static final String[] CABECALHO = {"email", "nome", "negocio", "tipoContrato", "status"};
 
     private final MentoradoRepository mentoradoRepository;
 
@@ -24,8 +24,8 @@ public class MentoradoCsvService {
         this.mentoradoRepository = mentoradoRepository;
     }
 
-    public String exportar(Plano plano, StatusMentorado status, String busca) {
-        List<Mentorado> mentorados = mentoradoRepository.buscarComFiltro(plano, status, busca);
+    public String exportar(StatusMentorado status, String busca) {
+        List<Mentorado> mentorados = mentoradoRepository.buscarComFiltro(status, busca);
         StringWriter destino = new StringWriter();
         CSVFormat formato = CSVFormat.Builder.create().setDelimiter(';').setHeader(CABECALHO).build();
         try (CSVPrinter printer = new CSVPrinter(destino, formato)) {
@@ -34,8 +34,7 @@ public class MentoradoCsvService {
                         m.getUsuario().getEmail(),
                         CsvUtils.neutralizarFormula(m.getNome()),
                         CsvUtils.neutralizarFormula(m.getNegocio() == null ? "" : m.getNegocio()),
-                        m.getPlano().name(),
-                        m.getVencimentoPlano() == null ? "" : CsvUtils.formatarData(m.getVencimentoPlano()),
+                        m.getTipoContrato() == null ? "" : m.getTipoContrato().name(),
                         m.getStatus().name());
             }
         } catch (IOException e) {

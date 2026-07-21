@@ -1,7 +1,6 @@
 package com.sawhub.hub.comercial;
 
 /** M25 (change request pós-MVP, 17/07/2026) — o que foi vendido de fato, distinto de
- * {@link com.sawhub.hub.mentorado.Plano} (legado, gating de conteúdo) e de
  * {@link com.sawhub.hub.mentorado.TipoContrato} (M23, só cobre os tipos de mentoria/consultoria
  * que viram Mentorado). Catálogo confirmado nas 5 planilhas reais da operação — ver
  * docs/reuniao-2026-07-17-atualizacoes.md. {@code FORMULA_SAW} e {@code FORMACAO_PROFISSIONAL}

@@ -11,7 +11,6 @@ import com.sawhub.hub.comercial.MetaComercial;
 import com.sawhub.hub.comercial.MetaComercialRepository;
 import com.sawhub.hub.comercial.StatusLead;
 import com.sawhub.hub.mentorado.Mentorado;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentoria.Mentoria;
 import com.sawhub.hub.mentoria.MentoriaRepository;
 import com.sawhub.hub.mentoria.StatusMentoria;
@@ -53,7 +52,7 @@ class DesempenhoTimeServiceTest {
     }
 
     private static Mentorado mentorado() {
-        Mentorado m = new Mentorado(null, "Mentorado", "Negócio", Plano.BASICO, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, "Mentorado", "Negócio", BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", UUID.randomUUID());
         return m;
     }

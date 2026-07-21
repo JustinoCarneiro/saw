@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import com.sawhub.hub.atividade.AtividadeLogService;
 import com.sawhub.hub.evento.dto.CriarEventoRequest;
 import com.sawhub.hub.mentorado.Mentorado;
-import com.sawhub.hub.mentorado.Plano;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -51,7 +50,7 @@ class EventoServiceTest {
     }
 
     private static Mentorado mentorado(UUID id) {
-        Mentorado m = new Mentorado(null, "Maria", null, Plano.ESSENCIAL, BigDecimal.ZERO, 0, 0);
+        Mentorado m = new Mentorado(null, "Maria", null, BigDecimal.ZERO, 0, 0);
         ReflectionTestUtils.setField(m, "id", id);
         return m;
     }

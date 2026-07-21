@@ -34,24 +34,23 @@ class MentoradoCsvServiceTest {
     @Test
     void exportarProduzCsvComPontoEVirgulaEDataPtBr() {
         Usuario usuario = usuario("joao@saborearte.com.br");
-        Mentorado m = new Mentorado(usuario, "João Silva", "Sabor & Arte", Plano.PROFISSIONAL,
-                BigDecimal.ZERO, 0, 0);
-        m.definirVencimentoPlano(LocalDate.of(2026, 12, 1));
-        when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(List.of(m));
+        Mentorado m = new Mentorado(usuario, "João Silva", "Sabor & Arte", BigDecimal.ZERO, 0, 0);
+        m.atualizarDadosContrato(null, null, null, TipoContrato.MENTORIA_CONTINUA, null, LocalDate.of(2026, 1, 15));
+        when(mentoradoRepository.buscarComFiltro(null, null)).thenReturn(List.of(m));
 
-        String csv = service().exportar(null, null, null);
+        String csv = service().exportar(null, null);
 
-        assertThat(csv).contains("email;nome;negocio;plano;vencimentoPlano;status");
-        assertThat(csv).contains("joao@saborearte.com.br;João Silva;Sabor & Arte;PROFISSIONAL;01/12/2026;ATIVO");
+        assertThat(csv).contains("email;nome;negocio;tipoContrato;status");
+        assertThat(csv).contains("joao@saborearte.com.br;João Silva;Sabor & Arte;MENTORIA_CONTINUA;ATIVO");
     }
 
     @Test
     void exportarNeutralizaNomeQueComecaComSinalDeFormula() {
         Usuario usuario = usuario("x@x.com");
-        Mentorado m = new Mentorado(usuario, "=SOMA(A1:A2)", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
-        when(mentoradoRepository.buscarComFiltro(any(), any(), any())).thenReturn(List.of(m));
+        Mentorado m = new Mentorado(usuario, "=SOMA(A1:A2)", null, BigDecimal.ZERO, 0, 0);
+        when(mentoradoRepository.buscarComFiltro(any(), any())).thenReturn(List.of(m));
 
-        String csv = service().exportar(null, null, null);
+        String csv = service().exportar(null, null);
 
         assertThat(csv).contains("'=SOMA(A1:A2)");
     }
