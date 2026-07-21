@@ -38,7 +38,7 @@ function arco(centro: number, raio: number, anguloInicioDeg: number, anguloFimDe
 // Réplica do donut do mockup (design/mockups-ref/06-admin.png, Tela 11 — "Distribuição por
 // plano"): anel de arcos SVG, sem lib de gráfico. Legenda é renderizada à parte por quem usa o
 // componente (mesma divisão de responsabilidade do restante do sistema).
-export function DonutChart({ segmentos, tamanho = 140, titulo = 'Distribuição por plano', centroConteudo }: DonutChartProps) {
+export function DonutChart({ segmentos, tamanho = 140, titulo = 'Distribuição', centroConteudo }: DonutChartProps) {
   const total = segmentos.reduce((soma, s) => soma + s.valor, 0);
   // Proporcional a `tamanho` (não fixo): com valores fixos (raio=46, espessura=20) calibrados
   // pro tamanho=140 do Dashboard, um tamanho menor (ex.: 104 no Painel Consolidado) deixava

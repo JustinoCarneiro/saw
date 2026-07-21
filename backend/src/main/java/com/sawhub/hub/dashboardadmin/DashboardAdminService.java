@@ -7,7 +7,7 @@ import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse;
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.AtividadeRecente;
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.CrescimentoMesItem;
-import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.DistribuicaoPlanoItem;
+import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.DistribuicaoTipoContratoItem;
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse.MentoriaHojeItem;
 import com.sawhub.hub.evento.Evento;
 import com.sawhub.hub.evento.EventoRepository;
@@ -16,8 +16,8 @@ import com.sawhub.hub.financeiro.RelatorioFinanceiroService;
 import com.sawhub.hub.financeiro.dto.DashboardFaturamentoResponse;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
-import com.sawhub.hub.mentorado.Plano;
 import com.sawhub.hub.mentorado.StatusMentorado;
+import com.sawhub.hub.mentorado.TipoContrato;
 import com.sawhub.hub.mentoria.Mentoria;
 import com.sawhub.hub.mentoria.MentoriaRepository;
 import com.sawhub.hub.mentoria.StatusMentoria;
@@ -97,7 +97,7 @@ public class DashboardAdminService {
                 eventosRealizados, variacaoEventosPct,
                 faturamentoAtual.faturamentoMensal(), variacaoReceitaPct,
                 crescimentoUltimosMeses(mentorados, periodo),
-                distribuicaoPorPlano(mentorados),
+                distribuicaoPorTipoContrato(mentorados),
                 atividadesRecentes(mentorados, eventos),
                 mentoriasDeHoje(mentorias));
     }
@@ -133,16 +133,23 @@ public class DashboardAdminService {
                 .toList();
     }
 
-    private static List<DistribuicaoPlanoItem> distribuicaoPorPlano(List<Mentorado> mentorados) {
+    // Inclui um bucket extra pra tipoContrato == null ("Não informado") — nem todo mentorado tem
+    // um tipo de contrato de mentoria (ver DistribuicaoTipoContratoItem), então esconder esse
+    // caso faria a soma dos percentuais não bater 100%.
+    private static List<DistribuicaoTipoContratoItem> distribuicaoPorTipoContrato(List<Mentorado> mentorados) {
         List<Mentorado> ativos = mentorados.stream().filter(m -> m.getStatus() == StatusMentorado.ATIVO).toList();
         long total = ativos.size();
-        return Arrays.stream(Plano.values())
-                .map(plano -> {
-                    long qtd = ativos.stream().filter(m -> m.getPlano() == plano).count();
+        List<DistribuicaoTipoContratoItem> itens = Arrays.stream(TipoContrato.values())
+                .map(tipo -> {
+                    long qtd = ativos.stream().filter(m -> m.getTipoContrato() == tipo).count();
                     double pct = total == 0 ? 0.0 : (qtd * 10000L / total) / 100.0;
-                    return new DistribuicaoPlanoItem(plano, qtd, pct);
+                    return new DistribuicaoTipoContratoItem(tipo, qtd, pct);
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+        long semInfo = ativos.stream().filter(m -> m.getTipoContrato() == null).count();
+        double pctSemInfo = total == 0 ? 0.0 : (semInfo * 10000L / total) / 100.0;
+        itens.add(new DistribuicaoTipoContratoItem(null, semInfo, pctSemInfo));
+        return itens;
     }
 
     // H10 — cadastro/evento/conteúdo derivam do criadoEm da própria entidade (têm timestamp real

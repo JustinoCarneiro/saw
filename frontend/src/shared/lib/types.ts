@@ -801,8 +801,8 @@ export interface CrescimentoMesItem {
   total: number;
 }
 
-export interface DistribuicaoPlanoItem {
-  plano: Plano;
+export interface DistribuicaoTipoContratoItem {
+  tipoContrato: TipoContrato | null;
   quantidade: number;
   pct: number;
 }
@@ -831,7 +831,7 @@ export interface DashboardAdminResponse {
   receitaMes: number;
   variacaoReceitaMesPct: number;
   crescimentoMentorados: CrescimentoMesItem[];
-  distribuicaoPlano: DistribuicaoPlanoItem[];
+  distribuicaoTipoContrato: DistribuicaoTipoContratoItem[];
   atividadesRecentes: AtividadeRecente[];
   mentoriasHoje: MentoriaHojeItem[];
 }

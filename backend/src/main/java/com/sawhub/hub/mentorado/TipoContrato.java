@@ -3,9 +3,10 @@ package com.sawhub.hub.mentorado;
 import java.time.LocalDate;
 
 /** Change request pós-MVP (reunião 17/07/2026, docs/reuniao-2026-07-17-atualizacoes.md) —
- * "não existem planos, mas sim produtos". Conceito NOVO e aditivo, só pro lado comercial
- * (Mentorado/Lead — "o que foi vendido"); {@link Plano} continua existindo e gateando conteúdo
- * exatamente como hoje (ver Suposição 1 do Blueprint M23 em ROADMAP.md — cisão, não substituição). */
+ * "não existem planos, mas sim produtos". Introduzido como conceito aditivo ao lado do legado
+ * {@link Plano} (Suposição 1 do Blueprint M23 em ROADMAP.md); a remoção completa de Plano está
+ * em andamento (M28, ver docs/reuniao-2026-07-17-atualizacoes.md) — TipoContrato é o único
+ * conceito de "tipo de contrato" que sobrevive ao fim dessa remoção. */
 public enum TipoContrato {
     MENTORIA_CONTINUA,
     MENTORIA_INDIVIDUAL,

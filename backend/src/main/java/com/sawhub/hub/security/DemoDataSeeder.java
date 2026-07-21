@@ -34,6 +34,7 @@ import com.sawhub.hub.mentorado.EncaminhamentoRepository;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentorado.Plano;
+import com.sawhub.hub.mentorado.TipoContrato;
 import com.sawhub.hub.mentoria.Ata;
 import com.sawhub.hub.mentoria.AtaEncaminhamentoSugerido;
 import com.sawhub.hub.mentoria.AtaEncaminhamentoSugeridoRepository;
@@ -164,36 +165,40 @@ public class DemoDataSeeder implements ApplicationRunner {
         seedMentorado("João Silva", "joao@saborearte.com.br", "Restaurante Sabor & Arte", Plano.PROFISSIONAL,
                 "18.0", 3, 3, new int[][]{{1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 0}},
                 "(11) 91234-5678", "Apaixonado por gestão e por negócios sustentáveis.",
-                LocalDate.of(2026, 10, 15));
+                LocalDate.of(2026, 10, 15), TipoContrato.MENTORIA_CONTINUA, LocalDate.of(2026, 1, 15));
         seedMentorado("Ana Costa", "ana@anacosta.com.br", "Cantina Ana Costa", Plano.ESSENCIAL,
                 "12.0", 2, 3, new int[][]{{1, 1}, {1, 1}, {1, 1}, {1, 1}, {2, 1}, {2, 1}, {1, 0}, {1, 0}, {2, 0}},
                 "(11) 98877-6655", "Focada em padronizar a cozinha e reduzir desperdício.",
-                LocalDate.of(2026, 9, 20));
+                LocalDate.of(2026, 9, 20), TipoContrato.MENTORIA_INDIVIDUAL, LocalDate.of(2026, 2, 1));
         seedMentorado("Carlos Menezes", "carlos@pointdocarlos.com.br", "Point do Carlos", Plano.PROFISSIONAL,
                 "5.0", 1, 3, new int[][]{{1, 1}, {1, 1}, {1, 1}, {2, 1}, {1, 0}, {1, 0}, {1, 0}, {2, 0}, {2, 0}, {2, 0}},
-                null, null, LocalDate.of(2026, 8, 5));
+                null, null, LocalDate.of(2026, 8, 5), TipoContrato.MENTORIA_CONTINUA, LocalDate.of(2026, 3, 10));
         seedMentorado("Rafael Gomes", "rafael@bistrogomes.com.br", "Bistrô Gomes", Plano.ESSENCIAL,
                 "-3.0", 0, 3, new int[][]{{1, 1}, {1, 1}, {1, 0}, {1, 0}, {1, 0}, {2, 0}, {2, 0}, {2, 0}},
                 "(21) 99988-7766", "Buscando virar o jogo do fluxo de caixa.",
-                LocalDate.of(2026, 8, 30));
+                LocalDate.of(2026, 8, 30), TipoContrato.MENTORIA_INDIVIDUAL, LocalDate.of(2026, 2, 20));
         seedMentorado("Fernanda Lima", "fernanda@cantinadafernanda.com.br", "Cantina da Fernanda", Plano.BASICO,
                 "24.0", 3, 3, new int[][]{{1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1}},
                 "(31) 97766-5544", "Sempre em busca da próxima tendência de cardápio.",
-                LocalDate.of(2026, 11, 10));
+                LocalDate.of(2026, 11, 10), TipoContrato.CONSULTORIA, LocalDate.of(2026, 4, 1));
+        // Marina fica sem TipoContrato de propósito — demonstra o bucket "Não informado" do
+        // Dashboard Admin (M28), não é um esquecimento.
         seedMentorado("Marina Souza", "marina@sabordamarina.com.br", "Sabor da Marina", Plano.BASICO,
                 "-8.0", 0, 3, new int[][]{{1, 1}, {1, 0}, {1, 0}, {1, 0}, {2, 0}, {2, 0}, {2, 0}},
-                null, null, LocalDate.of(2026, 7, 25));
+                null, null, LocalDate.of(2026, 7, 25), null, null);
     }
 
     private void seedMentorado(String nome, String email, String negocio, Plano plano, String crescimentoPct,
                                 int ferramentasConcluidas, int ferramentasTotal, int[][] encaminhamentosPesoConcluido,
-                                String telefone, String bio, LocalDate vencimentoPlano) {
+                                String telefone, String bio, LocalDate vencimentoPlano,
+                                TipoContrato tipoContrato, LocalDate dataFechamentoContrato) {
         Usuario usuario = usuarioRepository.save(
                 new Usuario(email, passwordEncoder.encode("trocar-no-primeiro-login"), Perfil.MENTORADO));
         Mentorado mentorado = new Mentorado(usuario, nome, negocio, plano,
                 new BigDecimal(crescimentoPct), ferramentasConcluidas, ferramentasTotal);
         mentorado.atualizarPerfil(telefone, bio, null);
         mentorado.definirVencimentoPlano(vencimentoPlano);
+        mentorado.atualizarDadosContrato(null, null, null, tipoContrato, null, dataFechamentoContrato);
         mentorado = mentoradoRepository.save(mentorado);
 
         int i = 1;

@@ -8,18 +8,30 @@ import { LineChart } from '../../shared/components/LineChart';
 import { areaLabel } from '../../shared/components/Pill';
 import { Topbar } from '../../shared/components/Topbar';
 import { formatBRL, formatPct } from '../../shared/lib/format';
-import type { DashboardAdminResponse, Plano } from '../../shared/lib/types';
+import type { DashboardAdminResponse, TipoContrato } from '../../shared/lib/types';
 import styles from './DashboardAdminPage.module.css';
 
-const PLANO_LABEL: Record<Plano, string> = {
-  GRATUITO: 'Gratuito', BASICO: 'Básico', ESSENCIAL: 'Essencial', PROFISSIONAL: 'Profissional',
+// M28 — "Distribuição por plano" trocado por "Distribuição por Tipo de Contrato" (não existem
+// planos, mas sim produtos — docs/reuniao-2026-07-17-atualizacoes.md). Chave sentinela pro
+// bucket "sem tipo de contrato informado" (TipoContrato null na resposta), já que a legenda
+// precisa de uma string estável pra key/cor mesmo pra esse caso.
+const NAO_INFORMADO = 'NAO_INFORMADO' as const;
+type TipoContratoOuNaoInformado = TipoContrato | typeof NAO_INFORMADO;
+
+const TIPO_CONTRATO_LABEL: Record<TipoContratoOuNaoInformado, string> = {
+  MENTORIA_CONTINUA: 'Mentoria Contínua',
+  MENTORIA_INDIVIDUAL: 'Mentoria Individual',
+  CONSULTORIA: 'Consultoria',
+  NAO_INFORMADO: 'Não informado',
 };
 
-// Mesmo mapeamento do mockup real (design/mockups-ref/06-admin.png, Tela 11) — Básico (azul) e
-// Profissional (verde) antes tinham contraste insuficiente entre si num anel fino de donut;
-// dourado/violeta/verde/cinza são 4 matizes bem separados entre si (achado do Marcos).
-const PLANO_COLOR: Record<Plano, string> = {
-  GRATUITO: 'var(--text-faint)', BASICO: 'var(--success)', ESSENCIAL: 'var(--violet)', PROFISSIONAL: 'var(--gold)',
+// Mesmo mapeamento do mockup real (design/mockups-ref/06-admin.png, Tela 11) — matizes bem
+// separados entre si num anel fino de donut (achado do Marcos).
+const TIPO_CONTRATO_COLOR: Record<TipoContratoOuNaoInformado, string> = {
+  MENTORIA_CONTINUA: 'var(--gold)',
+  MENTORIA_INDIVIDUAL: 'var(--violet)',
+  CONSULTORIA: 'var(--success)',
+  NAO_INFORMADO: 'var(--text-faint)',
 };
 
 // M23 — trocado de emoji (único lugar do sistema que usava; quebrava design/DESIGN.md §8:
@@ -156,7 +168,7 @@ export function DashboardAdminPage() {
 }
 
 function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminResponse }) {
-  const totalDistribuicao = dashboard.distribuicaoPlano.reduce((soma, d) => soma + d.quantidade, 0);
+  const totalDistribuicao = dashboard.distribuicaoTipoContrato.reduce((soma, d) => soma + d.quantidade, 0);
 
   return (
     <div className={styles.container}>
@@ -202,23 +214,30 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
           />
         </Card>
 
-        <Card style={{ padding: '20px 22px' }} testId="grafico-distribuicao-plano">
-          <div className={styles.sectionTitle}>Distribuição por plano</div>
+        <Card style={{ padding: '20px 22px' }} testId="grafico-distribuicao-tipo-contrato">
+          <div className={styles.sectionTitle}>Distribuição por Tipo de Contrato</div>
           <div className={styles.donutRow}>
             <DonutChart
               tamanho={176}
-              segmentos={dashboard.distribuicaoPlano.map((d) => ({ chave: d.plano, valor: d.quantidade, cor: PLANO_COLOR[d.plano] }))}
+              titulo="Distribuição por Tipo de Contrato"
+              segmentos={dashboard.distribuicaoTipoContrato.map((d) => {
+                const chave = d.tipoContrato ?? NAO_INFORMADO;
+                return { chave, valor: d.quantidade, cor: TIPO_CONTRATO_COLOR[chave] };
+              })}
             />
             <div className={styles.legendaLista}>
-              {dashboard.distribuicaoPlano.map((d) => (
-                <div key={d.plano} className={styles.legendaItem}>
-                  <span className={styles.dot} style={{ background: PLANO_COLOR[d.plano] }} />
-                  <span className={styles.legendaLabel}>{PLANO_LABEL[d.plano]}</span>
-                  <span className={styles.legendaValor}>
-                    {totalDistribuicao === 0 ? '—' : `${d.pct.toFixed(0)}%`}
-                  </span>
-                </div>
-              ))}
+              {dashboard.distribuicaoTipoContrato.map((d) => {
+                const chave = d.tipoContrato ?? NAO_INFORMADO;
+                return (
+                  <div key={chave} className={styles.legendaItem}>
+                    <span className={styles.dot} style={{ background: TIPO_CONTRATO_COLOR[chave] }} />
+                    <span className={styles.legendaLabel}>{TIPO_CONTRATO_LABEL[chave]}</span>
+                    <span className={styles.legendaValor}>
+                      {totalDistribuicao === 0 ? '—' : `${d.pct.toFixed(0)}%`}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </Card>

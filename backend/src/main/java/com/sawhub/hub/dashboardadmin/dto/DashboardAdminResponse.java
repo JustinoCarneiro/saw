@@ -2,7 +2,7 @@ package com.sawhub.hub.dashboardadmin.dto;
 
 import com.sawhub.hub.mentoria.StatusMentoria;
 import com.sawhub.hub.mentoria.TipoMentoria;
-import com.sawhub.hub.mentorado.Plano;
+import com.sawhub.hub.mentorado.TipoContrato;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -20,14 +20,17 @@ public record DashboardAdminResponse(
         BigDecimal receitaMes,
         double variacaoReceitaMesPct,
         List<CrescimentoMesItem> crescimentoMentorados,
-        List<DistribuicaoPlanoItem> distribuicaoPlano,
+        List<DistribuicaoTipoContratoItem> distribuicaoTipoContrato,
         List<AtividadeRecente> atividadesRecentes,
         List<MentoriaHojeItem> mentoriasHoje
 ) {
     public record CrescimentoMesItem(String mes, long total) {
     }
 
-    public record DistribuicaoPlanoItem(Plano plano, long quantidade, double pct) {
+    // tipoContrato nullable de propósito: representa o bucket "Não informado" — mentorados
+    // nascidos de vendas sem tipo de contrato de mentoria (ingresso de evento, produto digital
+    // etc., ver MentoradoAdminService.mapearTipoContrato) ou dado legado sem essa informação.
+    public record DistribuicaoTipoContratoItem(TipoContrato tipoContrato, long quantidade, double pct) {
     }
 
     public record AtividadeRecente(String tipo, String descricao, Instant quando) {

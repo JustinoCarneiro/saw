@@ -15,6 +15,7 @@ import com.sawhub.hub.financeiro.dto.DashboardFaturamentoResponse;
 import com.sawhub.hub.mentorado.Mentorado;
 import com.sawhub.hub.mentorado.MentoradoRepository;
 import com.sawhub.hub.mentorado.Plano;
+import com.sawhub.hub.mentorado.TipoContrato;
 import com.sawhub.hub.mentoria.Mentoria;
 import com.sawhub.hub.mentoria.MentoriaRepository;
 import com.sawhub.hub.mentoria.StatusMentoria;
@@ -102,27 +103,36 @@ class DashboardAdminServiceTest {
     }
 
     @Test
-    void distribuicaoPorPlanoSomaCemPorCentoEIgnoraInativos() {
+    void distribuicaoPorTipoContratoSomaCemPorCentoEIgnoraInativos() {
         YearMonth atual = YearMonth.of(2026, 7);
         YearMonth anterior = atual.minusMonths(1);
         mockarVazio(atual, anterior);
 
-        List<Mentorado> mentorados = List.of(
-                mentoradoEm("A", Plano.ESSENCIAL, emMes(anterior, 1), true),
-                mentoradoEm("B", Plano.ESSENCIAL, emMes(anterior, 1), true),
-                mentoradoEm("C", Plano.BASICO, emMes(anterior, 1), true),
-                mentoradoEm("D", Plano.PROFISSIONAL, emMes(anterior, 1), false)); // inativo, fora do cálculo
+        Mentorado a = mentoradoEm("A", Plano.ESSENCIAL, emMes(anterior, 1), true);
+        Mentorado b = mentoradoEm("B", Plano.ESSENCIAL, emMes(anterior, 1), true);
+        Mentorado c = mentoradoEm("C", Plano.BASICO, emMes(anterior, 1), true);
+        Mentorado d = mentoradoEm("D", Plano.PROFISSIONAL, emMes(anterior, 1), false); // inativo, fora do cálculo
+        ReflectionTestUtils.setField(a, "tipoContrato", TipoContrato.MENTORIA_CONTINUA);
+        ReflectionTestUtils.setField(b, "tipoContrato", TipoContrato.MENTORIA_CONTINUA);
+        ReflectionTestUtils.setField(c, "tipoContrato", TipoContrato.CONSULTORIA);
+        // d fica sem tipoContrato de propósito — mas está inativo, então nem entraria no bucket
+        // "Não informado" (ver assertThat(semInformado) abaixo).
+        List<Mentorado> mentorados = List.of(a, b, c, d);
         when(mentoradoRepository.buscarComFiltro(null, null, null)).thenReturn(mentorados);
 
         DashboardAdminResponse resposta = service().resumo(atual.getYear(), atual.getMonthValue());
 
-        // Tolerância pequena: divisão inteira truncada (2/3 + 1/3) não fecha em exatos 100.0 —
-        // mesmo artefato de arredondamento de qualquer gráfico de distribuição percentual.
-        double somaPct = resposta.distribuicaoPlano().stream().mapToDouble(DashboardAdminResponse.DistribuicaoPlanoItem::pct).sum();
+        // Tolerância pequena: divisão inteira truncada não fecha em exatos 100.0 — mesmo
+        // artefato de arredondamento de qualquer gráfico de distribuição percentual.
+        double somaPct = resposta.distribuicaoTipoContrato().stream()
+                .mapToDouble(DashboardAdminResponse.DistribuicaoTipoContratoItem::pct).sum();
         assertThat(somaPct).isCloseTo(100.0, org.assertj.core.data.Offset.offset(0.1));
-        var essencial = resposta.distribuicaoPlano().stream()
-                .filter(i -> i.plano() == Plano.ESSENCIAL).findFirst().orElseThrow();
-        assertThat(essencial.quantidade()).isEqualTo(2);
+        var continua = resposta.distribuicaoTipoContrato().stream()
+                .filter(i -> i.tipoContrato() == TipoContrato.MENTORIA_CONTINUA).findFirst().orElseThrow();
+        assertThat(continua.quantidade()).isEqualTo(2);
+        var semInformado = resposta.distribuicaoTipoContrato().stream()
+                .filter(i -> i.tipoContrato() == null).findFirst().orElseThrow();
+        assertThat(semInformado.quantidade()).isEqualTo(0);
     }
 
     @Test

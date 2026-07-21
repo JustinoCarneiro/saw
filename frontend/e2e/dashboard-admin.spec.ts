@@ -21,13 +21,15 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     await expect(page.getByText('Crescimento de mentorados')).toBeVisible();
     await expect(page.getByTestId('grafico-crescimento-mentorados').locator('svg path').first()).toBeVisible();
 
-    // Distribuição por plano: donut (M23) + legenda com os 4 planos, mesmo que algum tenha 0.
-    const distribuicao = page.getByTestId('grafico-distribuicao-plano');
+    // Distribuição por Tipo de Contrato (M28, trocou "Distribuição por plano" — "não existem
+    // planos, mas sim produtos"): donut + legenda com os 3 tipos + "Não informado", mesmo que
+    // algum tenha 0.
+    const distribuicao = page.getByTestId('grafico-distribuicao-tipo-contrato');
     await expect(distribuicao.locator('svg circle, svg path').first()).toBeVisible();
-    await expect(distribuicao.getByText('Gratuito')).toBeVisible();
-    await expect(distribuicao.getByText('Básico')).toBeVisible();
-    await expect(distribuicao.getByText('Essencial')).toBeVisible();
-    await expect(distribuicao.getByText('Profissional')).toBeVisible();
+    await expect(distribuicao.getByText('Mentoria Contínua')).toBeVisible();
+    await expect(distribuicao.getByText('Mentoria Individual')).toBeVisible();
+    await expect(distribuicao.getByText('Consultoria')).toBeVisible();
+    await expect(distribuicao.getByText('Não informado')).toBeVisible();
 
     // Atividades recentes: a suíte completa já gera mentorados/eventos/conteúdos em outras
     // specs, então a lista real tem itens — confirma que não é o estado vazio.
