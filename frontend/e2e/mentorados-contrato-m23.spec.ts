@@ -33,8 +33,11 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
     // Nasceu com o tipo de contrato já setado na criação — confere que persistiu antes de editar
     // os outros campos de contrato (CNPJ/sócios/nome fantasia não fazem parte do form de criação
     // direta, só de "dados de contrato").
+    // M28 ("página dedicada de mentorado") — "Editar" virou "Ver perfil" e navega pra uma página
+    // própria (/admin/mentorados/lista/:id) em vez de expandir um form inline nesta tela.
     const linha = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
-    await linha.getByRole('button', { name: 'Editar' }).click();
+    await linha.getByRole('button', { name: 'Ver perfil' }).click();
+    await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
     await expect(page.getByText('Dados de contrato', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Tipo de contrato')).toHaveValue('MENTORIA_CONTINUA');
     await expect(page.getByText('Vencimento calculado: 2027-07-17')).toBeVisible();
@@ -45,9 +48,9 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
     await page.getByRole('button', { name: 'Salvar dados de contrato' }).click();
     await expect(page.getByText('Salvo.')).toBeVisible();
 
-    // Reabre a tela pra confirmar que persistiu de verdade (não só o estado local do form).
-    await page.getByRole('button', { name: 'Cancelar' }).click();
-    await linha.getByRole('button', { name: 'Editar' }).click();
+    // Recarrega a página (GET /admin/mentorados/{id}) pra confirmar que persistiu de verdade, não
+    // só o estado local do form.
+    await page.reload();
     await expect(page.getByLabel('Nome fantasia')).toHaveValue('Restaurante da Maria E2E');
     await expect(page.getByLabel('CNPJ')).toHaveValue('42.521.899/0001-38');
     await expect(page.getByLabel('Sócios')).toHaveValue('Maria Silva; João Silva');
@@ -84,7 +87,8 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
     await expect(main.getByRole('button', { name: 'Criar a partir de um lead' })).toBeVisible();
 
     const linha = main.locator('text=Carlos Menezes').locator('xpath=ancestor::div[contains(@class,"row")]');
-    await linha.getByRole('button', { name: 'Editar' }).click();
+    await linha.getByRole('button', { name: 'Ver perfil' }).click();
+    await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
 
     await expect(page.getByText('Dados de contrato', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Diagnóstico Inicial', { exact: true })).toBeVisible();
@@ -98,23 +102,24 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
 
     // E17/M27 (change request pós-MVP, 19/07/2026) — mesma tela, mesmo ator (Gestão de
     // Performance), mesmo Modulo.MENTORADOS — ver ROADMAP.md § "Blueprint (M27)".
-    // onSalvo (recarrega a listagem em segundo plano) não é aguardado pelo handleSubmit — espera
-    // o próprio refetch da lista terminar antes de reabrir o form (registrando o listener ANTES do
-    // click), senão "Editar" pode reabrir com o `mentorado` (snapshot antigo da linha) de antes do
-    // PATCH, não o dado já persistido.
-    const listaRecarregouAposFerramentas = page.waitForResponse(
+    // onSalvo (recarrega o mentorado em segundo plano, GET /admin/mentorados/{id}) não é aguardado
+    // pelo handleSubmit — espera o próprio refetch terminar antes de seguir, senão o reload logo
+    // abaixo pode correr antes do PATCH ter sido confirmado pelo backend.
+    const recarregouAposFerramentas = page.waitForResponse(
       (res) => res.url().includes('/admin/mentorados') && res.request().method() === 'GET' && res.ok(),
     );
-    await expect(page.getByText('Ferramentas obrigatórias', { exact: true })).toBeVisible();
+    // M28 — "Ferramentas obrigatórias" também é label do card de métricas no topo da página
+    // (MetricasCard), então o texto aparece 2x agora; .first() só prova presença da seção.
+    await expect(page.getByText('Ferramentas obrigatórias', { exact: true }).first()).toBeVisible();
     await page.getByLabel('DRE estruturada').selectOption({ label: 'Sim' });
     await page.getByLabel('Manual de cultura').selectOption({ label: 'Em construção' });
     await Promise.all([
       page.waitForResponse((res) => res.url().includes('/ferramentas-obrigatorias') && res.ok()),
       page.getByRole('button', { name: 'Salvar ferramentas obrigatórias' }).click(),
     ]);
-    await listaRecarregouAposFerramentas;
+    await recarregouAposFerramentas;
 
-    const listaRecarregouAposAcompanhamento = page.waitForResponse(
+    const recarregouAposAcompanhamento = page.waitForResponse(
       (res) => res.url().includes('/admin/mentorados') && res.request().method() === 'GET' && res.ok(),
     );
     await expect(page.getByText('Acompanhamento', { exact: true })).toBeVisible();
@@ -124,10 +129,11 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
       page.waitForResponse((res) => res.url().includes('/acompanhamento') && res.ok()),
       page.getByRole('button', { name: 'Salvar acompanhamento' }).click(),
     ]);
-    await listaRecarregouAposAcompanhamento;
+    await recarregouAposAcompanhamento;
 
-    await page.getByRole('button', { name: 'Cancelar' }).click();
-    await linha.getByRole('button', { name: 'Editar' }).click();
+    // Recarrega a página (GET /admin/mentorados/{id}) pra confirmar que persistiu de verdade, não
+    // só o estado local dos formulários.
+    await page.reload();
     await expect(page.getByLabel('Faturamento anual (R$)')).toHaveValue('600000');
     await expect(page.getByLabel('Cultura construída?')).toHaveValue('EM_CONSTRUCAO');
     await expect(page.getByLabel('DRE estruturada')).toHaveValue('SIM');

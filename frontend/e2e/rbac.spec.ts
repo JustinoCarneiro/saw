@@ -8,7 +8,7 @@ test.describe('RBAC por área', () => {
 
     await expect(page.getByRole('link', { name: 'Comercial' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Time' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Mentorados' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Gestão de Performance' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Financeiro' })).toHaveCount(0);
 
     // Navegação direta pela URL não deve furar o RBAC do frontend (o backend já barra com 403,
@@ -33,16 +33,19 @@ test.describe('RBAC por área', () => {
     await loginAs(page, 'lucas@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
-    // getByRole('navigation') de propósito no link "Mentorados": a MentoradosShell (M06) tem
-    // sua própria aba "Mentorados", texto igual ao link da sidebar — sem escopo, os dois batem.
+    // getByRole('navigation') de propósito no link "Gestão de Performance": a MentoradosShell
+    // (M06) tem sua própria aba "Gestão de Performance" (M28, renomeada de "Mentorados"), texto
+    // igual ao link da sidebar E ao nome da própria área RBAC testada aqui — coincidência aceita
+    // pelo cliente (ver ROADMAP.md § M28) — sem escopo, os três batem.
     const sidebar = page.getByRole('navigation');
-    await expect(sidebar.getByRole('link', { name: 'Mentorados' })).toBeVisible();
+    await expect(sidebar.getByRole('link', { name: 'Gestão de Performance' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Time' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Financeiro' })).toHaveCount(0);
 
     // Painel Consolidado não é mais item próprio da sidebar — virou a 1ª aba (index) dentro de
-    // Mentorados, então quem tem Modulo.MENTORADOS cai direto nela ao clicar "Mentorados".
-    await sidebar.getByRole('link', { name: 'Mentorados' }).click();
+    // Mentorados/Gestão de Performance, então quem tem Modulo.MENTORADOS cai direto nela ao
+    // clicar "Gestão de Performance".
+    await sidebar.getByRole('link', { name: 'Gestão de Performance' }).click();
     await expect(page).toHaveURL(/\/admin\/mentorados\/consolidado$/);
     await expect(page.getByRole('main').getByText('João Silva').first()).toBeVisible();
 
@@ -68,7 +71,7 @@ test.describe('RBAC por área', () => {
     await expect(page.getByRole('link', { name: 'Comercial' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Time' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Financeiro' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Mentorados' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Gestão de Performance' })).toHaveCount(0);
 
     await page.goto('/admin/time');
     await expect(page.getByText('Sem acesso')).toBeVisible();

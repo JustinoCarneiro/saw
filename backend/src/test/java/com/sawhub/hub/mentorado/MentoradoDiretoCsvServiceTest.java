@@ -3,20 +3,21 @@ package com.sawhub.hub.mentorado;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.mentorado.dto.ImportMentoradoDiretoResultResponse;
 import com.sawhub.hub.mentorado.dto.ImportarMentoradoDiretoLinha;
 import com.sawhub.hub.security.Perfil;
 import com.sawhub.hub.security.Usuario;
-import com.sawhub.hub.security.UsuarioRepository;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,9 +25,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
-/** M23 item 4 (bulk-CREATE, 19/07/2026) — RED primeiro: MentoradoDiretoCsvService ainda não
- * existe neste ponto do ciclo. Mesmo padrão de MentoradoCsvServiceTest/TeamCsvServiceTest: duas
- * passadas (validação isolada de criação), tudo-ou-nada. */
+/** M23 item 4 (bulk-CREATE, 19/07/2026), estendido no M28 (change request, 21/07/2026, "import
+ * único") — mesmo padrão de MentoradoCsvServiceTest/TeamCsvServiceTest: duas passadas (validação
+ * isolada de criação/atualização), tudo-ou-nada. Sem stub, os mocks de MentoradoAdminService
+ * devolvem null/false por padrão (Mockito) — equivalente a "e-mail não cadastrado ainda", por isso
+ * a maioria dos testes de criação não precisa estubar buscarPorEmail/existeContaComEmail. */
 @ExtendWith(MockitoExtension.class)
 class MentoradoDiretoCsvServiceTest {
 
@@ -39,12 +42,10 @@ class MentoradoDiretoCsvServiceTest {
     };
 
     @Mock
-    private UsuarioRepository usuarioRepository;
-    @Mock
     private MentoradoAdminService mentoradoAdminService;
 
     private MentoradoDiretoCsvService service() {
-        return new MentoradoDiretoCsvService(usuarioRepository, mentoradoAdminService);
+        return new MentoradoDiretoCsvService(mentoradoAdminService);
     }
 
     private static String cabecalho() {
@@ -79,7 +80,6 @@ class MentoradoDiretoCsvServiceTest {
 
     @Test
     void importarValidaFormatoEDelegaCadaLinhaParaCriarDiretoDeImportacao() {
-        when(usuarioRepository.findByEmail(any())).thenReturn(Optional.empty());
         when(mentoradoAdminService.criarDiretoDeImportacao(any()))
                 .thenReturn(criadoFake("dono@restaurante.com", "Maria Souza"));
 
@@ -98,6 +98,7 @@ class MentoradoDiretoCsvServiceTest {
         ImportMentoradoDiretoResultResponse resultado = service().importar(csv(conteudo));
 
         assertThat(resultado.importados()).isEqualTo(1);
+        assertThat(resultado.atualizados()).isZero();
         assertThat(resultado.erros()).isEmpty();
         assertThat(resultado.criados()).hasSize(1);
         assertThat(resultado.criados().get(0).senhaTemporaria()).isEqualTo("senha-temp-123");
@@ -114,11 +115,11 @@ class MentoradoDiretoCsvServiceTest {
         assertThat(v.cnpj()).isEqualTo("42.521.899/0001-38");
         assertThat(v.socios()).contains("Girlandia", "Jaene");
         assertThat(v.temDadosDeDiagnostico()).isFalse();
+        assertThat(v.mentoradoExistenteId()).isNull();
     }
 
     @Test
     void importarCapturaCamposDeDiagnosticoQuandoPreenchidos() {
-        when(usuarioRepository.findByEmail(any())).thenReturn(Optional.empty());
         when(mentoradoAdminService.criarDiretoDeImportacao(any()))
                 .thenReturn(criadoFake("dono@restaurante.com", "Maria Souza"));
 
@@ -145,7 +146,6 @@ class MentoradoDiretoCsvServiceTest {
 
     @Test
     void importarComLinhaSemDadosDeDiagnosticoNaoMarcaTemDadosDeDiagnostico() {
-        when(usuarioRepository.findByEmail(any())).thenReturn(Optional.empty());
         when(mentoradoAdminService.criarDiretoDeImportacao(any()))
                 .thenReturn(criadoFake("dono@restaurante.com", "Maria Souza"));
 
@@ -158,12 +158,51 @@ class MentoradoDiretoCsvServiceTest {
         assertThat(captor.getValue().temDadosDeDiagnostico()).isFalse();
     }
 
+    // --- M28: e-mail já cadastrado como Mentorado vira atualização, não criação ---
+
+    @Test
+    void importarComEmailDeMentoradoExistenteDelegaParaAtualizarDeImportacaoEmVezDeCriar() {
+        UUID mentoradoId = UUID.randomUUID();
+        Mentorado existente = mock(Mentorado.class);
+        when(existente.getId()).thenReturn(mentoradoId);
+        when(mentoradoAdminService.buscarPorEmail("ja-e-mentorado@restaurante.com")).thenReturn(existente);
+
+        String conteudo = cabecalho() + "\n"
+                + linha(linhaBasica("ja-e-mentorado@restaurante.com", "Maria Souza Atualizada", "MENTORIA_CONTINUA")) + "\n";
+
+        ImportMentoradoDiretoResultResponse resultado = service().importar(csv(conteudo));
+
+        assertThat(resultado.erros()).isEmpty();
+        assertThat(resultado.importados()).isZero();
+        assertThat(resultado.atualizados()).isEqualTo(1);
+        assertThat(resultado.criados()).isEmpty();
+
+        ArgumentCaptor<ImportarMentoradoDiretoLinha> captor = ArgumentCaptor.forClass(ImportarMentoradoDiretoLinha.class);
+        verify(mentoradoAdminService).atualizarDeImportacao(eq(mentoradoId), captor.capture());
+        assertThat(captor.getValue().mentoradoExistenteId()).isEqualTo(mentoradoId);
+        verify(mentoradoAdminService, never()).criarDiretoDeImportacao(any());
+    }
+
+    @Test
+    void importarRejeitaEmailQueJaExisteMasNaoEhMentorado() {
+        when(mentoradoAdminService.buscarPorEmail("colaborador@sawhub.com.br")).thenReturn(null);
+        when(mentoradoAdminService.existeContaComEmail("colaborador@sawhub.com.br")).thenReturn(true);
+
+        String conteudo = cabecalho() + "\n"
+                + linha(linhaBasica("colaborador@sawhub.com.br", "Maria Souza", "MENTORIA_CONTINUA")) + "\n";
+
+        ImportMentoradoDiretoResultResponse resultado = service().importar(csv(conteudo));
+
+        assertThat(resultado.erros()).hasSize(1);
+        assertThat(resultado.erros().get(0).motivo()).contains("já existe").contains("não é um mentorado");
+        verify(mentoradoAdminService, never()).criarDiretoDeImportacao(any());
+        verify(mentoradoAdminService, never()).atualizarDeImportacao(any(), any());
+    }
+
     // --- tudo-ou-nada ---
 
     @Test
     void importarNaoCriaNenhumMentoradoQuandoUmaLinhaEhInvalida() {
-        when(usuarioRepository.findByEmail("valido@restaurante.com")).thenReturn(Optional.empty());
-
         String conteudo = cabecalho() + "\n"
                 + linha(linhaBasica("valido@restaurante.com", "Nome Válido", "MENTORIA_CONTINUA")) + "\n"
                 + linha(linhaBasica("sem-tipo@restaurante.com", "Nome Sem Tipo", "")) + "\n";
@@ -171,16 +210,20 @@ class MentoradoDiretoCsvServiceTest {
         ImportMentoradoDiretoResultResponse resultado = service().importar(csv(conteudo));
 
         assertThat(resultado.importados()).isZero();
+        assertThat(resultado.atualizados()).isZero();
         assertThat(resultado.criados()).isEmpty();
         assertThat(resultado.erros()).hasSize(1);
         assertThat(resultado.erros().get(0).linha()).isEqualTo(3);
-        verifyNoInteractions(mentoradoAdminService);
+        // A linha válida em isolamento passou pela resolução criar-ou-atualizar (validarLinha
+        // chama buscarPorEmail/existeContaComEmail pra TODA linha), mas nenhuma entidade chega a
+        // ser criada/atualizada — a garantia tudo-ou-nada é sobre criarDiretoDeImportacao/
+        // atualizarDeImportacao, não sobre a resolução em si.
+        verify(mentoradoAdminService, never()).criarDiretoDeImportacao(any());
+        verify(mentoradoAdminService, never()).atualizarDeImportacao(any(), any());
     }
 
     @Test
     void importarRejeitaEmailDuplicadoNoArquivo() {
-        when(usuarioRepository.findByEmail("dono@restaurante.com")).thenReturn(Optional.empty());
-
         String conteudo = cabecalho() + "\n"
                 + linha(linhaBasica("dono@restaurante.com", "Maria Souza", "MENTORIA_CONTINUA")) + "\n"
                 + linha(linhaBasica("dono@restaurante.com", "Outro Nome", "CONSULTORIA")) + "\n";
@@ -189,27 +232,12 @@ class MentoradoDiretoCsvServiceTest {
 
         assertThat(resultado.erros()).hasSize(1);
         assertThat(resultado.erros().get(0).motivo()).contains("duplicado");
-        verifyNoInteractions(mentoradoAdminService);
-    }
-
-    @Test
-    void importarRejeitaEmailJaExistenteNoSistema() {
-        when(usuarioRepository.findByEmail("ja-existe@restaurante.com"))
-                .thenReturn(Optional.of(new Usuario("ja-existe@restaurante.com", "hash", Perfil.MENTORADO)));
-
-        String conteudo = cabecalho() + "\n"
-                + linha(linhaBasica("ja-existe@restaurante.com", "Maria Souza", "MENTORIA_CONTINUA")) + "\n";
-
-        ImportMentoradoDiretoResultResponse resultado = service().importar(csv(conteudo));
-
-        assertThat(resultado.erros()).hasSize(1);
-        assertThat(resultado.erros().get(0).motivo()).contains("já existe");
+        verify(mentoradoAdminService, never()).criarDiretoDeImportacao(any());
+        verify(mentoradoAdminService, never()).atualizarDeImportacao(any(), any());
     }
 
     @Test
     void importarRejeitaCnpjInvalido() {
-        when(usuarioRepository.findByEmail(any())).thenReturn(Optional.empty());
-
         Map<String, String> campos = linhaBasica("dono@restaurante.com", "Maria Souza", "MENTORIA_CONTINUA");
         campos.put("cnpj", "123");
         String conteudo = cabecalho() + "\n" + linha(campos) + "\n";
@@ -222,8 +250,6 @@ class MentoradoDiretoCsvServiceTest {
 
     @Test
     void importarRejeitaTipoContratoInvalido() {
-        when(usuarioRepository.findByEmail(any())).thenReturn(Optional.empty());
-
         String conteudo = cabecalho() + "\n"
                 + linha(linhaBasica("dono@restaurante.com", "Maria Souza", "PLANO_QUE_NAO_EXISTE")) + "\n";
 

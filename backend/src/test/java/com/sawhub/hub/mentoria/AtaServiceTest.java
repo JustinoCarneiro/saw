@@ -117,6 +117,48 @@ class AtaServiceTest {
         verify(ataProcessamentoService).processar(ata.getId(), "audio.mp3");
     }
 
+    // M28 (change request, 21/07/2026) — "colar transcrição do Google Meet": mesma garantia de
+    // ordem (afterCommit) de iniciarUpload, mas sem AudioStorageService/TranscricaoService no
+    // caminho — o texto colado já É a transcrição.
+    @Test
+    void iniciarComTranscricaoColadaRegistraProcessamentoParaDepoisDoCommit() {
+        UUID mentoriaId = UUID.randomUUID();
+        Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
+        mentoria.realizar();
+        Ata ata = new Ata(mentoria);
+        ReflectionTestUtils.setField(ata, "id", UUID.randomUUID());
+        when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ata));
+        when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            Ata salva = service().iniciarComTranscricaoColada(mentoriaId, "Transcrição colada do Meet.");
+            assertThat(salva.getStatusProcessamento()).isEqualTo(StatusProcessamentoAta.PROCESSANDO);
+            assertThat(salva.getAudioUrl()).isNull();
+            verify(ataProcessamentoService, never()).processarTranscricaoColada(any(), any());
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+
+        verify(ataProcessamentoService).processarTranscricaoColada(ata.getId(), "Transcrição colada do Meet.");
+        verify(audioStorageService, never()).salvar(any(), any());
+    }
+
+    @Test
+    void iniciarComTranscricaoColadaComProcessamentoEmAndamentoLancaErro() {
+        UUID mentoriaId = UUID.randomUUID();
+        Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
+        mentoria.realizar();
+        Ata ata = new Ata(mentoria);
+        ata.iniciarProcessamento("audio-ja-em-voo.mp3");
+        when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ata));
+
+        assertThatThrownBy(() -> service().iniciarComTranscricaoColada(mentoriaId, "Texto colado."))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
     @Test
     void editarResumoAtualizaTexto() {
         UUID mentoriaId = UUID.randomUUID();

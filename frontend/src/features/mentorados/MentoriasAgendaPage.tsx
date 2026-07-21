@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
@@ -18,6 +18,16 @@ const STATUS_LABEL: Record<StatusMentoria, { label: string; bg: string; color: s
   CANCELADA: { label: 'Cancelada', bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
+// M28 (change request, 21/07/2026, "reorganizar lista de mentorias") — esta lista central passa a
+// mostrar só GRUPO por padrão: individual/consultoria têm seu próprio mentorado, então o
+// acompanhamento delas vive na página dele (MentoradoDetalhePage, seção "Mentorias"), não misturado
+// aqui com todo mundo. O filtro continua trocável (Individual/Todos) pra quem realmente precisar
+// ver tudo nesta tela — só o padrão mudou.
+const TIPO_FILTRO_LABEL: Record<TipoMentoria, string> = {
+  GRUPO: 'Grupo',
+  INDIVIDUAL: 'Individual',
+};
+
 function formatarDataHora(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
@@ -25,21 +35,46 @@ function formatarDataHora(iso: string): string {
 export function MentoriasAgendaPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<StatusMentoria | ''>('');
+  // M28 — GRUPO é o padrão (ver TIPO_FILTRO_LABEL acima); '' = Todos os tipos.
+  const [tipo, setTipo] = useState<TipoMentoria | ''>('GRUPO');
   const [mentorias, setMentorias] = useState<Mentoria[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
   const [processando, setProcessando] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState<Mentoria | null>(null);
+  // M28 — status/tipo mudaram de forma independente do fluxo de criação: "Nova mentoria" dispara
+  // um POST assíncrono e só chama carregar() (via onCriada) quando ele termina — se o filtro de
+  // tipo mudar ENQUANTO esse POST ainda está em voo, o carregar() do onCriada acaba sendo EMITIDO
+  // depois do carregar() do filtro novo (por mais lento, não por ser "mais recente"), e sua
+  // resposta (com o filtro ANTIGO) chegava por último e sobrescrevia a tela — achado ao vivo no
+  // E2E (dashboard-admin.spec.ts: dropdown mostrava "Individual", tabela continuava com Grupo).
+  // Ordem de EMISSÃO não é um proxy confiável pra "resposta mais recente" aqui; a defesa certa é
+  // comparar contra o filtro ATUAL no momento em que a resposta chega, não contra um contador.
+  const filtroAtualRef = useRef({ status, tipo });
+  useEffect(() => {
+    filtroAtualRef.current = { status, tipo };
+  });
 
   const carregar = () => {
+    const filtroDestaRequisicao = { status, tipo };
     setMentorias(null);
     apiClient
-      .get<Mentoria[]>('/admin/mentorias', { params: { status: status || undefined } })
-      .then((res) => setMentorias(res.data))
-      .catch(() => setError('Não foi possível carregar as mentorias.'));
+      .get<Mentoria[]>('/admin/mentorias', { params: { status: status || undefined, tipo: tipo || undefined } })
+      .then((res) => {
+        const atual = filtroAtualRef.current;
+        if (atual.status === filtroDestaRequisicao.status && atual.tipo === filtroDestaRequisicao.tipo) {
+          setMentorias(res.data);
+        }
+      })
+      .catch(() => {
+        const atual = filtroAtualRef.current;
+        if (atual.status === filtroDestaRequisicao.status && atual.tipo === filtroDestaRequisicao.tipo) {
+          setError('Não foi possível carregar as mentorias.');
+        }
+      });
   };
 
-  useEffect(carregar, [status]);
+  useEffect(carregar, [status, tipo]);
 
   async function transicionar(id: string, novoStatus: 'CONFIRMADA' | 'CANCELADA') {
     setProcessando(id);
@@ -78,6 +113,22 @@ export function MentoriasAgendaPage() {
           {(Object.keys(STATUS_LABEL) as StatusMentoria[]).map((s) => (
             <option key={s} value={s}>{STATUS_LABEL[s].label}</option>
           ))}
+        </select>
+        {/* M28 — individual/consultoria não somem do sistema, só desta lista central por padrão;
+            "Todos os tipos" continua disponível pra quem precisar ver junto. */}
+        {/* Rótulo evita a palavra "Mentor" de propósito — getByLabel('Mentor') do form de Nova
+            Mentoria (substring match) bateria neste select também se o texto contivesse esse
+            prefixo (achado ao vivo: "mentoria" começa com "mentor"). */}
+        <select
+          className={styles.select}
+          aria-label="Filtro de tipo (agenda)"
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value as TipoMentoria | '')}
+        >
+          {(Object.keys(TIPO_FILTRO_LABEL) as TipoMentoria[]).map((t) => (
+            <option key={t} value={t}>{TIPO_FILTRO_LABEL[t]}</option>
+          ))}
+          <option value="">Todos os tipos</option>
         </select>
         <button className={styles.newButton} onClick={() => setCriando(true)}>
           <span style={{ fontSize: 16 }}>+</span>Nova mentoria

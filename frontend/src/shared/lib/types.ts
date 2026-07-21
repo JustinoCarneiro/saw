@@ -340,12 +340,15 @@ export interface MentoradoCriado {
   senhaTemporaria: string;
 }
 
-// M23 item 4 (bulk-CREATE, 19/07/2026) — variante de ImportResultResponse pro import que CRIA
-// credencial nova por linha: precisa devolver a senha temporária de cada mentorado criado (não
-// fica recuperável depois — mesma razão de MentoradoCriado).
+// M23 item 4 (bulk-CREATE, 19/07/2026), estendido no M28 ("import único", 21/07/2026) — variante
+// de ImportResultResponse pro import que CRIA credencial nova por linha: precisa devolver a senha
+// temporária de cada mentorado criado (não fica recuperável depois — mesma razão de
+// MentoradoCriado). atualizados conta linhas resolvidas por e-mail já existente (essas não geram
+// credencial, por isso não aparecem em `criados`).
 export interface ImportMentoradoDiretoResultResponse {
   totalLinhas: number;
   importados: number;
+  atualizados: number;
   erros: ImportErro[];
   criados: MentoradoCriado[];
 }
@@ -608,6 +611,31 @@ export interface Evento {
   linkOnline: string | null;
   vagas: number | null;
   status: StatusEvento;
+}
+
+export type StatusInscricao = 'INSCRITA' | 'CANCELADA' | 'PARTICIPOU';
+
+// M28 (change request, 21/07/2026) — "controle de vagas em evento por mentorado da Contínua":
+// histórico de inscrições de UM mentorado (não a lista de eventos), usado pela página dedicada
+// dele (MentoradoDetalhePage) pra mostrar o que já foi usado da cota de 3 grátis/ano de contrato.
+export interface EventoInscricaoAdmin {
+  eventoId: string;
+  titulo: string;
+  tipo: TipoEvento;
+  dataHora: string;
+  status: StatusInscricao;
+}
+
+// M28 — resumo pronto do backend (não recalcular a janela rolante de 12 meses no frontend —
+// risco real de divergir do que o backend realmente aplica na hora de bloquear a inscrição).
+// aplicavel=false quando o mentorado não é Mentoria Contínua ou não tem dataFechamentoContrato
+// ainda (aí inicioCiclo/fimCiclo vêm null).
+export interface CotaEventos {
+  aplicavel: boolean;
+  usadas: number;
+  limite: number;
+  inicioCiclo: string | null;
+  fimCiclo: string | null;
 }
 
 // M13 · E7 (lado mentorado) — mentee-facing, com vagasDisponiveis (derivado) e inscrito (estado

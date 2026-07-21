@@ -103,14 +103,21 @@ export function AtaDetalhePage() {
   );
 }
 
+// M28 (change request, 21/07/2026) — "colar transcrição do Google Meet": aditivo, não substitui o
+// upload de áudio (Whisper). O mentor escolhe qual caminho usar; os dois terminam no mesmo
+// pipeline de IA (resumo/decisões/sugestões via Claude) e no mesmo polling de status abaixo.
+type ModoTranscricao = 'AUDIO' | 'TEXTO';
+
 function UploadAudioForm({ mentoriaId, desabilitado, onEnviado }: {
   mentoriaId: string; desabilitado: boolean; onEnviado: () => void;
 }) {
+  const [modo, setModo] = useState<ModoTranscricao>('AUDIO');
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [transcricaoColada, setTranscricaoColada] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmitAudio(e: FormEvent) {
     e.preventDefault();
     if (!arquivo) return;
     setError(null);
@@ -130,24 +137,85 @@ function UploadAudioForm({ mentoriaId, desabilitado, onEnviado }: {
     }
   }
 
+  async function handleSubmitTexto(e: FormEvent) {
+    e.preventDefault();
+    if (!transcricaoColada.trim()) return;
+    setError(null);
+    setEnviando(true);
+    try {
+      await apiClient.post(`/admin/mentorias/${mentoriaId}/ata/transcricao`, { transcricao: transcricaoColada });
+      setTranscricaoColada('');
+      onEnviado();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível processar a transcrição.'));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}>Áudio da mentoria</div>
+      <div className={styles.sectionTitle}>Transcrição da mentoria</div>
       <p className={styles.muted}>
-        Suba a gravação pra gerar automaticamente a transcrição e um rascunho de resumo (revisão
-        humana obrigatória antes de publicar).
+        Suba a gravação ou cole a transcrição do Google Meet — os dois caminhos geram
+        automaticamente a transcrição/resumo/decisões/sugestões (revisão humana obrigatória antes
+        de publicar).
       </p>
-      <form onSubmit={handleSubmit} className={styles.uploadForm}>
-        <input
-          type="file"
-          accept="audio/*"
-          onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
+      <div className={styles.modoTabs} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={modo === 'AUDIO'}
+          className={`${styles.modoTab} ${modo === 'AUDIO' ? styles.modoTabActive : ''}`}
+          onClick={() => setModo('AUDIO')}
           disabled={desabilitado || enviando}
-        />
-        <button type="submit" className={styles.actionButton} disabled={!arquivo || desabilitado || enviando}>
-          {enviando ? 'Enviando…' : 'Enviar áudio'}
+        >
+          Subir áudio
         </button>
-      </form>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={modo === 'TEXTO'}
+          className={`${styles.modoTab} ${modo === 'TEXTO' ? styles.modoTabActive : ''}`}
+          onClick={() => setModo('TEXTO')}
+          disabled={desabilitado || enviando}
+        >
+          Colar transcrição
+        </button>
+      </div>
+      {modo === 'AUDIO' ? (
+        <form onSubmit={handleSubmitAudio} className={styles.uploadForm}>
+          <input
+            type="file"
+            accept="audio/*"
+            onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
+            disabled={desabilitado || enviando}
+          />
+          <button type="submit" className={styles.actionButton} disabled={!arquivo || desabilitado || enviando}>
+            {enviando ? 'Enviando…' : 'Enviar áudio'}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleSubmitTexto} className={styles.textForm}>
+          <textarea
+            className={styles.textarea}
+            rows={6}
+            placeholder="Cole aqui a transcrição gerada pelo Google Meet…"
+            value={transcricaoColada}
+            onChange={(e) => setTranscricaoColada(e.target.value)}
+            disabled={desabilitado || enviando}
+          />
+          <div className={styles.formActions}>
+            <button
+              type="submit"
+              className={styles.actionButton}
+              disabled={!transcricaoColada.trim() || desabilitado || enviando}
+            >
+              {enviando ? 'Processando…' : 'Processar transcrição'}
+            </button>
+          </div>
+        </form>
+      )}
       {error && <div className={styles.error}>{error}</div>}
     </Card>
   );

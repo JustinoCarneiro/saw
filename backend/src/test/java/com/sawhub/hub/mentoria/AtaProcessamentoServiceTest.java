@@ -2,6 +2,7 @@ package com.sawhub.hub.mentoria;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.mentoria.ia.AtaRascunhoService;
@@ -84,5 +85,37 @@ class AtaProcessamentoServiceTest {
 
         assertThat(ata.getStatusProcessamento()).isEqualTo(StatusProcessamentoAta.FALHA);
         assertThat(ata.getErroProcessamento()).isEqualTo("Whisper indisponível");
+    }
+
+    // M28 (change request, 21/07/2026) — "colar transcrição do Google Meet": mesma orquestração
+    // de processar(), mas pula transcricaoService/audioStorageService por completo.
+    @Test
+    void processarTranscricaoColadaComSucessoConcluiEPersisteSugestoesSemChamarTranscricaoService() {
+        Ata ata = ataProcessando();
+        when(ataRascunhoService.gerarRascunho("transcrição colada do Meet")).thenReturn(
+                new RascunhoAta("Resumo gerado pela IA", "Decisões geradas pela IA", List.of(
+                        new RascunhoAta.EncaminhamentoSugerido("Atualizar ficha técnica", 2))));
+        when(ataRepository.findById(ata.getId())).thenReturn(Optional.of(ata));
+        when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service().processarTranscricaoColada(ata.getId(), "transcrição colada do Meet");
+
+        assertThat(ata.getStatusProcessamento()).isEqualTo(StatusProcessamentoAta.CONCLUIDO);
+        assertThat(ata.getTranscricao()).isEqualTo("transcrição colada do Meet");
+        assertThat(ata.getResumo()).isEqualTo("Resumo gerado pela IA");
+        verifyNoInteractions(transcricaoService, audioStorageService);
+    }
+
+    @Test
+    void processarTranscricaoColadaComFalhaDoRascunhoMarcaFalha() {
+        Ata ata = ataProcessando();
+        when(ataRascunhoService.gerarRascunho(any())).thenThrow(new RuntimeException("Claude indisponível"));
+        when(ataRepository.findById(ata.getId())).thenReturn(Optional.of(ata));
+        when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service().processarTranscricaoColada(ata.getId(), "transcrição colada do Meet");
+
+        assertThat(ata.getStatusProcessamento()).isEqualTo(StatusProcessamentoAta.FALHA);
+        assertThat(ata.getErroProcessamento()).isEqualTo("Claude indisponível");
     }
 }

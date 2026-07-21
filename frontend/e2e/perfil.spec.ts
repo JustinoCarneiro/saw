@@ -162,11 +162,14 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     await page.goto('/admin/mentorados/lista');
     const linha = page.locator('[data-testid^="mentorado-row-"]', { hasText: 'Carlos Menezes' });
     await expect(linha).toBeVisible();
-    await linha.getByRole('button', { name: 'Editar' }).click();
+    // M28 ("página dedicada de mentorado") — "Editar" virou "Ver perfil" e navega pra uma página
+    // própria em vez de expandir um form inline nesta tela.
+    await linha.getByRole('button', { name: 'Ver perfil' }).click();
+    await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
 
     await page.getByLabel('Vencimento do plano').fill('2026-12-25');
     await page.getByRole('button', { name: 'Salvar', exact: true }).click();
-    await expect(page.getByText('Editar mentorado')).toHaveCount(0);
+    await expect(page.getByText('Salvo.')).toBeVisible();
 
     // Confirma via API (view-only, sessão de Admin — não dá pra logar como Carlos na mesma aba).
     const res = await page.request.get('/api/v1/admin/mentorados', { params: { busca: 'Carlos Menezes' } });

@@ -3,6 +3,7 @@ package com.sawhub.hub.mentoria;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -80,12 +81,57 @@ class MentoriaServiceTest {
                 Instant.parse("2026-07-15T12:00:00Z"), 60, null, null);
         Mentoria fora = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, java.util.Set.of(mentorado(UUID.randomUUID(), "João")),
                 Instant.parse("2026-08-01T12:00:00Z"), 60, null, null);
-        when(mentoriaRepository.buscarPorStatus(StatusMentoria.AGENDADA)).thenReturn(List.of(dentro, fora));
+        when(mentoriaRepository.buscarPorStatus(null)).thenReturn(List.of(dentro, fora));
 
-        List<Mentoria> resultado = service().listar(StatusMentoria.AGENDADA,
+        List<Mentoria> resultado = service().listar(StatusMentoria.AGENDADA, null, null,
                 Instant.parse("2026-07-01T00:00:00Z"), Instant.parse("2026-07-31T23:59:59Z"));
 
         assertThat(resultado).containsExactly(dentro);
+    }
+
+    // M28 (change request, 21/07/2026) — "reorganizar lista de mentorias": tipo filtra em memória
+    // igual ao de/ate (mesmo motivo: dataset pequeno, sem valor em complicar a query SQL).
+    @Test
+    void listarComTipoFiltraEmMemoria() {
+        Colaborador mentor = mentor(UUID.randomUUID());
+        Mentoria grupo = new Mentoria(TipoMentoria.GRUPO, mentor,
+                java.util.Set.of(mentorado(UUID.randomUUID(), "Maria"), mentorado(UUID.randomUUID(), "Ana")),
+                Instant.parse("2026-07-15T12:00:00Z"), 60, null, null);
+        Mentoria individual = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, java.util.Set.of(mentorado(UUID.randomUUID(), "João")),
+                Instant.parse("2026-07-16T12:00:00Z"), 60, null, null);
+        when(mentoriaRepository.buscarPorStatus(null)).thenReturn(List.of(grupo, individual));
+
+        List<Mentoria> resultado = service().listar(null, TipoMentoria.GRUPO, null, null, null);
+
+        assertThat(resultado).containsExactly(grupo);
+    }
+
+    // M28 — "aba própria do mentorado": mentoradoId != null troca a base da consulta pra
+    // buscarPorMentorado (MEMBER OF), não buscarPorStatus.
+    @Test
+    void listarComMentoradoIdUsaBuscarPorMentorado() {
+        UUID mentoradoId = UUID.randomUUID();
+        Mentorado mentorado = mentorado(mentoradoId, "Maria");
+        Colaborador mentor = mentor(UUID.randomUUID());
+        Mentoria mentoria = new Mentoria(TipoMentoria.INDIVIDUAL, mentor, java.util.Set.of(mentorado),
+                Instant.parse("2026-07-15T12:00:00Z"), 60, null, null);
+        when(mentoradoRepository.findById(mentoradoId)).thenReturn(Optional.of(mentorado));
+        when(mentoriaRepository.buscarPorMentorado(mentorado)).thenReturn(List.of(mentoria));
+
+        List<Mentoria> resultado = service().listar(null, null, mentoradoId, null, null);
+
+        assertThat(resultado).containsExactly(mentoria);
+        verify(mentoriaRepository, never()).buscarPorStatus(any());
+    }
+
+    @Test
+    void listarComMentoradoIdInexistenteLancaErro() {
+        UUID mentoradoId = UUID.randomUUID();
+        when(mentoradoRepository.findById(mentoradoId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().listar(null, null, mentoradoId, null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("não encontrado");
     }
 
     @Test

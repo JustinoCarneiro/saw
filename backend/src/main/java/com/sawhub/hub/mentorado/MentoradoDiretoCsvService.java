@@ -5,7 +5,6 @@ import com.sawhub.hub.common.dto.ImportErro;
 import com.sawhub.hub.mentorado.dto.ImportMentoradoDiretoResultResponse;
 import com.sawhub.hub.mentorado.dto.ImportarMentoradoDiretoLinha;
 import com.sawhub.hub.mentorado.dto.MentoradoCriadoResponse;
-import com.sawhub.hub.security.UsuarioRepository;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
@@ -14,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -22,13 +22,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-/** M23 item 4 (bulk-CREATE, 19/07/2026) — import CSV que CRIA Mentorado (+ Usuario com senha
- * temporária, + Lead já FECHADO) em massa, diferente de {@link MentoradoCsvService} (M22, só
- * bulk-UPDATE de quem já existe). Pensado pra migrar de uma vez as ~40 empresas reais que hoje só
- * existem no Notion ("CRM Saw") — ver docs/reuniao-2026-07-17-atualizacoes.md.
+/** M23 item 4 (bulk-CREATE, 19/07/2026), estendido no M28 (change request, 21/07/2026, "import
+ * único") — import CSV que CRIA Mentorado (+ Usuario com senha temporária, + Lead já FECHADO) OU,
+ * se o e-mail já é de um mentorado cadastrado, ATUALIZA os campos desse mentorado. Antes do M28
+ * havia dois botões de import na tela (este só criava, {@link MentoradoCsvService} só atualizava
+ * por e-mail com um subconjunto de 6 campos) — o cliente achou confuso ter os dois, e um import só
+ * criar-ou-atualizar cobre os dois casos com o mesmo conjunto completo de campos. Pensado
+ * originalmente pra migrar de uma vez as ~40 empresas reais que hoje só existem no Notion ("CRM
+ * Saw") — ver docs/reuniao-2026-07-17-atualizacoes.md.
  *
- * <p>Duas passadas, mesmo padrão de {@code TeamCsvService}: primeira só valida (nenhuma entidade
- * é criada aqui), segunda cria de verdade — só roda se TODAS as linhas passaram na primeira. */
+ * <p>Duas passadas, mesmo padrão de {@code TeamCsvService}: primeira só valida/resolve (nenhuma
+ * entidade é criada OU mutada aqui — só decide, por e-mail, se a linha vai criar ou atualizar),
+ * segunda executa de verdade — só roda se TODAS as linhas passaram na primeira. */
 @Service
 public class MentoradoDiretoCsvService {
 
@@ -45,11 +50,9 @@ public class MentoradoDiretoCsvService {
     // Mesmo critério de AtualizarDadosContratoRequest.cnpj — aceita formatado ou 14 dígitos puros.
     private static final Pattern CNPJ_REGEX = Pattern.compile("^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$|^\\d{14}$");
 
-    private final UsuarioRepository usuarioRepository;
     private final MentoradoAdminService mentoradoAdminService;
 
-    public MentoradoDiretoCsvService(UsuarioRepository usuarioRepository, MentoradoAdminService mentoradoAdminService) {
-        this.usuarioRepository = usuarioRepository;
+    public MentoradoDiretoCsvService(MentoradoAdminService mentoradoAdminService) {
         this.mentoradoAdminService = mentoradoAdminService;
     }
 
@@ -99,16 +102,24 @@ public class MentoradoDiretoCsvService {
         }
 
         if (!erros.isEmpty()) {
-            return new ImportMentoradoDiretoResultResponse(registros.size(), 0, erros, List.of());
+            return new ImportMentoradoDiretoResultResponse(registros.size(), 0, 0, erros, List.of());
         }
 
-        // Segunda passada — só roda se TODAS as linhas passaram na primeira.
+        // Segunda passada — só roda se TODAS as linhas passaram na primeira. mentoradoExistenteId
+        // não-nulo (M28 — import único) decide entre atualizar um mentorado já cadastrado ou criar
+        // um novo, linha a linha.
         List<MentoradoCriadoResponse> criados = new ArrayList<>();
+        int atualizados = 0;
         for (ImportarMentoradoDiretoLinha v : validas) {
-            var resultado = mentoradoAdminService.criarDiretoDeImportacao(v);
-            criados.add(MentoradoCriadoResponse.from(resultado.mentorado(), resultado.senhaTemporaria()));
+            if (v.mentoradoExistenteId() != null) {
+                mentoradoAdminService.atualizarDeImportacao(v.mentoradoExistenteId(), v);
+                atualizados++;
+            } else {
+                var resultado = mentoradoAdminService.criarDiretoDeImportacao(v);
+                criados.add(MentoradoCriadoResponse.from(resultado.mentorado(), resultado.senhaTemporaria()));
+            }
         }
-        return new ImportMentoradoDiretoResultResponse(registros.size(), criados.size(), List.of(), criados);
+        return new ImportMentoradoDiretoResultResponse(registros.size(), criados.size(), atualizados, List.of(), criados);
     }
 
     private ImportarMentoradoDiretoLinha validarLinha(CSVRecord registro, char delimitador,
@@ -121,8 +132,15 @@ public class MentoradoDiretoCsvService {
         if (emailsJaVistosNoArquivo.contains(email)) {
             throw new IllegalArgumentException("E-mail \"" + email + "\" duplicado no arquivo.");
         }
-        if (usuarioRepository.findByEmail(email).isPresent()) {
-            throw new IllegalArgumentException("E-mail \"" + email + "\" já existe no sistema.");
+        // M28 — import único: e-mail já cadastrado como Mentorado vira ATUALIZAÇÃO, não erro. Só
+        // continua sendo erro quando o e-mail já existe mas pertence a outro tipo de conta
+        // (Colaborador/Admin) — aí não há Mentorado nenhum pra atualizar.
+        Mentorado existente = mentoradoAdminService.buscarPorEmail(email);
+        UUID mentoradoExistenteId = null;
+        if (existente != null) {
+            mentoradoExistenteId = existente.getId();
+        } else if (mentoradoAdminService.existeContaComEmail(email)) {
+            throw new IllegalArgumentException("E-mail \"" + email + "\" já existe mas não é um mentorado.");
         }
 
         String nome = registro.get("nome");
@@ -164,7 +182,7 @@ public class MentoradoDiretoCsvService {
         return new ImportarMentoradoDiretoLinha(email, nome.trim(), negocio, telefone, tipoContrato, valorContrato,
                 dataFechamentoContrato, nomeFantasia, cnpj, socios, faturamentoAnual, quantidadeColaboradores,
                 empresaRegularizada, quantidadeLojas, cmvDefinido, cmvDetalhe, tempoMedioAtendimento,
-                culturaConstruida, processosDesenhados);
+                culturaConstruida, processosDesenhados, mentoradoExistenteId);
     }
 
     private static String opcional(String bruto) {

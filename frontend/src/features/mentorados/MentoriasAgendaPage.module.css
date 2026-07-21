@@ -153,10 +153,13 @@
   gap: 12px;
 }
 
+/* M28 (change request, 21/07/2026) — lista vertical, não grade: o Marcos achou a grade de
+   colunas confusa pra escolher mentorado ("não gostei da maneira de selecionar"), 1 por linha
+   escaneia mais fácil que uma grade com quebra de coluna imprevisível. */
 .checkboxList {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   padding: 10px 4px;
   margin-top: 8px;
   max-height: 220px;
@@ -168,18 +171,15 @@
 .checkboxItem {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   color: var(--text);
   font-weight: 400;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 6px;
 }
 
 .checkboxEmpty {
-  grid-column: 1 / -1;
   color: var(--text-soft);
   font-size: 12.5px;
   padding: 8px 10px;

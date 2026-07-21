@@ -25,6 +25,7 @@ import { ProdutosPage } from './features/comercial/ProdutosPage';
 import { PedidosPage } from './features/comercial/PedidosPage';
 import { MentoradosShell } from './features/mentorados/MentoradosShell';
 import { MentoradosListaPage } from './features/mentorados/MentoradosListaPage';
+import { MentoradoDetalhePage } from './features/mentorados/MentoradoDetalhePage';
 import { MentoriasAgendaPage } from './features/mentorados/MentoriasAgendaPage';
 import { MetasAdminPage } from './features/mentorados/MetasAdminPage';
 import { TarefasAdminPage } from './features/mentorados/TarefasAdminPage';
@@ -133,6 +134,18 @@ export default function App() {
           <Route path="tarefas" element={<TarefasAdminPage />} />
           <Route path="mentorias/:mentoriaId/ata" element={<AtaDetalhePage />} />
         </Route>
+        {/* M28 ("página dedicada de mentorado", 21/07/2026) — de propósito FORA do bloco acima
+            (não aninhada em MentoradosShell): o pedido era foco total, sem as abas Painel
+            Consolidado/Gestão de Performance/Mentorias/Metas/Tarefas por cima, como uma página
+            própria (estilo Notion) — só a Sidebar do AdminShell continua visível. */}
+        <Route
+          path="mentorados/lista/:id"
+          element={
+            <RequireModulo modulo="MENTORADOS">
+              <MentoradoDetalhePage />
+            </RequireModulo>
+          }
+        />
         <Route
           path="time"
           element={

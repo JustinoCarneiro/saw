@@ -222,11 +222,13 @@ export function TeamPage() {
   );
 }
 
+// M28 — Modulo.MENTORADOS renomeado pra "Gestão de Performance" na UI (rename só de label, ver
+// Sidebar.tsx/MentoradosShell.tsx).
 const MODULO_LABEL: Record<Modulo, string> = {
   DASHBOARD: 'Dashboard',
   COMERCIAL: 'Comercial',
   FINANCEIRO: 'Financeiro',
-  MENTORADOS: 'Mentorados',
+  MENTORADOS: 'Gestão de Performance',
   CONTEUDOS: 'Conteúdos',
   TIME: 'Time',
   PAINEL_CONSOLIDADO: 'Painel Consolidado',

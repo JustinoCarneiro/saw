@@ -5,7 +5,7 @@ test('Fundador sees the real seeded mentee progress and ranking', async ({ page 
   await loginAs(page, 'matheus@sawhub.com.br');
   // Painel Consolidado não é mais item próprio da sidebar — virou a 1ª aba (index) dentro de
   // Mentorados, ver App.tsx/MentoradosShell.
-  await page.getByRole('link', { name: 'Mentorados' }).click();
+  await page.getByRole('link', { name: 'Gestão de Performance' }).click();
   await expect(page).toHaveURL(/\/admin\/mentorados\/consolidado$/);
 
   const main = page.getByRole('main');
@@ -35,7 +35,7 @@ test('Fundador sees the real seeded mentee progress and ranking', async ({ page 
 
 test('M23 — abas filtram a grade de mentorados por status', async ({ page }) => {
   await loginAs(page, 'matheus@sawhub.com.br');
-  await page.getByRole('link', { name: 'Mentorados' }).click();
+  await page.getByRole('link', { name: 'Gestão de Performance' }).click();
   await expect(page).toHaveURL(/\/admin\/mentorados\/consolidado$/);
 
   const main = page.getByRole('main');
@@ -56,7 +56,7 @@ test('M23 — abas filtram a grade de mentorados por status', async ({ page }) =
 // mentorado" — não existia, achado confirmado e fechado em 19/07/2026).
 test('busca por nome filtra a grade de mentorados, client-side', async ({ page }) => {
   await loginAs(page, 'matheus@sawhub.com.br');
-  await page.getByRole('link', { name: 'Mentorados' }).click();
+  await page.getByRole('link', { name: 'Gestão de Performance' }).click();
   await expect(page).toHaveURL(/\/admin\/mentorados\/consolidado$/);
 
   const main = page.getByRole('main');

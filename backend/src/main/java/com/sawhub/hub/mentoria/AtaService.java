@@ -84,6 +84,27 @@ public class AtaService {
         return salva;
     }
 
+    // M28 (change request, 21/07/2026) — "colar transcrição do Google Meet": aditivo, não
+    // substitui o upload de áudio (mentor escolhe qual usar). Pula WhisperTranscricaoService por
+    // completo — o texto colado JÁ é a transcrição, só falta o resumo/decisões/sugestões da IA
+    // (ClaudeAtaRascunhoService, via AtaRascunhoService). Mesmo padrão de afterCommit de
+    // iniciarUpload (ver comentário acima): dispara o @Async só depois do commit desta transação,
+    // pela mesma corrida ObjectOptimisticLockingFailureException já achada ali.
+    @Transactional
+    public Ata iniciarComTranscricaoColada(UUID mentoriaId, String transcricao) {
+        Ata ata = buscarPorMentoria(mentoriaId);
+        ata.iniciarProcessamento(null);
+        Ata salva = ataRepository.save(ata);
+        UUID ataId = salva.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                ataProcessamentoService.processarTranscricaoColada(ataId, transcricao);
+            }
+        });
+        return salva;
+    }
+
     @Transactional
     public Ata editarResumo(UUID mentoriaId, String resumo) {
         Ata ata = buscarPorMentoria(mentoriaId);

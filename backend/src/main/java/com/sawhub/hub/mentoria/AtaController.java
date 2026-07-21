@@ -4,6 +4,7 @@ import com.sawhub.hub.mentoria.dto.AtaResponse;
 import com.sawhub.hub.mentoria.dto.AtualizarDecisoesRequest;
 import com.sawhub.hub.mentoria.dto.AtualizarResumoRequest;
 import com.sawhub.hub.mentoria.dto.AtualizarSugestaoRequest;
+import com.sawhub.hub.mentoria.dto.ColarTranscricaoRequest;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;
 import jakarta.validation.Valid;
@@ -42,6 +43,15 @@ public class AtaController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public AtaResponse enviarAudio(@PathVariable UUID mentoriaId, @RequestParam("arquivo") MultipartFile arquivo) {
         Ata ata = ataService.iniciarUpload(mentoriaId, arquivo);
+        return AtaResponse.from(ata, ataService.listarSugestoes(mentoriaId));
+    }
+
+    // M28 (change request, 21/07/2026) — "colar transcrição do Google Meet", alternativa ao
+    // upload de áudio acima (aditivo, o mentor escolhe qual usar).
+    @PostMapping("/transcricao")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public AtaResponse colarTranscricao(@PathVariable UUID mentoriaId, @Valid @RequestBody ColarTranscricaoRequest request) {
+        Ata ata = ataService.iniciarComTranscricaoColada(mentoriaId, request.transcricao());
         return AtaResponse.from(ata, ataService.listarSugestoes(mentoriaId));
     }
 

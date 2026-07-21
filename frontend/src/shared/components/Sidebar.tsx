@@ -52,7 +52,10 @@ const NAV_ITEMS: NavItem[] = [
   {
     modulo: 'MENTORADOS',
     to: '/admin/mentorados',
-    label: 'Mentorados',
+    // M28 (change request, 21/07/2026) — renomeado de "Mentorados" pra bater com o nome que o
+    // time da SAW já usa internamente (mesmo nome do cargo/área "Gestão de Performance" em
+    // Colaborador.area, coincidência aceita pelo cliente). Rota não muda, só o label visível.
+    label: 'Gestão de Performance',
     icon: (
       <svg {...ICON_PROPS}>
         <circle cx="9" cy="8" r="3" />

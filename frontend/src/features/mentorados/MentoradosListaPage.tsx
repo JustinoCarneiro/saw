@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/lib/apiClient';
 import { useAuth } from '../auth/AuthContext';
 import { Card } from '../../shared/components/Card';
@@ -9,16 +10,11 @@ import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type {
-  DiagnosticoInicial,
-  EstadoImplementacao,
   ImportMentoradoDiretoResultResponse,
   Lead,
   MentoradoAdmin,
   MentoradoCriado,
-  NivelEngajamento,
   Plano,
-  RespostaSimNao,
-  RiscoChurn,
   StatusMentorado,
   TipoContrato,
 } from '../../shared/lib/types';
@@ -42,29 +38,6 @@ const TIPO_CONTRATO_LABEL: Record<TipoContrato, string> = {
   CONSULTORIA: 'Consultoria',
 };
 
-const ESTADO_IMPLEMENTACAO_LABEL: Record<EstadoImplementacao, string> = {
-  SIM: 'Sim',
-  NAO: 'Não',
-  EM_CONSTRUCAO: 'Em construção',
-};
-
-const RESPOSTA_SIM_NAO_LABEL: Record<RespostaSimNao, string> = {
-  SIM: 'Sim',
-  NAO: 'Não',
-};
-
-const NIVEL_ENGAJAMENTO_LABEL: Record<NivelEngajamento, string> = {
-  ALTO: 'Alto',
-  MEDIO: 'Médio',
-  BAIXO: 'Baixo',
-};
-
-const RISCO_CHURN_LABEL: Record<RiscoChurn, string> = {
-  NAO: 'Não',
-  ATENCAO: 'Atenção',
-  ALTO: 'Alto',
-};
-
 const STATUS_LABEL: Record<StatusMentorado, { label: string; bg: string; color: string }> = {
   ATIVO: { label: 'Ativo', bg: 'var(--success-bg)', color: 'var(--success)' },
   INATIVO: { label: 'Inativo', bg: 'var(--line)', color: 'var(--text-soft)' },
@@ -72,6 +45,7 @@ const STATUS_LABEL: Record<StatusMentorado, { label: string; bg: string; color: 
 
 export function MentoradosListaPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   // M23 — /direto e /dados-contrato exigem Modulo.COMERCIAL (achado do revisor-seguranca); a
   // área Gestão de Performance (que enxerga esta tela via Modulo.MENTORADOS) não vê esses botões.
   const podeVerContrato = user?.modulosPermitidos.includes('COMERCIAL') ?? false;
@@ -81,7 +55,6 @@ export function MentoradosListaPage() {
   const [busca, setBusca] = useState('');
   const [mentorados, setMentorados] = useState<MentoradoAdmin[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [editando, setEditando] = useState<MentoradoAdmin | null>(null);
   const [criando, setCriando] = useState(false);
   const [criandoDireto, setCriandoDireto] = useState(false);
   const [criado, setCriado] = useState<MentoradoCriado | null>(null);
@@ -123,7 +96,7 @@ export function MentoradosListaPage() {
           )}
           {podeVerContrato && (
             <button className={styles.newButton} onClick={() => setImportandoDireto(true)}>
-              <span style={{ fontSize: 16 }}>+</span>Importar mentorados em massa
+              <span style={{ fontSize: 16 }}>+</span>Importar mentorados (CSV)
             </button>
           )}
           <button className={styles.newButton} onClick={() => setCriando(true)}>
@@ -133,12 +106,14 @@ export function MentoradosListaPage() {
       </div>
 
       <div className={styles.csvRow}>
+        {/* M28 ("import único", 21/07/2026) — o import estreito (bulk-UPDATE de 6 campos) que
+            ficava aqui foi removido: dois botões de import confundiam o time (ver ROADMAP.md § M28).
+            Import agora é só o widget "Importar mentorados (CSV)" acima (Comercial), que cria OU
+            atualiza; esta tela mantém só a exportação. */}
         <CsvImportExport
           exportUrl="/admin/mentorados/export"
           exportParams={{ plano: plano || undefined, status: status || undefined, busca: busca || undefined }}
           exportFilename="mentorados.csv"
-          importUrl="/admin/mentorados/import"
-          onImportado={carregar}
           labelPrefix="Mentorados"
         />
       </div>
@@ -166,18 +141,24 @@ export function MentoradosListaPage() {
 
       {resultadoImportDireto && (
         <Card style={{ padding: 20, marginBottom: 16, borderColor: 'var(--gold)' }}>
-          <div className={styles.formTitle}>{resultadoImportDireto.importados} mentorado(s) importado(s)</div>
-          <p className={styles.muted}>
-            Ainda não há envio automático de e-mail — repasse cada senha temporária manualmente. Elas não
-            podem ser recuperadas depois de fechar esta tela.
-          </p>
-          <div className={styles.credenciais}>
-            {resultadoImportDireto.criados.map((c) => (
-              <div key={c.id}>
-                <strong>{c.nome}</strong> — {c.email} — <code>{c.senhaTemporaria}</code>
-              </div>
-            ))}
+          <div className={styles.formTitle}>
+            {resultadoImportDireto.importados} criado(s), {resultadoImportDireto.atualizados} atualizado(s)
           </div>
+          {resultadoImportDireto.criados.length > 0 && (
+            <>
+              <p className={styles.muted}>
+                Ainda não há envio automático de e-mail — repasse cada senha temporária manualmente. Elas não
+                podem ser recuperadas depois de fechar esta tela.
+              </p>
+              <div className={styles.credenciais}>
+                {resultadoImportDireto.criados.map((c) => (
+                  <div key={c.id}>
+                    <strong>{c.nome}</strong> — {c.email} — <code>{c.senhaTemporaria}</code>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
           <div className={styles.formActions}>
             <button className={styles.actionButton} onClick={() => setResultadoImportDireto(null)}>Entendi</button>
           </div>
@@ -201,16 +182,6 @@ export function MentoradosListaPage() {
         </Card>
       )}
 
-      {editando && (
-        <EditarMentoradoForm
-          mentorado={editando}
-          podeVerContrato={podeVerContrato}
-          onSalvo={() => { setEditando(null); carregar(); }}
-          onAtualizarLista={carregar}
-          onCancelar={() => setEditando(null)}
-        />
-      )}
-
       {error && <div className={styles.error}>{error}</div>}
 
       <DataGrid columns={COLUMNS} headers={['Nome', 'Negócio', 'E-mail', 'Plano', 'Status', 'Ações']}>
@@ -226,7 +197,12 @@ export function MentoradosListaPage() {
               <div className={styles.muted}>{PLANO_LABEL[m.plano]}</div>
               <div><Pill bg={st.bg} color={st.color}>{st.label}</Pill></div>
               <div className={styles.acoes}>
-                <button className={styles.actionButton} onClick={() => setEditando(m)}>Editar</button>
+                {/* M28 ("página dedicada de mentorado") — antes expandia um form inline nesta
+                    mesma tela; agora navega pra uma página própria (foco total, estilo Notion),
+                    fora das abas da MentoradosShell. Ver App.tsx e MentoradoDetalhePage.tsx. */}
+                <button className={styles.actionButton} onClick={() => navigate(`/admin/mentorados/lista/${m.id}`)}>
+                  Ver perfil
+                </button>
                 {m.status === 'ATIVO' ? (
                   <ToggleStatusButton mentoradoId={m.id} nome={m.nome} acao="desativar" label="Desativar" onFeito={carregar} />
                 ) : (
@@ -275,537 +251,6 @@ function ToggleStatusButton({ mentoradoId, nome, acao, label, onFeito }: {
         />
       )}
     </>
-  );
-}
-
-function EditarMentoradoForm({ mentorado, podeVerContrato, onSalvo, onAtualizarLista, onCancelar }: {
-  mentorado: MentoradoAdmin; podeVerContrato: boolean; onSalvo: () => void; onAtualizarLista: () => void; onCancelar: () => void;
-}) {
-  const [nome, setNome] = useState(mentorado.nome);
-  const [negocio, setNegocio] = useState(mentorado.negocio ?? '');
-  const [plano, setPlano] = useState<Plano>(mentorado.plano);
-  const [vencimentoPlano, setVencimentoPlano] = useState(mentorado.vencimentoPlano ?? '');
-  const [telefone, setTelefone] = useState(mentorado.telefone ?? '');
-  const [bio, setBio] = useState(mentorado.bio ?? '');
-  const [fotoUrl, setFotoUrl] = useState(mentorado.fotoUrl ?? '');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      await apiClient.put(`/admin/mentorados/${mentorado.id}`, {
-        nome, negocio: negocio || null, plano, vencimentoPlano: vencimentoPlano || null,
-        telefone: telefone || null,
-        bio: bio || null,
-        fotoUrl: fotoUrl || null,
-      });
-      onSalvo();
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível salvar. Tente novamente.'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.formTitle}>Editar mentorado</div>
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.formRow}>
-          <label className={styles.formField} style={{ flex: 2 }}>
-            Nome
-            <input className={styles.textInput} value={nome} onChange={(e) => setNome(e.target.value)} required />
-          </label>
-          <label className={styles.formField}>
-            Negócio
-            <input className={styles.textInput} value={negocio} onChange={(e) => setNegocio(e.target.value)} />
-          </label>
-          <label className={styles.formField}>
-            Plano
-            <select className={styles.select} value={plano} onChange={(e) => setPlano(e.target.value as Plano)}>
-              {(Object.keys(PLANO_LABEL) as Plano[]).map((p) => (
-                <option key={p} value={p}>{PLANO_LABEL[p]}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.formField}>
-            Vencimento do plano
-            <input className={styles.textInput} type="date" value={vencimentoPlano} onChange={(e) => setVencimentoPlano(e.target.value)} />
-          </label>
-        </div>
-        <div className={styles.formRow}>
-          <label className={styles.formField}>
-            Telefone
-            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 90000-0000" />
-          </label>
-          <label className={styles.formField} style={{ flex: 2 }}>
-            Foto (URL)
-            <input className={styles.textInput} value={fotoUrl} onChange={(e) => setFotoUrl(e.target.value)} placeholder="https://..." />
-          </label>
-        </div>
-        <label className={styles.formField}>
-          Bio
-          <textarea className={styles.textarea} value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
-        </label>
-        {error && <div className={styles.error}>{error}</div>}
-        <div className={styles.formActions}>
-          <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
-          <button type="submit" className={styles.actionButton} disabled={submitting}>
-            {submitting ? 'Salvando…' : 'Salvar'}
-          </button>
-        </div>
-      </form>
-      {podeVerContrato && <DadosContratoSection mentorado={mentorado} onSalvo={onAtualizarLista} />}
-      <DiagnosticoInicialSection mentoradoId={mentorado.id} />
-      <FerramentasObrigatoriasSection mentorado={mentorado} onSalvo={onAtualizarLista} />
-      <AcompanhamentoSection mentorado={mentorado} onSalvo={onAtualizarLista} />
-    </Card>
-  );
-}
-
-// M23 — CNPJ/sócios/valor de contrato só aparece pra quem tem Modulo.COMERCIAL (achado do
-// revisor-seguranca). Seção própria, com o próprio botão salvar — não mistura na mutation do
-// perfil (PUT /{id}), que é um endpoint/RBAC diferente (PATCH .../dados-contrato).
-function DadosContratoSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSalvo: () => void }) {
-  const [nomeFantasia, setNomeFantasia] = useState(mentorado.nomeFantasia ?? '');
-  const [cnpj, setCnpj] = useState(mentorado.cnpj ?? '');
-  const [socios, setSocios] = useState(mentorado.socios ?? '');
-  const [tipoContrato, setTipoContrato] = useState<TipoContrato | ''>(mentorado.tipoContrato ?? '');
-  const [valorContrato, setValorContrato] = useState(mentorado.valorContrato != null ? String(mentorado.valorContrato) : '');
-  const [dataFechamentoContrato, setDataFechamentoContrato] = useState(mentorado.dataFechamentoContrato ?? '');
-  const [documentoContratoUrl, setDocumentoContratoUrl] = useState(mentorado.documentoContratoUrl);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [salvo, setSalvo] = useState(false);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSalvo(false);
-    setSubmitting(true);
-    try {
-      await apiClient.patch(`/admin/mentorados/${mentorado.id}/dados-contrato`, {
-        nomeFantasia: nomeFantasia || null,
-        cnpj: cnpj || null,
-        socios: socios || null,
-        tipoContrato: tipoContrato || null,
-        valorContrato: valorContrato ? Number(valorContrato) : null,
-        dataFechamentoContrato: dataFechamentoContrato || null,
-      });
-      setSalvo(true);
-      onSalvo();
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível salvar os dados de contrato. Tente novamente.'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className={styles.form} style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
-      <div className={styles.formTitle}>Dados de contrato</div>
-      <div className={styles.formRow}>
-        <label className={styles.formField} style={{ flex: 2 }}>
-          Nome fantasia
-          <input className={styles.textInput} value={nomeFantasia} onChange={(e) => setNomeFantasia(e.target.value)} />
-        </label>
-        <label className={styles.formField}>
-          CNPJ
-          <input className={styles.textInput} value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
-        </label>
-        <label className={styles.formField}>
-          Tipo de contrato
-          <select className={styles.select} value={tipoContrato} onChange={(e) => setTipoContrato(e.target.value as TipoContrato | '')}>
-            <option value="">Selecione…</option>
-            {(Object.keys(TIPO_CONTRATO_LABEL) as TipoContrato[]).map((t) => (
-              <option key={t} value={t}>{TIPO_CONTRATO_LABEL[t]}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className={styles.formRow}>
-        <label className={styles.formField} style={{ flex: 2 }}>
-          Sócios
-          <input className={styles.textInput} value={socios} onChange={(e) => setSocios(e.target.value)} placeholder="Nome 1; Nome 2" />
-        </label>
-        <label className={styles.formField}>
-          Valor do contrato (R$)
-          <input className={styles.textInput} type="number" min="0" step="0.01" value={valorContrato} onChange={(e) => setValorContrato(e.target.value)} />
-        </label>
-        <label className={styles.formField}>
-          Data de fechamento
-          <input className={styles.textInput} type="date" value={dataFechamentoContrato} onChange={(e) => setDataFechamentoContrato(e.target.value)} />
-        </label>
-      </div>
-      {mentorado.vencimentoContrato && (
-        <div className={styles.muted}>Vencimento calculado: {mentorado.vencimentoContrato}</div>
-      )}
-      {error && <div className={styles.error}>{error}</div>}
-      <div className={styles.formActions}>
-        {salvo && !submitting && <span className={styles.muted}>Salvo.</span>}
-        <button type="submit" className={styles.actionButton} disabled={submitting}>
-          {submitting ? 'Salvando…' : 'Salvar dados de contrato'}
-        </button>
-      </div>
-      <DocumentoContratoUpload
-        mentoradoId={mentorado.id}
-        documentoContratoUrl={documentoContratoUrl}
-        onEnviado={setDocumentoContratoUrl}
-      />
-    </form>
-  );
-}
-
-// M23 — upload/download do PDF do contrato assinado, separado do submit dos campos de texto
-// (endpoint diferente, multipart/form-data — ver ContratoDocumentoStorageService no backend).
-function DocumentoContratoUpload({ mentoradoId, documentoContratoUrl, onEnviado }: {
-  mentoradoId: string; documentoContratoUrl: string | null; onEnviado: (url: string) => void;
-}) {
-  const [arquivo, setArquivo] = useState<File | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [baixando, setBaixando] = useState(false);
-
-  async function handleEnviar() {
-    if (!arquivo) return;
-    setError(null);
-    setEnviando(true);
-    try {
-      const formData = new FormData();
-      formData.append('arquivo', arquivo);
-      const res = await apiClient.post<MentoradoAdmin>(`/admin/mentorados/${mentoradoId}/documento-contrato`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setArquivo(null);
-      onEnviado(res.data.documentoContratoUrl ?? '');
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível enviar o documento do contrato.'));
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  async function handleBaixar() {
-    setError(null);
-    setBaixando(true);
-    try {
-      const res = await apiClient.get(`/admin/mentorados/${mentoradoId}/documento-contrato`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data as Blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'contrato.pdf';
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível baixar o documento do contrato.'));
-    } finally {
-      setBaixando(false);
-    }
-  }
-
-  return (
-    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <label className={styles.formField}>
-        Documento do contrato (PDF)
-        <input type="file" accept="application/pdf" onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} disabled={enviando} />
-      </label>
-      <div className={styles.formActions} style={{ justifyContent: 'flex-start' }}>
-        <button type="button" className={styles.actionButton} onClick={handleEnviar} disabled={!arquivo || enviando}>
-          {enviando ? 'Enviando…' : 'Enviar documento'}
-        </button>
-        {documentoContratoUrl && (
-          <button type="button" className={styles.cancelButton} onClick={handleBaixar} disabled={baixando}>
-            {baixando ? 'Baixando…' : 'Baixar contrato atual'}
-          </button>
-        )}
-      </div>
-      {error && <div className={styles.error}>{error}</div>}
-    </div>
-  );
-}
-
-// M23 — Diagnóstico Inicial (feito pela Leia antes da 1ª reunião com o Mateus). Busca o valor
-// atual ao montar (GET .../diagnostico-inicial) — é preenchido incrementalmente, então precisa
-// carregar o que já existe, não sempre partir de um formulário em branco.
-function DiagnosticoInicialSection({ mentoradoId }: { mentoradoId: string }) {
-  const [diagnostico, setDiagnostico] = useState<DiagnosticoInicial | null>(null);
-  const [faturamentoAnual, setFaturamentoAnual] = useState('');
-  const [quantidadeColaboradores, setQuantidadeColaboradores] = useState('');
-  const [empresaRegularizada, setEmpresaRegularizada] = useState('');
-  const [quantidadeLojas, setQuantidadeLojas] = useState('');
-  const [cmvDefinido, setCmvDefinido] = useState<RespostaSimNao | ''>('');
-  const [cmvDetalhe, setCmvDetalhe] = useState('');
-  const [tempoMedioAtendimento, setTempoMedioAtendimento] = useState('');
-  const [culturaConstruida, setCulturaConstruida] = useState<EstadoImplementacao>('NAO');
-  const [processosDesenhados, setProcessosDesenhados] = useState<EstadoImplementacao>('NAO');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [salvo, setSalvo] = useState(false);
-
-  useEffect(() => {
-    apiClient.get<DiagnosticoInicial>(`/admin/mentorados/${mentoradoId}/diagnostico-inicial`)
-      .then((res) => {
-        const d = res.data;
-        setDiagnostico(d);
-        setFaturamentoAnual(d.faturamentoAnual != null ? String(d.faturamentoAnual) : '');
-        setQuantidadeColaboradores(d.quantidadeColaboradores != null ? String(d.quantidadeColaboradores) : '');
-        setEmpresaRegularizada(d.empresaRegularizada == null ? '' : String(d.empresaRegularizada));
-        setQuantidadeLojas(d.quantidadeLojas != null ? String(d.quantidadeLojas) : '');
-        setCmvDefinido(d.cmvDefinido ?? '');
-        setCmvDetalhe(d.cmvDetalhe ?? '');
-        setTempoMedioAtendimento(d.tempoMedioAtendimento ?? '');
-        setCulturaConstruida(d.culturaConstruida ?? 'NAO');
-        setProcessosDesenhados(d.processosDesenhados ?? 'NAO');
-      })
-      .catch(() => setError('Não foi possível carregar o Diagnóstico Inicial.'));
-  }, [mentoradoId]);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSalvo(false);
-    setSubmitting(true);
-    try {
-      await apiClient.patch(`/admin/mentorados/${mentoradoId}/diagnostico-inicial`, {
-        faturamentoAnual: faturamentoAnual ? Number(faturamentoAnual) : null,
-        quantidadeColaboradores: quantidadeColaboradores ? Number(quantidadeColaboradores) : null,
-        empresaRegularizada: empresaRegularizada === '' ? null : empresaRegularizada === 'true',
-        quantidadeLojas: quantidadeLojas ? Number(quantidadeLojas) : null,
-        cmvDefinido: cmvDefinido || null,
-        cmvDetalhe: cmvDetalhe || null,
-        tempoMedioAtendimento: tempoMedioAtendimento || null,
-        culturaConstruida,
-        processosDesenhados,
-      });
-      setSalvo(true);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível salvar o Diagnóstico Inicial. Tente novamente.'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (diagnostico === null && !error) {
-    return <div className={styles.loading}>Carregando Diagnóstico Inicial…</div>;
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className={styles.form} style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
-      <div className={styles.formTitle}>Diagnóstico Inicial</div>
-      <div className={styles.formRow}>
-        <label className={styles.formField}>
-          Faturamento anual (R$)
-          <input className={styles.textInput} type="number" min="0" step="0.01" value={faturamentoAnual} onChange={(e) => setFaturamentoAnual(e.target.value)} />
-        </label>
-        <label className={styles.formField}>
-          Nº de colaboradores
-          <input className={styles.textInput} type="number" min="0" value={quantidadeColaboradores} onChange={(e) => setQuantidadeColaboradores(e.target.value)} />
-        </label>
-        <label className={styles.formField}>
-          Nº de lojas
-          <input className={styles.textInput} type="number" min="0" value={quantidadeLojas} onChange={(e) => setQuantidadeLojas(e.target.value)} />
-        </label>
-        <label className={styles.formField}>
-          Empresa regularizada?
-          <select className={styles.select} value={empresaRegularizada} onChange={(e) => setEmpresaRegularizada(e.target.value)}>
-            <option value="">Não perguntado</option>
-            <option value="true">Sim</option>
-            <option value="false">Não</option>
-          </select>
-        </label>
-      </div>
-      <div className={styles.formRow}>
-        <label className={styles.formField}>
-          CMV definido?
-          <select className={styles.select} value={cmvDefinido} onChange={(e) => setCmvDefinido(e.target.value as RespostaSimNao | '')}>
-            <option value="">Não perguntado</option>
-            {(Object.keys(RESPOSTA_SIM_NAO_LABEL) as RespostaSimNao[]).map((r) => (
-              <option key={r} value={r}>{RESPOSTA_SIM_NAO_LABEL[r]}</option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.formField} style={{ flex: 2 }}>
-          Qual (se sim)
-          <input className={styles.textInput} value={cmvDetalhe} onChange={(e) => setCmvDetalhe(e.target.value)} />
-        </label>
-        <label className={styles.formField} style={{ flex: 2 }}>
-          Tempo médio de atendimento
-          <input className={styles.textInput} value={tempoMedioAtendimento} onChange={(e) => setTempoMedioAtendimento(e.target.value)} placeholder="5 a 10 minutos" />
-        </label>
-      </div>
-      <div className={styles.formRow}>
-        <label className={styles.formField}>
-          Cultura construída?
-          <select className={styles.select} value={culturaConstruida} onChange={(e) => setCulturaConstruida(e.target.value as EstadoImplementacao)}>
-            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
-              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.formField}>
-          Processos desenhados?
-          <select className={styles.select} value={processosDesenhados} onChange={(e) => setProcessosDesenhados(e.target.value as EstadoImplementacao)}>
-            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
-              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {error && <div className={styles.error}>{error}</div>}
-      <div className={styles.formActions}>
-        {salvo && !submitting && <span className={styles.muted}>Salvo.</span>}
-        <button type="submit" className={styles.actionButton} disabled={submitting}>
-          {submitting ? 'Salvando…' : 'Salvar Diagnóstico Inicial'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-// E17/M27 (change request pós-MVP, 19/07/2026) — as 4 ferramentas obrigatórias nomeadas do
-// ranking (ver ROADMAP.md § "Blueprint (M27)"). Diferente do Diagnóstico Inicial, o valor atual
-// já vem no próprio `mentorado` (MentoradoResponse) — não precisa de um GET separado.
-function FerramentasObrigatoriasSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSalvo: () => void }) {
-  const [ferramentaDre, setFerramentaDre] = useState<EstadoImplementacao>(mentorado.ferramentaDre);
-  const [ferramentaManualCultura, setFerramentaManualCultura] = useState<EstadoImplementacao>(mentorado.ferramentaManualCultura);
-  const [ferramentaFichaTecnica, setFerramentaFichaTecnica] = useState<EstadoImplementacao>(mentorado.ferramentaFichaTecnica);
-  const [ferramentaManualProcessos, setFerramentaManualProcessos] = useState<EstadoImplementacao>(mentorado.ferramentaManualProcessos);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [salvo, setSalvo] = useState(false);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSalvo(false);
-    setSubmitting(true);
-    try {
-      await apiClient.patch(`/admin/mentorados/${mentorado.id}/ferramentas-obrigatorias`, {
-        ferramentaDre, ferramentaManualCultura, ferramentaFichaTecnica, ferramentaManualProcessos,
-      });
-      setSalvo(true);
-      onSalvo();
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível salvar as ferramentas obrigatórias. Tente novamente.'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className={styles.form} style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
-      <div className={styles.formTitle}>Ferramentas obrigatórias</div>
-      <div className={styles.formRow}>
-        <label className={styles.formField}>
-          DRE estruturada
-          <select className={styles.select} value={ferramentaDre} onChange={(e) => setFerramentaDre(e.target.value as EstadoImplementacao)}>
-            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
-              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.formField}>
-          Manual de cultura
-          <select className={styles.select} value={ferramentaManualCultura} onChange={(e) => setFerramentaManualCultura(e.target.value as EstadoImplementacao)}>
-            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
-              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.formField}>
-          Ficha técnica
-          <select className={styles.select} value={ferramentaFichaTecnica} onChange={(e) => setFerramentaFichaTecnica(e.target.value as EstadoImplementacao)}>
-            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
-              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.formField}>
-          Manual de processos
-          <select className={styles.select} value={ferramentaManualProcessos} onChange={(e) => setFerramentaManualProcessos(e.target.value as EstadoImplementacao)}>
-            {(Object.keys(ESTADO_IMPLEMENTACAO_LABEL) as EstadoImplementacao[]).map((v) => (
-              <option key={v} value={v}>{ESTADO_IMPLEMENTACAO_LABEL[v]}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {error && <div className={styles.error}>{error}</div>}
-      <div className={styles.formActions}>
-        {salvo && !submitting && <span className={styles.muted}>Salvo.</span>}
-        <button type="submit" className={styles.actionButton} disabled={submitting}>
-          {submitting ? 'Salvando…' : 'Salvar ferramentas obrigatórias'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-// E17/M27 — dois eixos de acompanhamento, preenchidos manualmente pelo mentor/time de sucesso
-// (não calculados — ver ROADMAP.md § "Blueprint (M27)"). "Não avaliado" mapeia pra null na
-// request (semântica de PATCH no backend: campo null não apaga valor já registrado).
-function AcompanhamentoSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSalvo: () => void }) {
-  const [nivelEngajamento, setNivelEngajamento] = useState<NivelEngajamento | ''>(mentorado.nivelEngajamento ?? '');
-  const [riscoChurn, setRiscoChurn] = useState<RiscoChurn | ''>(mentorado.riscoChurn ?? '');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [salvo, setSalvo] = useState(false);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSalvo(false);
-    setSubmitting(true);
-    try {
-      await apiClient.patch(`/admin/mentorados/${mentorado.id}/acompanhamento`, {
-        nivelEngajamento: nivelEngajamento || null,
-        riscoChurn: riscoChurn || null,
-      });
-      setSalvo(true);
-      onSalvo();
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível salvar o acompanhamento. Tente novamente.'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className={styles.form} style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
-      <div className={styles.formTitle}>Acompanhamento</div>
-      <div className={styles.formRow}>
-        <label className={styles.formField}>
-          Nível de engajamento
-          <select className={styles.select} value={nivelEngajamento} onChange={(e) => setNivelEngajamento(e.target.value as NivelEngajamento | '')}>
-            <option value="">Não avaliado</option>
-            {(Object.keys(NIVEL_ENGAJAMENTO_LABEL) as NivelEngajamento[]).map((v) => (
-              <option key={v} value={v}>{NIVEL_ENGAJAMENTO_LABEL[v]}</option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.formField}>
-          Risco de churn
-          <select className={styles.select} value={riscoChurn} onChange={(e) => setRiscoChurn(e.target.value as RiscoChurn | '')}>
-            <option value="">Não avaliado</option>
-            {(Object.keys(RISCO_CHURN_LABEL) as RiscoChurn[]).map((v) => (
-              <option key={v} value={v}>{RISCO_CHURN_LABEL[v]}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {mentorado.acompanhamentoAvaliadoEm && (
-        <div className={styles.muted}>Última avaliação: {new Date(mentorado.acompanhamentoAvaliadoEm).toLocaleString('pt-BR')}</div>
-      )}
-      {error && <div className={styles.error}>{error}</div>}
-      <div className={styles.formActions}>
-        {salvo && !submitting && <span className={styles.muted}>Salvo.</span>}
-        <button type="submit" className={styles.actionButton} disabled={submitting}>
-          {submitting ? 'Salvando…' : 'Salvar acompanhamento'}
-        </button>
-      </div>
-    </form>
   );
 }
 
@@ -963,10 +408,11 @@ const COLUNAS_IMPORT_DIRETO = [
   'quantidadeLojas', 'cmvDefinido', 'cmvDetalhe', 'tempoMedioAtendimento', 'culturaConstruida', 'processosDesenhados',
 ];
 
-// M23 item 4 (bulk-CREATE, 19/07/2026) — import CSV que CRIA mentorados novos em massa, pensado
-// pra migrar de uma vez as empresas reais que hoje só existem no Notion. Só COMERCIAL/ADMIN veem o
-// botão que abre este form (mesmo gate de "Criar mentorado direto" — cria credencial + carrega
-// CNPJ/sócios/valor de contrato).
+// M23 item 4 (bulk-CREATE, 19/07/2026), estendido no M28 ("import único", 21/07/2026) — import CSV
+// que CRIA mentorados novos OU ATUALIZA quem já existe (resolvido por e-mail), pensado pra migrar
+// de uma vez as empresas reais que hoje só existem no Notion. Só COMERCIAL/ADMIN veem o botão que
+// abre este form (mesmo gate de "Criar mentorado direto" — cria credencial + carrega CNPJ/sócios/
+// valor de contrato).
 function ImportarMentoradosDiretoForm({ onImportado, onCancelar }: {
   onImportado: (res: ImportMentoradoDiretoResultResponse) => void; onCancelar: () => void;
 }) {
@@ -999,11 +445,13 @@ function ImportarMentoradosDiretoForm({ onImportado, onCancelar }: {
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.formTitle}>Importar mentorados em massa</div>
+      <div className={styles.formTitle}>Importar mentorados (CSV)</div>
       <p className={styles.muted} style={{ marginTop: -8, marginBottom: 4 }}>
-        Cria um mentorado (com Lead já fechado + credencial de login) por linha do CSV. Tudo-ou-nada:
-        se alguma linha tiver erro, nada é criado. Colunas esperadas (só email/nome/tipoContrato são
-        obrigatórias): <code>{COLUNAS_IMPORT_DIRETO.join(', ')}</code>.
+        Por linha do CSV: se o e-mail ainda não existe, cria um mentorado novo (com Lead já fechado
+        + credencial de login); se já existe um mentorado com esse e-mail, atualiza os dados dele em
+        vez de criar de novo. Tudo-ou-nada: se alguma linha tiver erro, nada é criado ou atualizado.
+        Colunas esperadas (só email/nome/tipoContrato são obrigatórias):{' '}
+        <code>{COLUNAS_IMPORT_DIRETO.join(', ')}</code>.
       </p>
       <form onSubmit={handleSubmit} className={styles.form}>
         <label className={styles.formField}>

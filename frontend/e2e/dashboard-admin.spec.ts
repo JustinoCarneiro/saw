@@ -57,7 +57,25 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     await page.getByPlaceholder('Buscar mentorado...').fill('Ana Costa');
     await page.getByLabel('Ana Costa').check();
     await page.getByLabel('Data e hora').fill('2026-09-01T10:00');
+    // M28 ("reorganizar lista de mentorias") — a lista central passou a mostrar só Grupo por
+    // padrão; a mentoria recém-criada é Individual (tipo default do form), precisa do filtro.
+    // Espera o POST de criação E o GET que ele dispara em seguida (onCriada→carregar(), ainda
+    // com tipo=GRUPO no closure daquele momento) terminarem ANTES de trocar o filtro — só esperar
+    // o form fechar (DOM) não basta, o GET disparado pelo onCriada só é AGENDADO nesse instante,
+    // não concluído; se a troca de filtro entrasse no meio dele, a corrida podia (raramente)
+    // reaparecer mesmo com a defesa em MentoriasAgendaPage.tsx. Achado ao vivo neste E2E.
+    // waitForResponse precisa ser REGISTRADO antes da ação que dispara a resposta (senão, se a
+    // resposta já tiver chegado antes do registro, a promise fica esperando pra sempre) — por
+    // isso os dois listeners abaixo são criados ANTES do clique, não depois.
+    const postCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias') && res.request().method() === 'POST' && res.ok());
+    const getAposCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias?') && res.request().method() === 'GET' && res.ok());
     await page.getByRole('button', { name: 'Criar mentoria' }).click();
+    await postCriacao;
+    await getAposCriacao;
+
+    const getAposFiltro = page.waitForResponse((res) => res.url().includes('tipo=INDIVIDUAL') && res.request().method() === 'GET' && res.ok());
+    await page.getByLabel('Filtro de tipo (agenda)').selectOption({ label: 'Individual' });
+    await getAposFiltro;
 
     // "Ana Costa" sozinho não é único — ela também aparece como integrante da mentoria em grupo
     // seedada (Ricardo Costa, Realizada). Filtra também por "Agendada" (status da recém-criada,

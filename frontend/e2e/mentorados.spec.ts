@@ -51,12 +51,14 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
 
     // M25 (Suposição 6) — produtoVenda/valorTotalVenda/dataFechamento do Lead propagam pro
     // Mentorado (tipoContrato/valorContrato/dataFechamentoContrato) sem precisar redigitar.
+    // M28 ("página dedicada de mentorado") — "Editar" virou "Ver perfil" e navega pra uma página
+    // própria (/admin/mentorados/lista/:id) em vez de expandir um form inline nesta tela.
     const linhaMentoradoCriado = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
-    await linhaMentoradoCriado.getByRole('button', { name: 'Editar' }).click();
+    await linhaMentoradoCriado.getByRole('button', { name: 'Ver perfil' }).click();
+    await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
     await expect(page.getByText('Dados de contrato', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Tipo de contrato')).toHaveValue('MENTORIA_CONTINUA');
     await expect(page.getByLabel('Valor do contrato (R$)')).toHaveValue('26000');
-    await page.getByRole('button', { name: 'Cancelar' }).click();
 
     // 4) Cria a mentoria com esse mentorado recém-criado.
     await page.goto('/admin/mentorados/mentorias');
@@ -65,8 +67,24 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await page.getByLabel(nome).check();
     await page.getByLabel('Data e hora').fill('2026-08-15T14:00');
     await page.getByLabel('Duração (min)').fill('45');
+    // M28 ("reorganizar lista de mentorias") — a lista central passou a mostrar só Grupo por
+    // padrão; esta é uma mentoria Individual (tipo default do form), então precisa do filtro pra
+    // aparecer aqui (histórico individual "de verdade" agora vive na página do mentorado). Espera
+    // o POST de criação E o GET que ele dispara em seguida (onCriada→carregar(), ainda com
+    // tipo=GRUPO no closure daquele momento) terminarem ANTES de trocar o filtro — só esperar o
+    // form fechar (DOM) não basta, o GET disparado pelo onCriada só é AGENDADO nesse instante, não
+    // concluído (ver comentário em MentoriasAgendaPage.tsx e achado ao vivo neste E2E). Listeners
+    // registrados ANTES do clique (senão, se a resposta já tiver chegado antes do registro, a
+    // promise fica esperando pra sempre).
+    const postCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias') && res.request().method() === 'POST' && res.ok());
+    const getAposCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias?') && res.request().method() === 'GET' && res.ok());
     await main.getByRole('button', { name: 'Criar mentoria' }).click();
+    await postCriacao;
+    await getAposCriacao;
 
+    const getAposFiltro = page.waitForResponse((res) => res.url().includes('tipo=INDIVIDUAL') && res.request().method() === 'GET' && res.ok());
+    await page.getByLabel('Filtro de tipo (agenda)').selectOption({ label: 'Individual' });
+    await getAposFiltro;
     const linhaMentoria = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
     await expect(linhaMentoria.getByText('Agendada', { exact: true })).toBeVisible();
 
@@ -146,8 +164,20 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await page.getByLabel(nome).check();
     await page.getByLabel('Data e hora').fill('2026-08-16T10:00');
     await page.getByLabel('Duração (min)').fill('45');
+    // M28 — mesma razão do teste anterior: mentoria Individual não aparece mais por padrão nesta
+    // lista central (Grupo é o padrão desde a reorganização). Espera o POST de criação E o GET
+    // que ele dispara em seguida (onCriada→carregar(), ainda com tipo=GRUPO no closure daquele
+    // momento) terminarem antes de trocar o filtro — só esperar o form fechar (DOM) não basta.
+    // Listeners registrados ANTES do clique (senão a promise pode ficar esperando pra sempre).
+    const postCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias') && res.request().method() === 'POST' && res.ok());
+    const getAposCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias?') && res.request().method() === 'GET' && res.ok());
     await main.getByRole('button', { name: 'Criar mentoria' }).click();
+    await postCriacao;
+    await getAposCriacao;
 
+    const getAposFiltro = page.waitForResponse((res) => res.url().includes('tipo=INDIVIDUAL') && res.request().method() === 'GET' && res.ok());
+    await page.getByLabel('Filtro de tipo (agenda)').selectOption({ label: 'Individual' });
+    await getAposFiltro;
     const linhaMentoria = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
     await linhaMentoria.getByRole('button', { name: 'Confirmar' }).click();
     await expect(linhaMentoria.getByText('Confirmada', { exact: true })).toBeVisible();
@@ -189,6 +219,90 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(page.getByText('Publicada', { exact: true })).toBeVisible();
   });
 
+  // M28 (change request, 21/07/2026) — "colar transcrição do Google Meet", alternativa aditiva ao
+  // upload de áudio testado acima. Mesmo pipeline de IA (Claude via stub) a partir daqui, só pula
+  // o passo de transcrição (Whisper) — o texto colado já É a transcrição.
+  test('colar transcrição do Meet aciona o mesmo pipeline de IA, sem passar pelo Whisper', async ({ page }) => {
+    const timestamp = Date.now();
+    const nome = `Lead Transcricao E2E ${timestamp}`;
+    const email = `transcricao.${timestamp}@example.com`;
+    const main = page.getByRole('main');
+
+    // 1-4) Mesmo caminho dos testes acima até ter uma mentoria CONFIRMADA própria.
+    await page.goto('/solicitar-acesso');
+    await page.getByLabel('Nome').fill(nome);
+    await page.getByLabel('E-mail').fill(email);
+    await page.getByRole('button', { name: 'Enviar solicitação' }).click();
+    await expect(page.getByText('Solicitação enviada.')).toBeVisible();
+
+    await loginAs(page, 'paula@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/comercial/leads');
+    const linhaLead = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linhaLead.getByRole('button', { name: 'Mover p/ Em contato' }).click();
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await linhaLead.getByRole('button', { name: 'Avançar p/ Proposta' }).click();
+    await page.getByRole('button', { name: 'Confirmar' }).click();
+    await linhaLead.getByRole('button', { name: 'Fechar venda' }).click();
+    await page.getByLabel('Produto vendido').selectOption({ label: 'Mentoria contínua' });
+    await page.getByLabel('Origem da venda').selectOption({ label: 'Direta' });
+    await page.getByLabel('Valor total da venda').fill('26000');
+    await page.getByLabel('Valor pago no ato').fill('6000');
+    await page.getByLabel('Forma de pagamento').selectOption({ label: 'Pix' });
+    await page.getByRole('button', { name: 'Confirmar venda' }).click();
+    await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
+
+    await page.context().clearCookies();
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/lista');
+    await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
+    await page.getByLabel('Lead').selectOption({ label: `${nome} — ${email}` });
+    await page.getByRole('button', { name: 'Criar mentorado', exact: true }).click();
+    await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
+    await page.getByRole('button', { name: 'Entendi' }).click();
+
+    await page.goto('/admin/mentorados/mentorias');
+    await main.getByRole('button', { name: 'Nova mentoria' }).click();
+    await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
+    await page.getByLabel(nome).check();
+    await page.getByLabel('Data e hora').fill('2026-08-17T10:00');
+    await page.getByLabel('Duração (min)').fill('45');
+    const postCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias') && res.request().method() === 'POST' && res.ok());
+    const getAposCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias?') && res.request().method() === 'GET' && res.ok());
+    await main.getByRole('button', { name: 'Criar mentoria' }).click();
+    await postCriacao;
+    await getAposCriacao;
+
+    const getAposFiltro = page.waitForResponse((res) => res.url().includes('tipo=INDIVIDUAL') && res.request().method() === 'GET' && res.ok());
+    await page.getByLabel('Filtro de tipo (agenda)').selectOption({ label: 'Individual' });
+    await getAposFiltro;
+    const linhaMentoria = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linhaMentoria.getByRole('button', { name: 'Confirmar' }).click();
+    await expect(linhaMentoria.getByText('Confirmada', { exact: true })).toBeVisible();
+    await linhaMentoria.getByRole('button', { name: 'Realizar' }).click();
+    await expect(page).toHaveURL(/\/ata$/);
+
+    // 5) Cola a transcrição em vez de subir áudio — troca de aba primeiro.
+    await expect(page.getByRole('tab', { name: 'Subir áudio' })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('tab', { name: 'Colar transcrição' }).click();
+    await expect(page.getByRole('tab', { name: 'Colar transcrição' })).toHaveAttribute('aria-selected', 'true');
+    await page.getByPlaceholder(/Cole aqui a transcrição/).fill('Transcrição colada manualmente do Google Meet, teste E2E.');
+    await page.getByRole('button', { name: 'Processar transcrição' }).click();
+
+    // 6) Mesmo pipeline assíncrono/polling de status do teste de áudio acima.
+    await expect(page.getByText('IA concluída')).toBeVisible({ timeout: 15_000 });
+
+    // 7) A transcrição exibida é literalmente o texto colado (não passou pelo Whisper) — resumo e
+    // sugestões vêm do mesmo stub de Claude usado no upload de áudio.
+    await expect(page.getByText('Transcrição colada manualmente do Google Meet, teste E2E.')).toBeVisible();
+    await expect(page.getByPlaceholder(/Escreva o resumo da mentoria/)).toHaveValue(/Resumo gerado pela IA \(stub E2E\)/);
+
+    await page.getByRole('button', { name: 'Publicar ata' }).click();
+    await page.getByRole('button', { name: 'Sim, publicar' }).click();
+    await expect(page.getByText('Publicada', { exact: true })).toBeVisible();
+  });
+
   // Fase 5 (H11.1) — antes desta feature, telefone/bio/foto só podiam ser preenchidos pelo
   // próprio mentorado logando (H9.1); o Admin não tinha como completar o cadastro (achado
   // relatado pelo cliente: só nome/e-mail/plano apareciam pra editar). areasInteresse removido
@@ -202,16 +316,19 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     // caso real reportado: Admin prospectando/completando um cadastro ainda vazio.
     const main = page.getByRole('main');
     const linha = main.locator('text=Carlos Menezes').locator('xpath=ancestor::div[contains(@class,"row")]');
-    await linha.getByRole('button', { name: 'Editar' }).click();
+    await linha.getByRole('button', { name: 'Ver perfil' }).click();
+    await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
 
     const foto = `https://exemplo.com/foto-e2e-${Date.now()}.jpg`;
     await page.getByLabel('Telefone').fill('(11) 90000-1234');
     await page.getByLabel('Foto (URL)').fill(foto);
     await page.getByLabel('Bio').fill('Bio preenchida pelo Admin no teste E2E.');
     await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await expect(page.getByText('Salvo.')).toBeVisible();
 
-    await expect(page.getByText('Editar mentorado')).toHaveCount(0);
-    await linha.getByRole('button', { name: 'Editar' }).click();
+    // Recarrega a página (GET /admin/mentorados/{id}) pra provar que persistiu de verdade, não só
+    // que o estado local do formulário manteve o valor digitado.
+    await page.reload();
     await expect(page.getByLabel('Telefone')).toHaveValue('(11) 90000-1234');
     await expect(page.getByLabel('Foto (URL)')).toHaveValue(foto);
     await expect(page.getByLabel('Bio')).toHaveValue('Bio preenchida pelo Admin no teste E2E.');
@@ -330,7 +447,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
   test('RBAC: área sem Mentorados/Conteúdos não vê os módulos nem acessa via URL direta', async ({ page }) => {
     await loginAs(page, 'paula@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
-    await expect(page.getByRole('link', { name: 'Mentorados' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Gestão de Performance' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Conteúdos' })).toHaveCount(0);
 
     await page.goto('/admin/mentorados/lista');

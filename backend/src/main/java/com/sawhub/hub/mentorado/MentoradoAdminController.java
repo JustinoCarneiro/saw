@@ -1,6 +1,5 @@
 package com.sawhub.hub.mentorado;
 
-import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.mentorado.dto.AtualizarAcompanhamentoRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarDiagnosticoInicialRequest;
 import com.sawhub.hub.mentorado.dto.AtualizarFerramentasObrigatoriasRequest;
@@ -28,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 /** H11.1 — CRUD administrativo de mentorados. */
 @RestController
@@ -49,6 +47,12 @@ public class MentoradoAdminController {
                                            @RequestParam(required = false) StatusMentorado status,
                                            @RequestParam(required = false) String busca) {
         return mentoradoAdminService.listar(plano, status, busca).stream().map(MentoradoResponse::from).toList();
+    }
+
+    // M28 — "página dedicada de mentorado" (MentoradoDetalhePage), acessada direto por URL.
+    @GetMapping("/{id}")
+    public MentoradoResponse buscar(@PathVariable UUID id) {
+        return MentoradoResponse.from(mentoradoAdminService.buscarPorId(id));
     }
 
     @PutMapping("/{id}")
@@ -116,14 +120,5 @@ public class MentoradoAdminController {
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"mentorados.csv\"")
                 .body(csv.getBytes(StandardCharsets.UTF_8));
-    }
-
-    // M22 — bulk-UPDATE apenas (resolve por e-mail já existente); 200 se tudo foi validado e
-    // persistido, 422 se nada foi (ver erros no corpo).
-    @PostMapping("/import")
-    public ResponseEntity<ImportResultResponse> importar(@RequestParam("arquivo") MultipartFile arquivo) {
-        ImportResultResponse resultado = mentoradoCsvService.importar(arquivo);
-        HttpStatus status = resultado.erros().isEmpty() ? HttpStatus.OK : HttpStatus.UNPROCESSABLE_ENTITY;
-        return ResponseEntity.status(status).body(resultado);
     }
 }

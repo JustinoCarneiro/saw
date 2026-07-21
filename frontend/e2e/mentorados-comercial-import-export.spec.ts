@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { loginAs } from './helpers';
 
-// M22 — import/export CSV de Mentorados (bulk-update apenas, resolvido por e-mail) e Comercial/
-// Leads (import sempre cria em SOLICITACAO). Import é tudo-ou-nada (ver Blueprint, ROADMAP.md).
-test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
+// M22 — export CSV de Mentorados e import/export de Comercial/Leads (import sempre cria em
+// SOLICITACAO). M28 (21/07/2026) substituiu o import de Mentorados (era bulk-update só, 6 campos)
+// pelo import único (cria OU atualiza, 19 campos) — ver testes abaixo. Import é tudo-ou-nada (ver
+// Blueprint, ROADMAP.md).
+test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
   test('Mentorados: exportar CSV dispara o download do arquivo', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
@@ -20,45 +22,27 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     expect(download.suggestedFilename()).toBe('mentorados.csv');
   });
 
-  test('Mentorados: importar CSV atualiza um mentorado existente (resolvido por e-mail)', async ({ page }) => {
-    const timestamp = Date.now();
-    const nome = `Lead M22 E2E ${timestamp}`;
-    const email = `m22.${timestamp}@example.com`;
-
-    // Cria um mentorado de verdade, único desta execução — nunca muta um mentorado seedado
-    // compartilhado com outras specs (vários deles têm nome/vencimentoPlano checados em
-    // perfil.spec.ts/consolidated.spec.ts; mutar um deles via import quebraria essas asserções).
-    await page.goto('/solicitar-acesso');
-    await page.getByLabel('Nome').fill(nome);
-    await page.getByLabel('E-mail').fill(email);
-    await page.getByRole('button', { name: 'Enviar solicitação' }).click();
-    await expect(page.getByText('Solicitação enviada.')).toBeVisible();
-
-    await loginAs(page, 'paula@sawhub.com.br');
-    await expect(page).toHaveURL(/\/admin\//);
-    await page.goto('/admin/comercial/leads');
-    const mainComercial = page.getByRole('main');
-    const linhaLead = mainComercial.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
-    await linhaLead.getByRole('button', { name: 'Mover p/ Em contato' }).click();
-    await page.getByRole('button', { name: 'Confirmar' }).click();
-    await linhaLead.getByRole('button', { name: 'Avançar p/ Proposta' }).click();
-    await page.getByRole('button', { name: 'Confirmar' }).click();
-    await linhaLead.getByRole('button', { name: 'Fechar venda' }).click();
-    await page.getByLabel('Produto vendido').selectOption({ label: 'Mentoria contínua' });
-    await page.getByLabel('Origem da venda').selectOption({ label: 'Direta' });
-    await page.getByLabel('Valor total da venda').fill('26000');
-    await page.getByLabel('Valor pago no ato').fill('6000');
-    await page.getByLabel('Forma de pagamento').selectOption({ label: 'Pix' });
-    await page.getByRole('button', { name: 'Confirmar venda' }).click();
-    await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
-
-    await page.context().clearCookies();
+  // M28 (change request, 21/07/2026, "import único") — o import estreito bulk-UPDATE (6 campos,
+  // widget CsvImportExport) foi removido: dois botões de import confundiam o time. O único import
+  // que resta em Mentorados é "Importar mentorados (CSV)" (MentoradoDiretoCsvService, 19 colunas,
+  // Comercial), que cria OU atualiza dependendo de o e-mail já existir.
+  test('Mentorados: import único (CSV) atualiza um mentorado existente resolvido por e-mail', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
+
+    const timestamp = Date.now();
+    const nome = `Mentorado M28 E2E ${timestamp}`;
+    const email = `m28.${timestamp}@example.com`;
     const main = page.getByRole('main');
-    await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
-    await page.getByLabel('Lead').selectOption({ label: `${nome} — ${email}` });
+
+    // Cria um mentorado de verdade, único desta execução — nunca muta um mentorado seedado
+    // compartilhado com outras specs (mesma cautela do M22: mutar um deles via import quebraria
+    // asserções de perfil.spec.ts/consolidated.spec.ts).
+    await main.getByRole('button', { name: 'Criar mentorado direto' }).click();
+    await page.getByLabel('Nome').fill(nome);
+    await page.getByLabel('E-mail').fill(email);
+    await page.getByLabel('Tipo de contrato').selectOption({ label: 'Mentoria Individual' });
     await page.getByRole('button', { name: 'Criar mentorado', exact: true }).click();
     await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
     await page.getByRole('button', { name: 'Entendi' }).click();
@@ -66,40 +50,50 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22)', () => {
     // "Negócio Atualizado" (fixo) sozinho colide entre execuções — só o nome é único por
     // execução, então a checagem do negócio precisa ficar escopada à linha certa (mesma classe
     // de lição M09/M20: nunca assumir texto fixo como identificador único num teste repetível).
+    const nomeAtualizado = `${nome} Atualizado`;
     const negocio = `Negócio Atualizado ${timestamp}`;
-    const csv = `email;nome;negocio;plano;vencimentoPlano;status\n`
-        + `${email};${nome} Atualizado;${negocio};PROFISSIONAL;;ATIVO\n`;
+    const csv = 'email;nome;negocio;nomeFantasia;cnpj;socios;telefone;tipoContrato;valorContrato;'
+        + 'dataFechamentoContrato;faturamentoAnual;quantidadeColaboradores;empresaRegularizada;quantidadeLojas;'
+        + 'cmvDefinido;cmvDetalhe;tempoMedioAtendimento;culturaConstruida;processosDesenhados\n'
+        + `${email};${nomeAtualizado};${negocio};;;;;MENTORIA_CONTINUA;;;;;;;;;;;\n`;
 
-    // Mesmo raciocínio do teste de export acima: escopa ao widget de Mentorados (não Metas/Tarefas).
-    const widgetMentorados = main.locator('xpath=//button[contains(text(),"Importar Mentorados")]/ancestor::div[contains(@class,"wrapper")]');
-    await widgetMentorados.getByTestId('csv-importar-input').setInputFiles({
-      name: 'mentorados.csv',
+    await main.getByRole('button', { name: 'Importar mentorados (CSV)' }).click();
+    await page.getByLabel('Arquivo CSV').setInputFiles({
+      name: 'mentorados-direto.csv',
       mimeType: 'text/csv',
       buffer: Buffer.from(csv, 'utf-8'),
     });
+    await page.getByRole('button', { name: 'Importar', exact: true }).click();
 
-    await expect(widgetMentorados.getByTestId('csv-import-sucesso')).toContainText('1 linha(s) importada(s)');
-    const linhaAtualizada = main.locator('text=' + `${nome} Atualizado`).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await expect(page.getByText('0 criado(s), 1 atualizado(s)')).toBeVisible();
+    await page.getByRole('button', { name: 'Entendi' }).click();
+
+    const linhaAtualizada = main.locator('text=' + nomeAtualizado).locator('xpath=ancestor::div[contains(@class,"row")]');
     await expect(linhaAtualizada.getByText(negocio)).toBeVisible();
   });
 
-  test('Mentorados: importar CSV com e-mail inexistente mostra o erro por linha e não muta nada', async ({ page }) => {
+  test('Mentorados: import único (CSV) rejeita e-mail que já existe mas não é mentorado', async ({ page }) => {
     await loginAs(page, 'matheus@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
-    const csv = `email;nome;negocio;plano;vencimentoPlano;status\n`
-        + `fantasma-m22-e2e@example.com;Qualquer;;GRATUITO;;ATIVO\n`;
+    // matheus@sawhub.com.br é login de Colaborador (Fundador), não de Mentorado — o import único
+    // trata isso como erro de validação (e-mail em uso por outro tipo de conta), não como criação.
+    const csv = 'email;nome;negocio;nomeFantasia;cnpj;socios;telefone;tipoContrato;valorContrato;'
+        + 'dataFechamentoContrato;faturamentoAnual;quantidadeColaboradores;empresaRegularizada;quantidadeLojas;'
+        + 'cmvDefinido;cmvDetalhe;tempoMedioAtendimento;culturaConstruida;processosDesenhados\n'
+        + 'matheus@sawhub.com.br;Qualquer;;;;;;MENTORIA_CONTINUA;;;;;;;;;;;\n';
 
     const main = page.getByRole('main');
-    const widgetMentorados = main.locator('xpath=//button[contains(text(),"Importar Mentorados")]/ancestor::div[contains(@class,"wrapper")]');
-    await widgetMentorados.getByTestId('csv-importar-input').setInputFiles({
-      name: 'mentorados.csv',
+    await main.getByRole('button', { name: 'Importar mentorados (CSV)' }).click();
+    await page.getByLabel('Arquivo CSV').setInputFiles({
+      name: 'mentorados-direto.csv',
       mimeType: 'text/csv',
       buffer: Buffer.from(csv, 'utf-8'),
     });
+    await page.getByRole('button', { name: 'Importar', exact: true }).click();
 
-    await expect(widgetMentorados.getByTestId('csv-import-erros')).toContainText('não encontrado');
+    await expect(page.getByText(/já existe.*não é um mentorado/)).toBeVisible();
   });
 
   test('Comercial: exportar CSV dispara o download do arquivo', async ({ page }) => {

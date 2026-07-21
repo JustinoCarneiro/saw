@@ -51,6 +51,20 @@ public class AtaProcessamentoService {
         }
     }
 
+    // M28 — "colar transcrição do Google Meet": mesmo worker, mesmo executor, mas pula
+    // TranscricaoService por completo (o texto colado já é a transcrição) e vai direto pro
+    // resumo estruturado via Claude.
+    @Async("ataProcessamentoExecutor")
+    public void processarTranscricaoColada(UUID ataId, String transcricao) {
+        try {
+            RascunhoAta rascunho = ataRascunhoService.gerarRascunho(transcricao);
+            concluir(ataId, transcricao, rascunho);
+        } catch (Exception e) {
+            log.error("Falha ao processar IA da ata {} (transcrição colada)", ataId, e);
+            falhar(ataId, e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+        }
+    }
+
     @Transactional
     void concluir(UUID ataId, String transcricao, RascunhoAta rascunho) {
         Ata ata = ataRepository.findById(ataId)

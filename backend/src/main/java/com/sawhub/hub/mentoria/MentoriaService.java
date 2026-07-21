@@ -59,12 +59,26 @@ public class MentoriaService {
         return mentoriaRepository.save(mentoria);
     }
 
-    public List<Mentoria> listar(StatusMentoria status, Instant de, Instant ate) {
-        // Filtro de data em memória — ver nota em MentoriaRepository.buscarPorStatus.
-        return mentoriaRepository.buscarPorStatus(status).stream()
+    // M28 (change request, 21/07/2026) — tipo/mentoradoId somados ao filtro já existente de
+    // status/de/ate: "Reorganizar lista de mentorias" pede separar Grupo (lista central) de
+    // Individual/Consultoria (só na página do próprio mentorado). mentoradoId != null troca a
+    // base da consulta (MEMBER OF em vez de status), mas os outros filtros continuam se aplicando
+    // do mesmo jeito por cima — mesma composição em memória de sempre (ver nota em
+    // MentoriaRepository.buscarPorStatus sobre o bug de Instant nulo em JPQL).
+    public List<Mentoria> listar(StatusMentoria status, TipoMentoria tipo, UUID mentoradoId, Instant de, Instant ate) {
+        List<Mentoria> base = mentoradoId != null ? buscarPorMentoradoId(mentoradoId) : mentoriaRepository.buscarPorStatus(null);
+        return base.stream()
+                .filter(m -> status == null || m.getStatus() == status)
+                .filter(m -> tipo == null || m.getTipo() == tipo)
                 .filter(m -> de == null || !m.getDataHora().isBefore(de))
                 .filter(m -> ate == null || !m.getDataHora().isAfter(ate))
                 .toList();
+    }
+
+    private List<Mentoria> buscarPorMentoradoId(UUID mentoradoId) {
+        Mentorado mentorado = mentoradoRepository.findById(mentoradoId)
+                .orElseThrow(() -> new IllegalArgumentException("Mentorado não encontrado."));
+        return mentoriaRepository.buscarPorMentorado(mentorado);
     }
 
     @Transactional

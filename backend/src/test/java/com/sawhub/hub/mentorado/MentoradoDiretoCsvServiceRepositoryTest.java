@@ -67,7 +67,7 @@ class MentoradoDiretoCsvServiceRepositoryTest {
         var contratoStorage = new ContratoDocumentoStorageService(tempDir.toString());
         var mentoradoAdminService = new MentoradoAdminService(mentoradoRepository, usuarioRepository, leadRepository,
                 diagnosticoInicialRepository, contratoStorage, PASSWORD_ENCODER_SEM_HASH);
-        return new MentoradoDiretoCsvService(usuarioRepository, mentoradoAdminService);
+        return new MentoradoDiretoCsvService(mentoradoAdminService);
     }
 
     // Ordem alinhada ao contrato do Blueprint M24 (ROADMAP.md).
@@ -173,5 +173,50 @@ class MentoradoDiretoCsvServiceRepositoryTest {
                 .orElseThrow();
         assertThat(diagnostico.getFaturamentoAnual()).isEqualByComparingTo("600000");
         assertThat(diagnostico.getCulturaConstruida()).isEqualTo(EstadoImplementacao.EM_CONSTRUCAO);
+    }
+
+    // M28 (change request, 21/07/2026, "import único") — mesma garantia de sessão real do
+    // Hibernate que MentoradoCsvServiceRepositoryTest cobria pro bulk-UPDATE antigo (removido),
+    // agora dentro deste service: uma linha com e-mail já cadastrado ATUALIZA o Mentorado existente
+    // em vez de tentar criar um novo (o que quebraria a constraint de e-mail único).
+    @Test
+    void importarComEmailJaCadastradoAtualizaOMentoradoExistenteDeVerdadeNoPostgres() {
+        String sufixo = UUID.randomUUID().toString();
+        String email = "existente-" + sufixo + "@sawhub-teste.com.br";
+
+        Map<String, String> campoOriginal = new LinkedHashMap<>();
+        campoOriginal.put("email", email);
+        campoOriginal.put("nome", "Nome Original");
+        campoOriginal.put("tipoContrato", "MENTORIA_INDIVIDUAL");
+        ImportMentoradoDiretoResultResponse criacao =
+                service().importar(csv(cabecalho() + "\n" + linha(campoOriginal) + "\n"));
+        assertThat(criacao.importados()).isEqualTo(1);
+        entityManager.flush();
+        entityManager.clear();
+
+        Map<String, String> campoAtualizado = new LinkedHashMap<>();
+        campoAtualizado.put("email", email);
+        campoAtualizado.put("nome", "Nome Atualizado Via Import");
+        campoAtualizado.put("negocio", "Negócio Novo");
+        campoAtualizado.put("tipoContrato", "MENTORIA_CONTINUA");
+        ImportMentoradoDiretoResultResponse atualizacao =
+                service().importar(csv(cabecalho() + "\n" + linha(campoAtualizado) + "\n"));
+
+        assertThat(atualizacao.erros()).isEmpty();
+        assertThat(atualizacao.importados()).isZero();
+        assertThat(atualizacao.atualizados()).isEqualTo(1);
+        assertThat(atualizacao.criados()).isEmpty();
+
+        entityManager.flush();
+        entityManager.clear();
+
+        var usuario = usuarioRepository.findByEmail(email).orElseThrow();
+        List<Mentorado> todos = mentoradoRepository.findAll().stream()
+                .filter(m -> usuario.equals(m.getUsuario())).toList();
+        assertThat(todos).hasSize(1);
+        Mentorado mentorado = todos.get(0);
+        assertThat(mentorado.getNome()).isEqualTo("Nome Atualizado Via Import");
+        assertThat(mentorado.getNegocio()).isEqualTo("Negócio Novo");
+        assertThat(mentorado.getTipoContrato()).isEqualTo(TipoContrato.MENTORIA_CONTINUA);
     }
 }

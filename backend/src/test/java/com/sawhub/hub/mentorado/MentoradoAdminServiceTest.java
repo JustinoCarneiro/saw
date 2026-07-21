@@ -64,6 +64,27 @@ class MentoradoAdminServiceTest {
         return lead;
     }
 
+    // M28 — buscarPorId novo, pra MentoradoDetalhePage abrir direto por URL sem depender de ter
+    // vindo da lista.
+    @Test
+    void buscarPorIdDevolveOMentorado() {
+        UUID id = UUID.randomUUID();
+        Mentorado mentorado = new Mentorado(null, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
+
+        assertThat(service().buscarPorId(id)).isEqualTo(mentorado);
+    }
+
+    @Test
+    void buscarPorIdInexistenteLancaErro() {
+        UUID id = UUID.randomUUID();
+        when(mentoradoRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().buscarPorId(id))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("não encontrado");
+    }
+
     @Test
     void atualizarMudaNomeNegocioEPlano() {
         UUID id = UUID.randomUUID();
@@ -267,7 +288,7 @@ class MentoradoAdminServiceTest {
                 "11999998888", TipoContrato.MENTORIA_CONTINUA, new BigDecimal("26000.00"),
                 LocalDate.of(2026, 7, 17), "Menu Caseirinho Ltda", "42.521.899/0001-38",
                 "Girlandia Aragão de Sousa; Jaene Oliveira de Araujo", null, null, null, null, null, null, null,
-                null, null);
+                null, null, null);
         var resultado = service().criarDiretoDeImportacao(linha);
 
         assertThat(resultado.mentorado().getNome()).isEqualTo("Maria Souza");
@@ -291,7 +312,7 @@ class MentoradoAdminServiceTest {
         var linha = new ImportarMentoradoDiretoLinha("dono@restaurante.com", "Maria Souza", null, null,
                 TipoContrato.CONSULTORIA, null, null, null, null, null,
                 new BigDecimal("600000"), 6, true, 1, RespostaSimNao.SIM, "margem apertada", "5 a 10 minutos",
-                EstadoImplementacao.EM_CONSTRUCAO, EstadoImplementacao.SIM);
+                EstadoImplementacao.EM_CONSTRUCAO, EstadoImplementacao.SIM, null);
         var resultado = service().criarDiretoDeImportacao(linha);
 
         ArgumentCaptor<MentoradoDiagnosticoInicial> captor = ArgumentCaptor.forClass(MentoradoDiagnosticoInicial.class);
@@ -308,12 +329,95 @@ class MentoradoAdminServiceTest {
 
         var linha = new ImportarMentoradoDiretoLinha("dono@restaurante.com", "Maria Souza", null, null,
                 TipoContrato.CONSULTORIA, null, null, null, null, null, null, null, null, null, null, null, null,
-                null, null);
+                null, null, null);
 
         assertThatThrownBy(() -> service().criarDiretoDeImportacao(linha))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Já existe uma conta");
         verifyNoInteractions(leadRepository, mentoradoRepository);
+    }
+
+    // M28 (change request, 21/07/2026, "import único") — buscarPorEmail/existeContaComEmail
+    // resolvem, por e-mail, se uma linha do CSV de import vai criar ou atualizar.
+
+    @Test
+    void buscarPorEmailDevolveMentoradoQuandoUsuarioEstaVinculadoAUmMentorado() {
+        Usuario usuario = new Usuario("dono@restaurante.com", "hash", com.sawhub.hub.security.Perfil.MENTORADO);
+        Mentorado mentorado = new Mentorado(usuario, "Maria Souza", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        when(usuarioRepository.findByEmail("dono@restaurante.com")).thenReturn(Optional.of(usuario));
+        when(mentoradoRepository.findByUsuario(usuario)).thenReturn(Optional.of(mentorado));
+
+        assertThat(service().buscarPorEmail("dono@restaurante.com")).isEqualTo(mentorado);
+    }
+
+    @Test
+    void buscarPorEmailDevolveNullQuandoUsuarioExisteMasNaoEhMentorado() {
+        Usuario usuario = new Usuario("colaborador@sawhub.com.br", "hash", com.sawhub.hub.security.Perfil.ADMIN);
+        when(usuarioRepository.findByEmail("colaborador@sawhub.com.br")).thenReturn(Optional.of(usuario));
+        when(mentoradoRepository.findByUsuario(usuario)).thenReturn(Optional.empty());
+
+        assertThat(service().buscarPorEmail("colaborador@sawhub.com.br")).isNull();
+    }
+
+    @Test
+    void buscarPorEmailDevolveNullQuandoNaoHaContaComEsseEmail() {
+        when(usuarioRepository.findByEmail("fantasma@x.com")).thenReturn(Optional.empty());
+
+        assertThat(service().buscarPorEmail("fantasma@x.com")).isNull();
+    }
+
+    @Test
+    void existeContaComEmailDistingueDeMentoradoNaoEncontrado() {
+        when(usuarioRepository.findByEmail("colaborador@sawhub.com.br"))
+                .thenReturn(Optional.of(new Usuario("colaborador@sawhub.com.br", "hash", com.sawhub.hub.security.Perfil.ADMIN)));
+        when(usuarioRepository.findByEmail("fantasma@x.com")).thenReturn(Optional.empty());
+
+        assertThat(service().existeContaComEmail("colaborador@sawhub.com.br")).isTrue();
+        assertThat(service().existeContaComEmail("fantasma@x.com")).isFalse();
+    }
+
+    @Test
+    void atualizarDeImportacaoAtualizaPerfilContratoEDiagnosticoSemMexerEmPlanoOuStatus() {
+        UUID id = UUID.randomUUID();
+        Usuario usuario = new Usuario("dono@restaurante.com", "hash", com.sawhub.hub.security.Perfil.MENTORADO);
+        Mentorado mentorado = new Mentorado(usuario, "Nome Antigo", "Negócio Antigo", Plano.PROFISSIONAL,
+                BigDecimal.ZERO, 0, 0);
+        when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
+        when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(diagnosticoInicialRepository.findByMentoradoId(id)).thenReturn(Optional.empty());
+        when(diagnosticoInicialRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var linha = new ImportarMentoradoDiretoLinha("dono@restaurante.com", "Nome Novo", "Negócio Novo",
+                "11999998888", TipoContrato.MENTORIA_CONTINUA, new BigDecimal("26000.00"),
+                LocalDate.of(2026, 7, 17), "Menu Caseirinho Ltda", "42.521.899/0001-38", "Girlandia e Jaene",
+                new BigDecimal("600000"), 6, true, 1, RespostaSimNao.SIM, "margem apertada", "5 a 10 minutos",
+                EstadoImplementacao.EM_CONSTRUCAO, EstadoImplementacao.SIM, id);
+
+        Mentorado atualizado = service().atualizarDeImportacao(id, linha);
+
+        assertThat(atualizado.getNome()).isEqualTo("Nome Novo");
+        assertThat(atualizado.getNegocio()).isEqualTo("Negócio Novo");
+        assertThat(atualizado.getPlano()).isEqualTo(Plano.PROFISSIONAL);
+        assertThat(atualizado.getNomeFantasia()).isEqualTo("Menu Caseirinho Ltda");
+        assertThat(atualizado.getTipoContrato()).isEqualTo(TipoContrato.MENTORIA_CONTINUA);
+        verify(diagnosticoInicialRepository).save(any());
+    }
+
+    @Test
+    void atualizarDeImportacaoSemDadosDeDiagnosticoNaoTocaNoDiagnosticoRepository() {
+        UUID id = UUID.randomUUID();
+        Usuario usuario = new Usuario("dono@restaurante.com", "hash", com.sawhub.hub.security.Perfil.MENTORADO);
+        Mentorado mentorado = new Mentorado(usuario, "Nome Antigo", null, Plano.GRATUITO, BigDecimal.ZERO, 0, 0);
+        when(mentoradoRepository.findById(id)).thenReturn(Optional.of(mentorado));
+        when(mentoradoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var linha = new ImportarMentoradoDiretoLinha("dono@restaurante.com", "Nome Novo", null, null,
+                TipoContrato.CONSULTORIA, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, id);
+
+        service().atualizarDeImportacao(id, linha);
+
+        verifyNoInteractions(diagnosticoInicialRepository);
     }
 
     @Test

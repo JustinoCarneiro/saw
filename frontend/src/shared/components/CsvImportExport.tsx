@@ -9,8 +9,11 @@ interface CsvImportExportProps {
   exportUrl: string;
   exportParams?: Record<string, string | undefined>;
   exportFilename: string;
-  importUrl: string;
-  onImportado: () => void;
+  // M28 ("import único", 21/07/2026) — opcional: quando ausente, só o botão de exportar é
+  // renderizado. Mentorados passou a usar essa tela só pra exportar depois que o import estreito
+  // (bulk-UPDATE de 6 campos) foi removido em favor do import único de MentoradoDiretoCsvService.
+  importUrl?: string;
+  onImportado?: () => void;
   labelPrefix?: string;
 }
 
@@ -44,7 +47,7 @@ export function CsvImportExport({ exportUrl, exportParams, exportFilename, impor
 
   async function importar(e: ChangeEvent<HTMLInputElement>) {
     const arquivo = e.target.files?.[0];
-    if (!arquivo) return;
+    if (!arquivo || !importUrl) return;
     setImportando(true);
     setErro(null);
     setResultado(null);
@@ -54,7 +57,7 @@ export function CsvImportExport({ exportUrl, exportParams, exportFilename, impor
       const res = await apiClient.post<ImportResultResponse>(importUrl, form);
       setResultado(res.data);
       if (res.data.erros.length === 0) {
-        onImportado();
+        onImportado?.();
       }
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 422 && Array.isArray(err.response.data?.erros)) {
@@ -76,23 +79,27 @@ export function CsvImportExport({ exportUrl, exportParams, exportFilename, impor
         <button type="button" className={styles.button} onClick={exportar} disabled={exportando} data-testid="csv-exportar">
           {exportando ? 'Exportando…' : `Exportar ${labelPrefix}`}
         </button>
-        <button
-          type="button"
-          className={styles.button}
-          onClick={() => fileInputRef.current?.click()}
-          disabled={importando}
-          data-testid="csv-importar-botao"
-        >
-          {importando ? 'Importando…' : `Importar ${labelPrefix}`}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          hidden
-          onChange={importar}
-          data-testid="csv-importar-input"
-        />
+        {importUrl && (
+          <>
+            <button
+              type="button"
+              className={styles.button}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importando}
+              data-testid="csv-importar-botao"
+            >
+              {importando ? 'Importando…' : `Importar ${labelPrefix}`}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              hidden
+              onChange={importar}
+              data-testid="csv-importar-input"
+            />
+          </>
+        )}
       </div>
 
       {erro && <div className={styles.erro}>{erro}</div>}

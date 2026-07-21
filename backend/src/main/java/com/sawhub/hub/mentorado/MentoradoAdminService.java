@@ -57,6 +57,13 @@ public class MentoradoAdminService {
         return mentoradoRepository.buscarComFiltro(plano, status, busca);
     }
 
+    // M28 (change request, 21/07/2026) — "página dedicada de mentorado": até aqui a tela só
+    // usava o Mentorado já carregado pela listagem, nunca buscava um por id isoladamente. Precisa
+    // pra abrir a página direto por URL (bookmark/reload), sem depender de ter vindo da lista.
+    public Mentorado buscarPorId(UUID id) {
+        return buscar(id);
+    }
+
     @Transactional
     public Mentorado atualizar(UUID id, AtualizarMentoradoRequest request) {
         Mentorado mentorado = buscar(id);
@@ -206,6 +213,46 @@ public class MentoradoAdminService {
         }
 
         return new MentoradoCriado(mentorado, senhaTemporaria);
+    }
+
+    /** M28 — resolve se já existe Mentorado pra esse e-mail; usado pelo import único (M28 item 1)
+     * pra decidir, por linha do CSV, entre criar ({@link #criarDiretoDeImportacao}) ou atualizar
+     * ({@link #atualizarDeImportacao}). {@code null} quando não há Usuario com esse e-mail OU
+     * quando há Usuario mas ele não é um Mentorado (ex.: conta de Colaborador/Admin). */
+    public Mentorado buscarPorEmail(String email) {
+        return usuarioRepository.findByEmail(email).flatMap(mentoradoRepository::findByUsuario).orElse(null);
+    }
+
+    /** M28 — true mesmo quando o e-mail pertence a uma conta que NÃO é Mentorado (Colaborador/Admin);
+     * usado junto com {@link #buscarPorEmail} pra distinguir "cria" (nenhuma conta) de "e-mail já
+     * usado por outro tipo de conta" (erro) dentro da validação do import único. */
+    public boolean existeContaComEmail(String email) {
+        return usuarioRepository.findByEmail(email).isPresent();
+    }
+
+    /** M28 item 1 — "import único": atualiza um Mentorado já existente a partir de uma linha do
+     * mesmo CSV de {@link #criarDiretoDeImportacao} (19 colunas), resolvida por e-mail. Não mexe
+     * em plano/status/bio/foto — só nos campos que esse CSV carrega (perfil básico + contrato +
+     * diagnóstico), mesmo escopo de {@link #atualizar}/{@link #atualizarDadosContrato} somados. */
+    @Transactional
+    public Mentorado atualizarDeImportacao(UUID mentoradoId, ImportarMentoradoDiretoLinha linha) {
+        Mentorado mentorado = buscar(mentoradoId);
+        mentorado.atualizar(linha.nome(), linha.negocio(), mentorado.getPlano());
+        mentorado.atualizarPerfil(linha.telefone(), mentorado.getBio(), mentorado.getFotoUrl());
+        mentorado.atualizarDadosContrato(linha.nomeFantasia(), linha.cnpj(), linha.socios(), linha.tipoContrato(),
+                linha.valorContrato(), linha.dataFechamentoContrato());
+        Mentorado salvo = mentoradoRepository.save(mentorado);
+
+        if (linha.temDadosDeDiagnostico()) {
+            MentoradoDiagnosticoInicial diagnostico = diagnosticoInicialRepository.findByMentoradoId(mentoradoId)
+                    .orElseGet(() -> new MentoradoDiagnosticoInicial(salvo));
+            diagnostico.atualizar(linha.faturamentoAnual(), linha.quantidadeColaboradores(),
+                    linha.empresaRegularizada(), linha.quantidadeLojas(), linha.cmvDefinido(), linha.cmvDetalhe(),
+                    linha.tempoMedioAtendimento(), linha.culturaConstruida(), linha.processosDesenhados());
+            diagnosticoInicialRepository.save(diagnostico);
+        }
+
+        return salvo;
     }
 
     /** M23 — edição administrativa dos dados de contrato (H11.1 estendida). */

@@ -69,11 +69,16 @@ public class MentoriaController {
         return MentoriaResponse.from(mentoriaService.criar(request));
     }
 
+    // M28 — tipo/mentoradoId novos (ver MentoriaService#listar): a lista central (MentoriasAgendaPage)
+    // passa a pedir tipo=GRUPO por padrão; a página do mentorado (MentoradoDetalhePage) pede
+    // mentoradoId pra ver o histórico individual/consultoria dele, sem tipo (todos os tipos).
     @GetMapping
     public List<MentoriaResponse> listar(@RequestParam(required = false) StatusMentoria status,
+                                          @RequestParam(required = false) TipoMentoria tipo,
+                                          @RequestParam(required = false) UUID mentoradoId,
                                           @RequestParam(required = false) Instant de,
                                           @RequestParam(required = false) Instant ate) {
-        return mentoriaService.listar(status, de, ate).stream().map(MentoriaResponse::from).toList();
+        return mentoriaService.listar(status, tipo, mentoradoId, de, ate).stream().map(MentoriaResponse::from).toList();
     }
 
     @GetMapping("/{id}")

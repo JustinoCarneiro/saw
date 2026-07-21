@@ -27,7 +27,7 @@ test.describe('Login', () => {
 
     // Fundador tem acesso irrestrito (E15) — os 6 itens de navegação devem aparecer na sidebar.
     // Painel Consolidado não é mais um item próprio: virou a 1ª aba dentro de Mentorados.
-    for (const modulo of ['Dashboard', 'Comercial', 'Financeiro', 'Mentorados', 'Time', 'Conteúdos']) {
+    for (const modulo of ['Dashboard', 'Comercial', 'Financeiro', 'Gestão de Performance', 'Time', 'Conteúdos']) {
       await expect(page.getByRole('link', { name: modulo })).toBeVisible();
     }
 
