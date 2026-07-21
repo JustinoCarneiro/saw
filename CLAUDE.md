@@ -37,7 +37,7 @@ O cliente comparou o projeto com ferramentas no-code (ex.: Base44) e perguntou s
 - Vale comunicar isso explicitamente ao cliente antes de avançar para não deixar a dúvida em aberto — inclusive a pendência da criptografia de disco, pra não prometer algo que ainda não existe.
 
 ## Perfil de projeto
-SaaS multi-tenant (1 tenant = 1 mentorado/restaurante) · perfis: **Mentorado** e **Admin (SAW)** · produto recorrente por assinatura (planos).
+SaaS multi-tenant (1 tenant = 1 mentorado/restaurante) · perfis: **Mentorado** e **Admin (SAW)** · venda por produto/contrato de mentoria, não assinatura recorrente por tier (ver "Produtos & Tipo de Contrato" abaixo).
 
 ## Identidade visual
 Fornecida pelo cliente (não é a marca da Onda). Base: mockups do SAW HUB — tema **dark**, vinho/bordô + dourado/champagne. Fonte display condensada + sans para UI. Fonte única da verdade: `./design/tokens.css` + `./design/DESIGN.md` (gerados na Fase 2 a partir dos mockups).
@@ -78,17 +78,17 @@ Cliente pediu explicitamente algo que "feche o projeto na hora". **Confirmado pa
    - **Backlog (pós-MVP, não implementado):** cliente quer futuramente **upload de vídeo** próprio (não só link externo). Hoje `conteudo.url` é só link (ex.: YouTube) — vídeo autohospedado é um problema diferente do áudio de mentoria (E5): arquivos ordens de magnitude maiores, e precisam ser **transmitidos pra vários mentorados assistirem**, ao contrário do áudio (guardado só pra transcrição, nunca servido). Servir isso direto do disco da VPS arrisca lotar disco e derrubar performance do resto do sistema conforme a biblioteca cresce. Opções levantadas, nenhuma decidida: (a) serviço de streaming de vídeo dedicado (Bunny Stream/Cloudflare Stream — transcodifica e faz streaming adaptativo, custo por uso); (b) object storage genérico (Backblaze B2/Cloudflare R2 — mais barato, sem transcodificação, mesma conta poderia servir também o backup off-site do Postgres já pendente); (c) manter no disco da VPS (só viável se volume esperado for pequeno). Decidir e desenhar antes de começar a implementar.
 7. **E7 · Eventos & Inscrições** *(Médio)* — eventos ao vivo/presencial, inscrição, calendário.
 8. **E8 · Loja SAW** *(Grande · risco alto)* — catálogo, carrinho, checkout, gateway de pagamento, pedidos.
-9. **E9 · Perfil & Gamificação** *(Médio)* — perfil, jornada/nível, XP, conquistas, preferências, assinatura/plano.
+9. **E9 · Perfil & Gamificação** *(Médio)* — perfil, jornada/nível, XP, conquistas, preferências, tipo de contrato.
 
 ### Área Admin (SAW)
-10. **E10 · Painel Administrativo & Métricas** *(Médio)* — mentorados ativos, mentorias/eventos realizados, receita, crescimento, distribuição por plano, atividades.
+10. **E10 · Painel Administrativo & Métricas** *(Médio)* — mentorados ativos, mentorias/eventos realizados, receita, crescimento, distribuição por tipo de contrato, atividades.
     - Inclui **painel consolidado de todos os mentorados** (E17): visão simultânea do "em que pé está cada um", não só o dashboard individual do E2.
-11. **E11 · Gestão Admin** *(Grande)* — CRUD de mentorados por plano, criação de mentorias (individual/grupo), curadoria de conteúdos e gestão de eventos.
+11. **E11 · Gestão Admin** *(Grande)* — CRUD de mentorados por tipo de contrato, criação de mentorias (individual/grupo), curadoria de conteúdos e gestão de eventos.
 
 ### Gestão interna da SAW (back-office) — solicitado pelo cliente
 > Área Admin ampliada para a SAW gerir o próprio negócio (não é ERP do restaurante do mentorado).
-13. **E13 · Comercial & Vendas** *(Grande)* — dashboard comercial: leads (solicitações de acesso), funil/pipeline, taxa de conversão, vendas por plano, MRR, vendas da loja, metas e ranking do time comercial.
-14. **E14 · Financeiro & DRE** *(Grande · risco alto)* — lançamento de receitas/despesas por categoria, contas a pagar/receber, fluxo de caixa, **DRE** por período e **dashboard de faturamento** (recorrência por plano, loja, eventos; MRR/churn; margem/lucro).
+13. **E13 · Comercial & Vendas** *(Grande)* — dashboard comercial: leads (solicitações de acesso), funil/pipeline, taxa de conversão, vendas por produto, MRR, vendas da loja, metas e ranking do time comercial.
+14. **E14 · Financeiro & DRE** *(Grande · risco alto)* — lançamento de receitas/despesas por categoria, contas a pagar/receber, fluxo de caixa, **DRE** por período e **dashboard de faturamento** (recorrência por tipo de contrato, loja, eventos; MRR/churn; margem/lucro).
 15. **E15 · Gestão de Time (SAW)** *(Médio · risco alto pelo escopo de acesso)* — cadastro da equipe interna, carteira de clientes por mentor, metas e desempenho por colaborador. **Acesso por área** (RBAC), não é papel genérico:
     - **Comercial** → só o painel Comercial (E13).
     - **Marketing** → só conteúdos/marketing *(tela dedicada ainda não existe no protótipo — validar com o cliente se reaproveita "Conteúdos" ou é nova, ver Suposições em `spec.md`)*.
@@ -108,8 +108,11 @@ Cliente pediu explicitamente algo que "feche o projeto na hora". **Confirmado pa
 - **Lead comercial:** `Solicitação → Em contato → Proposta → Fechado` · desvio: `Perdido`.
 - **Lançamento financeiro:** `Previsto → Realizado` · conta: `A pagar/A receber → Pago/Recebido` (ou `Vencido`).
 
-## Planos
-`Gratuito · Básico · Essencial · Profissional` — controlam acesso a conteúdos, nº de mentorias e recursos. Cobrança recorrente (assinatura).
+## Produtos & Tipo de Contrato
+Decisão do cliente (reunião 17/07/2026): **"não existem planos, mas sim produtos"** — o antigo `Plano` (Gratuito/Básico/Essencial/Profissional, com cobrança recorrente por tier) não reflete o modelo de negócio real e foi **removido por completo do sistema** (schema, backend, frontend — M28, concluído 21/07/2026).
+- **`TipoContrato`** (aditivo em `Mentorado`, nullable) é o que define o contrato de mentoria de um mentorado: **Mentoria Contínua** (12 meses, sessão semanal em grupo + 2 individuais/ano com o Mateus, 3 eventos grátis/ano) · **Mentoria Individual** (12 meses, sessão mensal individual em vez das 2/ano) · **Consultoria** (sem prazo fixo/"esporádica", sessão semanal individual, sem acesso ao conteúdo da mentoria contínua em grupo).
+- **`ProdutoVenda`** (Comercial/E13) é o catálogo mais amplo do que a SAW efetivamente vende — inclui os 3 tipos acima e também `FORMULA_SAW`, `FORMACAO_PROFISSIONAL`, `FICHA_TECNICA_LUCRATIVA`, `INGRESSO_EVENTO`, `PRODUTO_DIGITAL`. Só os 3 primeiros propagam pra `TipoContrato` no Mentorado (os demais não são contrato de mentoria).
+- Sem cobrança recorrente por tier — venda é por produto/contrato fechado (ver máquina de estado "Lead comercial" abaixo).
 
 ## Convenções
 - API REST `/api/v1`, JSON, erros padronizados.
