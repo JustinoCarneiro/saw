@@ -319,7 +319,7 @@ function ResumoCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: Ata
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
       <div className={styles.sectionTitle}>
-        <Tooltip text="Rascunho gerado por IA a partir da transcrição — revise e edite antes de publicar a ata.">Resumo</Tooltip>
+        <Tooltip text="Visão geral do que foi conversado na mentoria — o assunto, não necessariamente o que ficou fechado. Vem como rascunho editável.">Resumo</Tooltip>
       </div>
       <textarea
         className={styles.textarea}
@@ -367,7 +367,7 @@ function DecisoesCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: A
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
       <div className={styles.sectionTitle}>
-        <Tooltip text="Rascunho gerado por IA a partir da transcrição — revise e edite antes de publicar a ata.">Decisões</Tooltip>
+        <Tooltip text="O que ficou combinado/definido na mentoria — diferente do Resumo, foca só nos pontos fechados. Também um rascunho editável.">Decisões</Tooltip>
       </div>
       <textarea
         className={styles.textarea}
