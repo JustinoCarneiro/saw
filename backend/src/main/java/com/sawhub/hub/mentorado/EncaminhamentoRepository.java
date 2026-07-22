@@ -32,6 +32,13 @@ public interface EncaminhamentoRepository extends JpaRepository<Encaminhamento, 
                                              @Param("status") StatusTarefa status,
                                              @Param("busca") String busca);
 
+    // Fase 5 (H4.6) — edição/status pelo Admin (EncaminhamentoAdminService): findById() puro deixa
+    // `mentorado` como proxy LAZY não inicializado; EncaminhamentoAdminResponse (fora da transação,
+    // open-in-view=false) lê nome/id do mentorado e quebraria com LazyInitializationException —
+    // mesma classe de bug já corrigida em buscarPorIdComMeta (self-service) acima.
+    @Query("SELECT e FROM Encaminhamento e LEFT JOIN FETCH e.mentorado WHERE e.id = :id")
+    Optional<Encaminhamento> buscarPorIdComMentorado(@Param("id") UUID id);
+
     // Fase 5 — mesmo achado do MetaRepository.listarTodasComMentorado(): findAll() (usado por
     // EncaminhamentoCsvService.exportar() e pela listagem admin nova) deixava `mentorado`/
     // `mentorado.usuario` LAZY não inicializado fora de transação — GET /admin/encaminhamentos/

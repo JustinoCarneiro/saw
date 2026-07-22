@@ -79,3 +79,56 @@ test.describe('M10 — E4 Tarefas & Agenda', () => {
     expect(tarefas).toHaveLength(10);
   });
 });
+
+// H4.6 (Fase 5, 22/07/2026, pedido do Marcos) — a tela Admin de Tarefas só tinha listagem + CSV,
+// sem forma de editar título/prazo/prioridade nem avançar status de um encaminhamento existente
+// (inclusive os materializados na publicação de ata, que nunca têm prazo de origem).
+test.describe('H4.6 — Admin edita e avança status de um encaminhamento existente', () => {
+  // Um só login pro describe inteiro (não um por teste) — o rate-limit de tentativas de login
+  // (achado ao vivo nesta sessão) dispara com poucos logins seguidos no mesmo arquivo de spec.
+  test('Gestão de Performance edita título/prazo/prioridade, avança status, e edição sem prazo não força uma data', async ({ page }) => {
+    await loginAs(page, 'lucas@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin/);
+
+    await page.goto('/admin/mentorados/tarefas');
+    const linha = page.locator('[data-testid^="tarefa-admin-row-"]', { hasText: 'Rafael Gomes' }).first();
+    await expect(linha).toBeVisible();
+    const tarefaId = (await linha.getAttribute('data-testid'))!.replace('tarefa-admin-row-', '');
+
+    const novoTitulo = `Encaminhamento editado ${Date.now()}`;
+    await linha.getByRole('button', { name: 'Editar' }).click();
+
+    const linhaEditando = page.getByTestId(`tarefa-admin-editando-${tarefaId}`);
+    await page.getByTestId(`tarefa-admin-titulo-${tarefaId}`).fill(novoTitulo);
+    await linhaEditando.locator('input[type="date"]').fill('2026-09-15');
+    await linhaEditando.locator('select').selectOption('ALTA');
+    await linhaEditando.getByRole('button', { name: 'Salvar' }).click();
+
+    const linhaAtualizada = page.getByTestId(`tarefa-admin-row-${tarefaId}`);
+    await expect(linhaAtualizada.getByText(novoTitulo)).toBeVisible();
+    await expect(linhaAtualizada.getByText('15/09/2026')).toBeVisible();
+    await expect(linhaAtualizada.getByText('Alta')).toBeVisible();
+
+    // Concluir -> some o botão Editar (mesmo padrão do lado mentorado).
+    await linhaAtualizada.getByRole('button', { name: 'Concluir' }).click();
+    await expect(linhaAtualizada.getByText('Concluída')).toBeVisible();
+    await expect(linhaAtualizada.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+
+    // Reabrir -> volta pra Pendente, Editar reaparece.
+    await linhaAtualizada.getByRole('button', { name: 'Reabrir' }).click();
+    await expect(linhaAtualizada.getByText('Pendente')).toBeVisible();
+    await expect(linhaAtualizada.getByRole('button', { name: 'Editar' })).toBeVisible();
+
+    // Marina Souza (M06/DemoDataSeeder): encaminhamentos vêm de ata publicada, sem prazo de
+    // origem — editar (mesmo só o título) não deve forçar a inventar uma data.
+    const linhaSemPrazo = page.locator('[data-testid^="tarefa-admin-row-"]', { hasText: 'Marina Souza' })
+      .filter({ hasText: 'Sem prazo' }).first();
+    await expect(linhaSemPrazo).toBeVisible();
+    const idSemPrazo = (await linhaSemPrazo.getAttribute('data-testid'))!.replace('tarefa-admin-row-', '');
+
+    await linhaSemPrazo.getByRole('button', { name: 'Editar' }).click();
+    await page.getByTestId(`tarefa-admin-editando-${idSemPrazo}`).getByRole('button', { name: 'Salvar' }).click();
+
+    await expect(page.getByTestId(`tarefa-admin-row-${idSemPrazo}`).getByText('Sem prazo')).toBeVisible();
+  });
+});
