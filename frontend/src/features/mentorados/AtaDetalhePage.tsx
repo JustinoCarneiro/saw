@@ -1,10 +1,12 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../../shared/lib/apiClient';
+import { AvisoAreaMentoradoPausada } from '../../shared/components/AvisoAreaMentoradoPausada';
 import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { AREA_MENTORADO_PAUSADA } from '../../shared/lib/featureFlags';
 import type { Ata, Conteudo, Mentoria, StatusProcessamentoAta, SugestaoEncaminhamento } from '../../shared/lib/types';
 import styles from './AtaDetalhePage.module.css';
 
@@ -425,6 +427,7 @@ function MateriaisCard({ mentoriaId, mentoria, podeEditar, onSalvo }: {
     <Card style={{ padding: 20, marginBottom: 16 }} testId="materiais-card">
       <div className={styles.sectionTitle}>Materiais recomendados</div>
       <p className={styles.muted}>Conteúdos que o mentorado vai ver vinculados a esta mentoria.</p>
+      <AvisoAreaMentoradoPausada />
       {podeEditar && (
         <input
           className={styles.textInput}
@@ -569,7 +572,12 @@ function PublicarButton({ mentoriaId, desabilitado, onPublicado }: {
       {confirmando && (
         <ConfirmDialog
           title="Publicar ata?"
-          message="O mentorado vai poder ver o resumo da mentoria e os encaminhamentos aceitos viram tarefas de verdade. Revise as sugestões antes de confirmar — depois de publicada, a ata não pode voltar a rascunho."
+          message={
+            (AREA_MENTORADO_PAUSADA
+              ? 'A área do mentorado está pausada — ele não vai ver isso agora, mas '
+              : 'O mentorado vai poder ver o resumo da mentoria e ') +
+            'os encaminhamentos aceitos viram tarefas de verdade. Revise as sugestões antes de confirmar — depois de publicada, a ata não pode voltar a rascunho.'
+          }
           confirmLabel="Sim, publicar"
           cancelLabel="Revisar de novo"
           danger={false}

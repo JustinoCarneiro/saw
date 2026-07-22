@@ -6,6 +6,7 @@ import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { AREA_MENTORADO_PAUSADA } from '../../shared/lib/featureFlags';
 import type { Evento, StatusEvento, TipoEvento } from '../../shared/lib/types';
 import styles from './EventosPage.module.css';
 
@@ -117,7 +118,11 @@ export function EventosPage() {
       {cancelando && (
         <ConfirmDialog
           title="Cancelar evento?"
-          message={`"${cancelando.titulo}" (${formatarDataHora(cancelando.dataHora)}) será marcado como cancelado. Mentorados já inscritos verão o evento como cancelado. Essa ação não pode ser desfeita.`}
+          message={`"${cancelando.titulo}" (${formatarDataHora(cancelando.dataHora)}) será marcado como cancelado. ${
+            AREA_MENTORADO_PAUSADA
+              ? 'A área do mentorado está pausada — mentorados já inscritos não vão ver essa mudança agora.'
+              : 'Mentorados já inscritos verão o evento como cancelado.'
+          } Essa ação não pode ser desfeita.`}
           confirmLabel="Cancelar evento"
           cancelLabel="Voltar"
           submitting={cancelSubmitting}

@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/lib/apiClient';
+import { AvisoAreaMentoradoPausada } from '../../shared/components/AvisoAreaMentoradoPausada';
 import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
@@ -107,6 +108,7 @@ export function MentoriasAgendaPage() {
 
   return (
     <div>
+      <AvisoAreaMentoradoPausada />
       <div className={styles.toolbar}>
         <select className={styles.select} value={status} onChange={(e) => setStatus(e.target.value as StatusMentoria | '')}>
           <option value="">Todos os status</option>
