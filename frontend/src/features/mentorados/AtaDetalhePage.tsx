@@ -5,6 +5,7 @@ import { AvisoAreaMentoradoPausada } from '../../shared/components/AvisoAreaMent
 import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Pill } from '../../shared/components/Pill';
+import { Tooltip } from '../../shared/components/Tooltip';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import { AREA_MENTORADO_PAUSADA } from '../../shared/lib/featureFlags';
 import type { Ata, Conteudo, Mentoria, StatusProcessamentoAta, SugestaoEncaminhamento } from '../../shared/lib/types';
@@ -158,7 +159,9 @@ function TranscricaoCard({ mentoriaId, transcricaoAtual, podeEditar, desabilitad
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}>Transcrição</div>
+      <div className={styles.sectionTitle}>
+        <Tooltip text="Texto transcrito do áudio da mentoria (upload ou colado manualmente) — é a partir dele que a IA gera o rascunho de Resumo e Decisões abaixo.">Transcrição</Tooltip>
+      </div>
       {transcricaoAtual && <div className={styles.transcricao}>{transcricaoAtual}</div>}
       {podeEditar && (
         <>
@@ -269,7 +272,9 @@ function PresencaCard({ mentoriaId, mentoria, onSalvo }: { mentoriaId: string; m
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }} testId="presenca-card">
-      <div className={styles.sectionTitle}>Presença</div>
+      <div className={styles.sectionTitle}>
+        <Tooltip text="Só aparece em mentoria coletiva — marque quem participou. Alimenta a métrica de Frequência em mentoria do mentorado, não entra no cálculo do ranking do Painel Consolidado.">Presença</Tooltip>
+      </div>
       <p className={styles.muted}>Marque quem participou desta mentoria em grupo.</p>
       <div className={styles.checkboxList}>
         {mentoria.mentorados.map((mt) => (
@@ -313,7 +318,9 @@ function ResumoCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: Ata
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}>Resumo</div>
+      <div className={styles.sectionTitle}>
+        <Tooltip text="Rascunho gerado por IA a partir da transcrição — revise e edite antes de publicar a ata.">Resumo</Tooltip>
+      </div>
       <textarea
         className={styles.textarea}
         rows={5}
@@ -359,7 +366,9 @@ function DecisoesCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: A
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}>Decisões</div>
+      <div className={styles.sectionTitle}>
+        <Tooltip text="Rascunho gerado por IA a partir da transcrição — revise e edite antes de publicar a ata.">Decisões</Tooltip>
+      </div>
       <textarea
         className={styles.textarea}
         rows={4}
@@ -431,7 +440,9 @@ function MateriaisCard({ mentoriaId, mentoria, podeEditar, onSalvo }: {
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }} testId="materiais-card">
-      <div className={styles.sectionTitle}>Materiais recomendados</div>
+      <div className={styles.sectionTitle}>
+        <Tooltip text="Conteúdos da biblioteca (E6) indicados como leitura complementar dessa mentoria específica.">Materiais recomendados</Tooltip>
+      </div>
       <p className={styles.muted}>Conteúdos que o mentorado vai ver vinculados a esta mentoria.</p>
       <AvisoAreaMentoradoPausada />
       {podeEditar && (
@@ -487,7 +498,9 @@ function SugestoesCard({ mentoriaId, sugestoes, podeEditar, onSalvo }: {
 }) {
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}>Encaminhamentos</div>
+      <div className={styles.sectionTitle}>
+        <Tooltip text="Ações combinadas nesta mentoria, cadastradas manualmente. Cada uma tem peso 1 ou 2, usado no cálculo de progresso do mentorado e no ranking do Painel Consolidado.">Encaminhamentos</Tooltip>
+      </div>
       <p className={styles.muted}>
         O que o mentorado leva pra fazer até a próxima mentoria — vira tarefa de verdade (e passa a
         contar no ranking) na publicação da ata.
