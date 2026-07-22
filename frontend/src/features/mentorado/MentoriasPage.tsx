@@ -3,6 +3,7 @@ import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill } from '../../shared/components/Pill';
+import { Tooltip } from '../../shared/components/Tooltip';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { MentoriaMentorado } from '../../shared/lib/types';
 import styles from './MentoriasPage.module.css';
@@ -99,7 +100,9 @@ export function MentoriasPage() {
       {mentorias !== null && (
         <>
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Agenda</h2>
+            <h2 className={styles.sectionTitle}>
+              <Tooltip text="Suas mentorias com status Agendada ou Confirmada, ainda não realizadas.">Agenda</Tooltip>
+            </h2>
             {agenda.length === 0 && <div className={styles.emptyState}>Nenhuma mentoria agendada.</div>}
             <div className={styles.agendaGrid}>
               {agenda.map((m) => {
@@ -148,7 +151,9 @@ export function MentoriasPage() {
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Histórico</h2>
+            <h2 className={styles.sectionTitle}>
+              <Tooltip text="Mentorias já Realizadas — abra pra ver a ata publicada de cada uma.">Histórico</Tooltip>
+            </h2>
             {historico.length === 0 && <div className={styles.emptyState}>Nenhuma mentoria realizada ainda.</div>}
             <div className={styles.historicoList}>
               {historico.map((m) => {

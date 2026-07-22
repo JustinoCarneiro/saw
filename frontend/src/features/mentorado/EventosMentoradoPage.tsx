@@ -4,6 +4,7 @@ import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill } from '../../shared/components/Pill';
+import { Tooltip } from '../../shared/components/Tooltip';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { EventoMentorado, TipoEvento } from '../../shared/lib/types';
 import styles from './EventosMentoradoPage.module.css';
@@ -204,12 +205,18 @@ export function EventosMentoradoPage() {
         <>
           {meusEventos.length > 0 && (
             <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Próximos eventos (você está inscrito)</h2>
+              <h2 className={styles.sectionTitle}>
+                <Tooltip text="Eventos em que você já confirmou inscrição, do mais próximo ao mais distante.">Próximos eventos (você está inscrito)</Tooltip>
+              </h2>
               <div className={styles.grid}>{meusEventos.map(renderCard)}</div>
             </section>
           )}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>{diaSelecionado ? 'Eventos neste dia' : 'Eventos disponíveis'}</h2>
+            <h2 className={styles.sectionTitle}>
+              <Tooltip text="Eventos com vaga aberta em que você ainda não se inscreveu.">
+                {diaSelecionado ? 'Eventos neste dia' : 'Eventos disponíveis'}
+              </Tooltip>
+            </h2>
             {disponiveis.length === 0 && (
               <div className={styles.emptyState}>
                 {/* Dia selecionado cujo único evento já está listado em "Próximos eventos" acima —

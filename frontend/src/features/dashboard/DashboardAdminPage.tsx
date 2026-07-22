@@ -6,6 +6,7 @@ import { DonutChart } from '../../shared/components/DonutChart';
 import { ICON_PROPS } from '../../shared/components/iconProps';
 import { LineChart } from '../../shared/components/LineChart';
 import { areaLabel } from '../../shared/components/Pill';
+import { Tooltip } from '../../shared/components/Tooltip';
 import { Topbar } from '../../shared/components/Topbar';
 import { formatBRL, formatPct } from '../../shared/lib/format';
 import type { DashboardAdminResponse, TipoContrato } from '../../shared/lib/types';
@@ -174,28 +175,36 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
     <div className={styles.container}>
       <div className={styles.kpis}>
         <Card style={{ padding: 18 }} testId="kpi-mentorados-ativos">
-          <div className={styles.kpiLabel}>Mentorados ativos</div>
+          <div className={styles.kpiLabel}>
+            <Tooltip text="Quantos mentorados têm status ATIVO agora, independente do tipo de contrato.">Mentorados ativos</Tooltip>
+          </div>
           <div className={styles.kpiValue}>{dashboard.mentoradosAtivos}</div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoMentoradosAtivosPct) }}>
             {formatPct(dashboard.variacaoMentoradosAtivosPct)} este mês
           </div>
         </Card>
         <Card style={{ padding: 18 }} testId="kpi-mentorias-realizadas">
-          <div className={styles.kpiLabel}>Mentorias realizadas</div>
+          <div className={styles.kpiLabel}>
+            <Tooltip text="Mentorias com status Realizada no mês corrente.">Mentorias realizadas</Tooltip>
+          </div>
           <div className={styles.kpiValue}>{dashboard.mentoriasRealizadas}</div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoMentoriasRealizadasPct) }}>
             {formatPct(dashboard.variacaoMentoriasRealizadasPct)} este mês
           </div>
         </Card>
         <Card style={{ padding: 18 }} testId="kpi-eventos-realizados">
-          <div className={styles.kpiLabel}>Eventos realizados</div>
+          <div className={styles.kpiLabel}>
+            <Tooltip text="Eventos com status Realizado no mês corrente.">Eventos realizados</Tooltip>
+          </div>
           <div className={styles.kpiValue}>{dashboard.eventosRealizados}</div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoEventosRealizadosPct) }}>
             {formatPct(dashboard.variacaoEventosRealizadosPct)} este mês
           </div>
         </Card>
         <Card style={{ padding: 18 }} testId="kpi-receita-mes">
-          <div className={styles.kpiLabel}>Receita este mês</div>
+          <div className={styles.kpiLabel}>
+            <Tooltip text="Receita lançada como Realizada no mês corrente, somando Loja, eventos e mentoria.">Receita este mês</Tooltip>
+          </div>
           <div className={styles.kpiValue}>{formatBRL(dashboard.receitaMes)}</div>
           <div className={styles.kpiHint} style={{ color: variacaoCor(dashboard.variacaoReceitaMesPct) }}>
             {formatPct(dashboard.variacaoReceitaMesPct)} este mês
@@ -206,7 +215,9 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
       <div className={styles.row}>
         <Card style={{ padding: '20px 22px' }} testId="grafico-crescimento-mentorados">
           <div className={styles.chartHeader}>
-            <div className={styles.sectionTitle}>Crescimento de mentorados</div>
+            <div className={styles.sectionTitle}>
+              <Tooltip text="Total de mentorados ativos ao final de cada mês, últimos 6 meses.">Crescimento de mentorados</Tooltip>
+            </div>
             <span className={styles.periodoLabel}>Últimos 6 meses</span>
           </div>
           <LineChart
@@ -215,7 +226,9 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         </Card>
 
         <Card style={{ padding: '20px 22px' }} testId="grafico-distribuicao-tipo-contrato">
-          <div className={styles.sectionTitle}>Distribuição por Tipo de Contrato</div>
+          <div className={styles.sectionTitle}>
+            <Tooltip text="% de mentorados ativos por Tipo de Contrato (Mentoria Contínua/Individual/Consultoria) — não conta vendas de outros produtos do catálogo comercial.">Distribuição por Tipo de Contrato</Tooltip>
+          </div>
           <div className={styles.donutRow}>
             <DonutChart
               tamanho={176}
@@ -245,7 +258,9 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
 
       <div className={styles.row}>
         <Card style={{ padding: '20px 22px' }} testId="atividades-recentes">
-          <div className={styles.sectionTitle}>Atividades recentes</div>
+          <div className={styles.sectionTitle}>
+            <Tooltip text="Últimos eventos relevantes do sistema (cadastros, mentorias/eventos realizados ou cancelados, pedidos, leads) em ordem cronológica.">Atividades recentes</Tooltip>
+          </div>
           {dashboard.atividadesRecentes.length === 0 && <div className={styles.emptyState}>Nenhuma atividade recente.</div>}
           <div className={styles.listaAtividades}>
             {dashboard.atividadesRecentes.map((a, i) => {
@@ -264,7 +279,9 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         </Card>
 
         <Card style={{ padding: '20px 22px' }} testId="mentorias-hoje">
-          <div className={styles.sectionTitle}>Mentorias agendadas para hoje</div>
+          <div className={styles.sectionTitle}>
+            <Tooltip text="Mentorias com status Agendada ou Confirmada previstas para a data de hoje.">Mentorias agendadas para hoje</Tooltip>
+          </div>
           {dashboard.mentoriasHoje.length === 0 && <div className={styles.emptyState}>Nenhuma mentoria hoje.</div>}
           <div className={styles.listaAtividades}>
             {dashboard.mentoriasHoje.map((m, i) => (

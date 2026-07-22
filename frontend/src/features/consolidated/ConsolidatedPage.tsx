@@ -6,6 +6,7 @@ import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { DonutChart } from '../../shared/components/DonutChart';
 import { ICON_PROPS } from '../../shared/components/iconProps';
 import { Pill, StatusPill } from '../../shared/components/Pill';
+import { Tooltip } from '../../shared/components/Tooltip';
 import type {
   ConsolidatedSummary,
   MentoradoConsolidado,
@@ -139,7 +140,9 @@ export function ConsolidatedPage() {
           <Card style={{ padding: '16px 18px' }}>
             <div className={styles.kpiHeader}>
               <span className={styles.kpiBadge} style={{ background: 'var(--success-bg)' }}>{KPI_ICON.emDia}</span>
-              <span className={styles.kpiLabel}>Em dia</span>
+              <span className={styles.kpiLabel}>
+                <Tooltip text="Mentorados com progresso de encaminhamentos dentro do esperado — sem atraso nem sinal de atenção.">Em dia</Tooltip>
+              </span>
             </div>
             <div className={styles.kpiValue} style={{ color: 'var(--success)' }}>
               {summary.emDia}
@@ -149,7 +152,9 @@ export function ConsolidatedPage() {
           <Card style={{ padding: '16px 18px' }}>
             <div className={styles.kpiHeader}>
               <span className={styles.kpiBadge} style={{ background: 'var(--warning-bg)' }}>{KPI_ICON.atencao}</span>
-              <span className={styles.kpiLabel}>Em atenção</span>
+              <span className={styles.kpiLabel}>
+                <Tooltip text="Mentorados com progresso abaixo do ideal, mas ainda sem atraso — vale um acompanhamento mais de perto.">Em atenção</Tooltip>
+              </span>
             </div>
             <div className={styles.kpiValue} style={{ color: 'var(--warning)' }}>
               {summary.atencao}
@@ -159,7 +164,9 @@ export function ConsolidatedPage() {
           <Card style={{ padding: '16px 18px' }}>
             <div className={styles.kpiHeader}>
               <span className={styles.kpiBadge} style={{ background: 'var(--danger-bg)' }}>{KPI_ICON.atrasado}</span>
-              <span className={styles.kpiLabel}>Atrasados</span>
+              <span className={styles.kpiLabel}>
+                <Tooltip text="Mentorados com prazo de encaminhamento vencido sem conclusão.">Atrasados</Tooltip>
+              </span>
             </div>
             <div className={styles.kpiValue} style={{ color: 'var(--danger)' }}>
               {summary.atrasado}
@@ -169,7 +176,9 @@ export function ConsolidatedPage() {
           <Card style={{ padding: '16px 18px' }}>
             <div className={styles.kpiHeader}>
               <span className={styles.kpiBadge} style={{ background: 'var(--info-bg)' }}>{KPI_ICON.progresso}</span>
-              <span className={styles.kpiLabel}>Progresso médio</span>
+              <span className={styles.kpiLabel}>
+                <Tooltip text="Média do % de encaminhamentos concluídos por mentorado, ponderado pelo peso de cada um.">Progresso médio</Tooltip>
+              </span>
             </div>
             <div className={styles.kpiValue} style={{ color: 'var(--info)' }}>
               {summary.progressoMedioPct}%
@@ -260,7 +269,9 @@ export function ConsolidatedPage() {
         <div className={styles.rightCol}>
           {summary && (
             <Card style={{ padding: '20px 22px' }} testId="grafico-distribuicao-status">
-              <div className={styles.sectionTitle}>Distribuição por status</div>
+              <div className={styles.sectionTitle}>
+                <Tooltip text="Quantos mentorados estão em cada status (Em dia/Em atenção/Atrasado), calculado a partir do progresso de encaminhamentos.">Distribuição por status</Tooltip>
+              </div>
               <div className={styles.donutRow}>
                 <DonutChart
                   titulo="Distribuição por status"
@@ -281,7 +292,9 @@ export function ConsolidatedPage() {
           )}
 
           <Card style={{ padding: '20px 22px', height: 'fit-content' }}>
-            <div className={styles.rankingTitle}>Ranking · Crescimento de Faturamento</div>
+            <div className={styles.rankingTitle}>
+              <Tooltip text="Top 3 mentorados por % de crescimento de faturamento — valor informado no cadastro, sem tela de atualização própria hoje.">Ranking · Crescimento de Faturamento</Tooltip>
+            </div>
             <div className={styles.rankingSubtitle}>Comparado ao período anterior</div>
             <div className={styles.rankingList}>
               {ranking?.map((r) => (

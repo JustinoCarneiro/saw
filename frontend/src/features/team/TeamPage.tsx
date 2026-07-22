@@ -8,6 +8,7 @@ import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { ICON_PROPS } from '../../shared/components/iconProps';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
 import { AreaPill, areaLabel, areaDotColor } from '../../shared/components/Pill';
+import { Tooltip } from '../../shared/components/Tooltip';
 import { Topbar } from '../../shared/components/Topbar';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { Area, Colaborador, DesempenhoColaborador, Modulo, PermissionMatrixRow } from '../../shared/lib/types';
@@ -132,7 +133,9 @@ export function TeamPage() {
               <AreaPill area={user.area ?? ''} />
             </div>
 
-            <div className={styles.sectionTitle}>Permissões de acesso</div>
+            <div className={styles.sectionTitle}>
+              <Tooltip text="Módulos que sua área pode acessar (RBAC) — Fundador acessa tudo, as demais áreas só o que está marcado abaixo.">Permissões de acesso</Tooltip>
+            </div>
             <div className={styles.permList}>
               {MATRIX_MODULOS.map((m) => {
                 const has = user.modulosPermitidos.includes(m);

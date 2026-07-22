@@ -28,6 +28,11 @@ export function Tooltip({ text, children }: { text: string; children: ReactNode 
       onBlur={fechar}
     >
       {children}
+      <svg className={styles.icone} viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <line x1="12" y1="11" x2="12" y2="16.5" />
+        <line x1="12" y1="7.3" x2="12" y2="7.31" />
+      </svg>
       {visivel && (
         <span className={styles.bubble} role="tooltip">
           {text}

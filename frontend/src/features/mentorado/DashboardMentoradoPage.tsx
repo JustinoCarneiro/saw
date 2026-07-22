@@ -4,6 +4,7 @@ import { Card } from '../../shared/components/Card';
 import { DonutChart } from '../../shared/components/DonutChart';
 import { Pill } from '../../shared/components/Pill';
 import { ProgressBar } from '../../shared/components/ProgressBar';
+import { Tooltip } from '../../shared/components/Tooltip';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import { CATEGORIA_COR, CATEGORIA_ICONE } from '../../shared/lib/avisoDisplay';
 import { formatarQuando } from '../../shared/lib/format';
@@ -45,11 +46,15 @@ export function DashboardMentoradoPage() {
 
       <div className={styles.kpis}>
         <Card style={{ padding: 18 }} testId="kpi-tarefas-abertas">
-          <div className={styles.kpiLabel}>Tarefas abertas</div>
+          <div className={styles.kpiLabel}>
+            <Tooltip text="Suas tarefas com status Pendente ou Em andamento agora.">Tarefas abertas</Tooltip>
+          </div>
           <div className={styles.kpiValue}>{dashboard.tarefasAbertas}</div>
         </Card>
         <Card style={{ padding: 18 }}>
-          <div className={styles.kpiLabel}>Meta semanal</div>
+          <div className={styles.kpiLabel}>
+            <Tooltip text="Progresso da sua meta ativa com prazo mais próximo.">Meta semanal</Tooltip>
+          </div>
           {dashboard.metaSemanalPct === null ? (
             <div className={styles.kpiHint}>Ainda não disponível</div>
           ) : (
@@ -69,13 +74,17 @@ export function DashboardMentoradoPage() {
             ]}
             centroConteudo={<span className={styles.evolucaoRingLabel}>{dashboard.evolucaoGeralPct}%</span>}
           />
-          <div className={styles.kpiLabel}>Evolução geral</div>
+          <div className={styles.kpiLabel}>
+            <Tooltip text="Combina o progresso das suas metas e tarefas numa única métrica geral.">Evolução geral</Tooltip>
+          </div>
         </Card>
       </div>
 
       <div className={styles.grid}>
         <Card style={{ padding: 20 }}>
-          <div className={styles.sectionTitle}>Próxima reunião</div>
+          <div className={styles.sectionTitle}>
+            <Tooltip text="Sua próxima mentoria Agendada ou Confirmada, individual ou em grupo.">Próxima reunião</Tooltip>
+          </div>
           {dashboard.proximaReuniao ? (
             <div className={styles.proximaReuniao}>
               <Pill bg="var(--info-bg)" color="var(--info)">{TIPO_LABEL[dashboard.proximaReuniao.tipo]}</Pill>
@@ -93,7 +102,9 @@ export function DashboardMentoradoPage() {
         </Card>
 
         <Card style={{ padding: 20 }}>
-          <div className={styles.sectionTitle}>Dica do Brayan</div>
+          <div className={styles.sectionTitle}>
+            <Tooltip text="Conteúdo em destaque da biblioteca de materiais, selecionado pela SAW.">Dica do Brayan</Tooltip>
+          </div>
           {dashboard.dicaDestaque ? (
             <a className={styles.dicaCard} href={dashboard.dicaDestaque.url} target="_blank" rel="noreferrer">
               {dashboard.dicaDestaque.titulo}
@@ -105,7 +116,9 @@ export function DashboardMentoradoPage() {
       </div>
 
       <Card style={{ padding: 20, marginTop: 16 }}>
-        <div className={styles.sectionTitle}>Compromissos</div>
+        <div className={styles.sectionTitle}>
+          <Tooltip text="Suas próximas mentorias agendadas, em ordem cronológica.">Compromissos</Tooltip>
+        </div>
         {dashboard.compromissos.length === 0 ? (
           <div className={styles.kpiHint}>Nenhum compromisso futuro.</div>
         ) : (
@@ -121,7 +134,9 @@ export function DashboardMentoradoPage() {
       </Card>
 
       <Card style={{ padding: 20, marginTop: 16 }} testId="avisos-importantes">
-        <div className={styles.sectionTitle}>Avisos importantes</div>
+        <div className={styles.sectionTitle}>
+          <Tooltip text="Comunicados publicados pela SAW pra todos os mentorados ativos.">Avisos importantes</Tooltip>
+        </div>
         {dashboard.avisos.length === 0 ? (
           <div className={styles.kpiHint}>Nenhum aviso no momento.</div>
         ) : (

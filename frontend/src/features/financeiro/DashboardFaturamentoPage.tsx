@@ -4,6 +4,7 @@ import { Card } from '../../shared/components/Card';
 import type { DashboardFaturamentoResponse, OrigemReceita } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
+import { Tooltip } from '../../shared/components/Tooltip';
 import styles from './DashboardFaturamentoPage.module.css';
 
 const ORIGEM_LABEL: Record<OrigemReceita, string> = {
@@ -49,15 +50,21 @@ export function DashboardFaturamentoPage() {
         <>
           <div className={styles.kpis}>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Faturamento do mês</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="Soma de todos os lançamentos de receita Realizados no mês/ano selecionado.">Faturamento do mês</Tooltip>
+              </div>
               <div className={styles.kpiValue}>{formatBRL(dashboard.faturamentoMensal)}</div>
             </Card>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Receita recorrente (MRR)</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="Receita mensal recorrente — contratos de mentoria em andamento, sem contar receitas pontuais (Loja, eventos).">Receita recorrente (MRR)</Tooltip>
+              </div>
               <div className={styles.kpiValue}>{formatBRL(dashboard.mrr)}</div>
             </Card>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Churn de receita</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="% de queda do MRR em relação ao mês anterior.">Churn de receita</Tooltip>
+              </div>
               <div className={styles.kpiValue} style={{ color: dashboard.churnPct > 0 ? 'var(--danger)' : 'var(--success)' }}>
                 {dashboard.churnPct.toFixed(1)}%
               </div>
@@ -66,7 +73,9 @@ export function DashboardFaturamentoPage() {
           </div>
 
           <Card style={{ padding: '20px 22px' }}>
-            <div className={styles.sectionTitle}>Composição da receita</div>
+            <div className={styles.sectionTitle}>
+              <Tooltip text="Como a receita realizada do período se divide por origem (assinaturas, Loja, eventos, outras).">Composição da receita</Tooltip>
+            </div>
             <div className={styles.composicaoList}>
               {dashboard.composicao.length === 0 && (
                 <div className={styles.empty}>Sem receitas realizadas neste período.</div>

@@ -3,6 +3,7 @@ import { apiClient } from '../../shared/lib/apiClient';
 import { Avatar } from '../../shared/components/Avatar';
 import { Card } from '../../shared/components/Card';
 import { ProgressBar } from '../../shared/components/ProgressBar';
+import { Tooltip } from '../../shared/components/Tooltip';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import { formatarTelefone } from '../../shared/lib/format';
 import type { Jornada, PerfilMentorado } from '../../shared/lib/types';
@@ -85,7 +86,9 @@ export function PerfilPage() {
           <Card style={{ padding: 24, marginTop: 20 }} testId="jornada-cartao">
             <div className={styles.jornadaHeader}>
               <div>
-                <div className={styles.jornadaTitulo}>Minha jornada SAW</div>
+                <div className={styles.jornadaTitulo}>
+                  <Tooltip text="Seu nível e XP evoluem conforme você usa a plataforma: acessa materiais, participa de eventos e mentorias.">Minha jornada SAW</Tooltip>
+                </div>
                 <div className={styles.nivelLabel}>
                   Nível atual: <strong>{NIVEL_LABEL[jornada.nivelAtual]}</strong>
                 </div>
@@ -103,7 +106,9 @@ export function PerfilPage() {
               <StatTile label="Mentorias realizadas" valor={jornada.stats.mentoriasRealizadas} />
             </div>
 
-            <div className={styles.conquistasTitulo}>Conquistas</div>
+            <div className={styles.conquistasTitulo}>
+              <Tooltip text="Marcos desbloqueados automaticamente conforme você avança na jornada. Cinza = ainda não conquistado.">Conquistas</Tooltip>
+            </div>
             <div className={styles.conquistasGrid}>
               {jornada.conquistas.map((c) => (
                 <div
