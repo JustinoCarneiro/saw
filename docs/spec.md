@@ -134,8 +134,8 @@
 **H9.2** — Como mentorado, quero ver minha jornada e conquistas.
 - **Dado** meu progresso, **então** vejo nível (ex.: Ouro), XP para o próximo nível, materiais/dicas/eventos e conquistas recentes.
 
-**H9.3** — Como mentorado, quero gerenciar minha assinatura.
-- **Dado** meu plano atual, **quando** abro "Gerenciar plano", **então** vejo vencimento e opções de upgrade/downgrade.
+**H9.3** — Como mentorado, quero ver o tipo de contrato da minha mentoria.
+- **Dado** meu perfil, **então** vejo o tipo de contrato (Mentoria Contínua/Mentoria Individual/Consultoria) — informativo, sem fluxo de upgrade/downgrade (M28: "não existem planos, mas sim produtos").
 
 ---
 
@@ -144,8 +144,8 @@
 **H10.1** — Como Admin, quero uma visão geral da plataforma.
 - **Dado** o Dashboard admin, **então** vejo mentorados ativos, mentorias e eventos realizados e receita do mês, com variação.
 
-**H10.2** — Como Admin, quero ver crescimento e distribuição por plano.
-- **Dado** os dados, **então** vejo gráfico de crescimento de mentorados e a distribuição por plano (Gratuito/Básico/Essencial/Profissional).
+**H10.2** — Como Admin, quero ver crescimento e distribuição por tipo de contrato.
+- **Dado** os dados, **então** vejo gráfico de crescimento de mentorados e a distribuição por tipo de contrato (Mentoria Contínua/Mentoria Individual/Consultoria/Não informado).
 
 **H10.3** — Como Admin, quero ver atividades recentes e mentorias do dia.
 - **Dado** o Dashboard admin, **então** vejo atividades recentes e as mentorias agendadas para hoje.
@@ -156,14 +156,14 @@
 
 ## E11 · Gestão Admin  *(Grande)*
 
-**H11.1** — Como Admin, quero gerenciar mentorados por plano e status.
-- **Dado** a lista de mentorados, **quando** filtro por plano/status e busco, **então** vejo cada mentorado com plano, status e ações (ver/editar/remover).
+**H11.1** — Como Admin, quero gerenciar mentorados por status.
+- **Dado** a lista de mentorados, **quando** filtro por status e busco, **então** vejo cada mentorado com tipo de contrato, status e ações (ver/editar/remover).
 
 **H11.2** — Como Admin, quero criar uma nova mentoria (individual ou em grupo).
 - **Dado** o formulário, **quando** escolho tipo, mentorado(s), data, hora, duração e plataforma, **então** a mentoria é criada e (opcional) o convite é enviado por e-mail.
 
 **H11.3** — Como Admin, quero gerir a biblioteca de conteúdos.
-- **Dado** conteúdos, **quando** crio/edito/publico, **então** eles ficam disponíveis para os mentorados conforme o plano.
+- **Dado** conteúdos, **quando** crio/edito/publico, **então** eles ficam disponíveis para todo mentorado ativo (M28: sem gating por plano — "não existem planos, mas sim produtos").
 
 **H11.4** — Como Admin, quero gerir os eventos.
 - **Dado** eventos, **quando** crio/edito e mudo status (Programado/Ao vivo/Realizado/Cancelado), **então** os mentorados veem o estado correto.
@@ -192,7 +192,7 @@
 - **Dado** receitas e despesas classificadas, **quando** escolho um período, **então** vejo Receita bruta → líquida → custos → despesas → **resultado (lucro/EBITDA)**, com comparativo mês a mês.
 
 **H14.3** — Como SAW, quero um dashboard de faturamento.
-- **Dado** as fontes de receita (assinaturas por plano, loja, eventos), **então** vejo faturamento mensal, MRR, churn e composição da receita.
+- **Dado** as fontes de receita (recorrência por tipo de contrato, loja, eventos), **então** vejo faturamento mensal, MRR, churn e composição da receita.
 
 **H14.4** — Como SAW, quero contas a pagar/receber com status.
 - **Dado** uma conta, **quando** o pagamento é feito, **então** ela passa de `A pagar/A receber` para `Pago/Recebido`; vencidas são sinalizadas.
@@ -254,7 +254,7 @@
 ---
 
 ## Suposições a validar com a SAW
-1. **Planos e o que cada um libera** (conteúdos, nº de mentorias, loja) — os nomes vieram dos mockups; falta a regra de cada plano.
+1. ~~**Planos e o que cada um libera**~~ — **resolvido** (reunião 17/07/2026): "não existem planos, mas sim produtos". `Plano` removido do sistema por completo (M28); o conceito real é `TipoContrato`/`ProdutoVenda`, sem gating de conteúdo por tier.
 2. **Gateway de pagamento** a ser usado (Mercado Pago / Stripe / Pagar.me) e emissão fiscal.
 3. **Mentoria em grupo** — quantos mentorados por grupo e como a ata é compartilhada.
 4. **Origem dos vídeos** (upload próprio vs. YouTube/Vimeo não listado) das dicas e materiais.
