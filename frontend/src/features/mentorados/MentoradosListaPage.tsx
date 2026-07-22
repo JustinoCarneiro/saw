@@ -9,6 +9,7 @@ import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { formatarTelefone } from '../../shared/lib/format';
 import type {
   ImportMentoradoDiretoResultResponse,
   Lead,
@@ -346,7 +347,8 @@ function CriarMentoradoDiretoForm({ onCriado, onCancelar }: {
           </label>
           <label className={styles.formField}>
             Telefone
-            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 90000-0000" />
+            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                   placeholder="(11) 90000-0000" maxLength={15} />
           </label>
         </div>
         <div className={styles.formRow}>

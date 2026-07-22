@@ -7,6 +7,7 @@ import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Pill, StatusPill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { formatarCnpj, formatarTelefone } from '../../shared/lib/format';
 import type {
   CotaEventos,
   DiagnosticoInicial,
@@ -298,7 +299,8 @@ function PerfilSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSa
         <div className={styles.formRow}>
           <label className={styles.formField}>
             Telefone
-            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 90000-0000" />
+            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                   placeholder="(11) 90000-0000" maxLength={15} />
           </label>
           <label className={styles.formField} style={{ flex: 2 }}>
             Foto (URL)
@@ -370,7 +372,8 @@ function DadosContratoSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmi
           </label>
           <label className={styles.formField}>
             CNPJ
-            <input className={styles.textInput} value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
+            <input className={styles.textInput} value={cnpj} onChange={(e) => setCnpj(formatarCnpj(e.target.value))}
+                   placeholder="00.000.000/0000-00" maxLength={18} />
           </label>
           <label className={styles.formField}>
             Tipo de contrato

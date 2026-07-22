@@ -5,7 +5,7 @@ import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
-import { formatBRL } from '../../shared/lib/format';
+import { formatBRL, formatarTelefone } from '../../shared/lib/format';
 import type {
   CategoriaIngresso,
   EventoVendaResumo,
@@ -272,7 +272,7 @@ function CriarLeadForm({ onCriado, onCancelar }: {
           </label>
           <label className={styles.formField}>
             Telefone
-            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(e.target.value)} maxLength={20} />
+            <input className={styles.textInput} value={telefone} onChange={(e) => setTelefone(formatarTelefone(e.target.value))} maxLength={15} />
           </label>
         </div>
         <label className={styles.formField}>
@@ -624,7 +624,7 @@ function FecharVendaForm({ lead, onFechado, onCancelar }: {
                   <label className={styles.formField}>
                     Telefone (opcional)
                     <input className={styles.textInput} value={ing.telefone}
-                           onChange={(e) => atualizarIngresso(i, 'telefone', e.target.value)} maxLength={20} />
+                           onChange={(e) => atualizarIngresso(i, 'telefone', formatarTelefone(e.target.value))} maxLength={15} />
                   </label>
                   <label className={styles.formField}>
                     E-mail (opcional)

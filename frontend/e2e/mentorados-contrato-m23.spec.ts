@@ -43,7 +43,10 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
     await expect(page.getByText('Vencimento calculado: 2027-07-17')).toBeVisible();
 
     await page.getByLabel('Nome fantasia').fill('Restaurante da Maria E2E');
-    await page.getByLabel('CNPJ').fill('42.521.899/0001-38');
+    // Auditoria de UX (22/07/2026) — pressSequentially (não .fill) digita dígito a dígito, pra
+    // provar que a máscara formata em tempo real, não só quando o valor já chega pronto.
+    await page.getByLabel('CNPJ').pressSequentially('42521899000138');
+    await expect(page.getByLabel('CNPJ')).toHaveValue('42.521.899/0001-38');
     await page.getByLabel('Sócios').fill('Maria Silva; João Silva');
     await page.getByRole('button', { name: 'Salvar dados de contrato' }).click();
     await expect(page.getByText('Salvo.')).toBeVisible();
@@ -71,6 +74,30 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
       page.getByRole('button', { name: 'Baixar contrato atual' }).click(),
     ]);
     expect(download.suggestedFilename()).toBe('contrato.pdf');
+  });
+
+  // Auditoria de UX (22/07/2026) — achado real: GlobalExceptionHandler não tinha handler pra
+  // MethodArgumentNotValidException, então uma falha de @Valid (@Pattern do CNPJ) caía no
+  // ProblemDetail padrão do Spring sem o campo "message" que getApiErrorMessage usa — o usuário
+  // via sempre o fallback genérico da tela, nunca a mensagem específica. CNPJ incompleto (a
+  // máscara nunca produz um valor com o formato errado, só incompleto) é o jeito real de
+  // reproduzir isso pela UI.
+  test('CNPJ incompleto mostra a mensagem específica de formato, não o fallback genérico', async ({ page }) => {
+    await loginAs(page, 'matheus@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/mentorados/lista');
+
+    const main = page.getByRole('main');
+    const linha = main.locator('text=Carlos Menezes').locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linha.getByRole('button', { name: 'Ver perfil' }).click();
+    await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
+
+    await page.getByLabel('CNPJ').pressSequentially('123');
+    await expect(page.getByLabel('CNPJ')).toHaveValue('12.3');
+    await page.getByRole('button', { name: 'Salvar dados de contrato' }).click();
+
+    await expect(page.getByText('CNPJ deve estar no formato 00.000.000/0000-00 ou 14 dígitos')).toBeVisible();
+    await expect(page.getByText('Não foi possível salvar os dados de contrato. Tente novamente.')).toHaveCount(0);
   });
 
   // Léa ("Sucesso do Gestor") é quem preenche o Diagnóstico Inicial na operação real (ver

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import logoSaw from '../../assets/logo-saw.png';
 import { apiClient } from '../../shared/lib/apiClient';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { formatarTelefone } from '../../shared/lib/format';
 import styles from './SolicitarAcessoPage.module.css';
 
 export function SolicitarAcessoPage() {
@@ -81,8 +82,8 @@ export function SolicitarAcessoPage() {
               id="telefone"
               className={styles.input}
               value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-              maxLength={20}
+              onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+              maxLength={15}
             />
 
             <label className={styles.label} htmlFor="mensagem">Mensagem (opcional)</label>

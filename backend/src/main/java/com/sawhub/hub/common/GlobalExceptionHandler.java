@@ -6,11 +6,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.DateTimeException;
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -34,6 +37,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleBadRequest(IllegalArgumentException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiError.of(400, "Bad Request", ex.getMessage(), request.getRequestURI()));
+    }
+
+    // Achado de auditoria de UX (22/07/2026): sem isto, uma falha de @Valid num @RequestBody (ex.:
+    // @Pattern do CNPJ em AtualizarDadosContratoRequest) cai no ProblemDetail padrão do Spring, que
+    // não tem campo "message" — o frontend (getApiErrorMessage) então mostra sempre o fallback
+    // genérico da tela ("Não foi possível salvar..."), nunca a mensagem específica escrita na
+    // anotação. Confirmado ao vivo: POST com CNPJ="123" devolvia {timestamp,status,error,path} sem
+    // "message" nenhum. Junta as mensagens de todos os campos com erro (normalmente só um).
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        String mensagem = ex.getBindingResult().getFieldErrors().stream()
+                .map(erro -> erro.getDefaultMessage())
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.joining("; "));
+        if (mensagem.isBlank()) {
+            mensagem = "Dados inválidos.";
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiError.of(400, "Bad Request", mensagem, request.getRequestURI()));
     }
 
     // Violação de máquina de estado (ex.: liquidar conta já liquidada) é rejeição de regra de
