@@ -176,6 +176,34 @@ test.describe('Financeiro (E14)', () => {
     await expect(linha).toBeVisible();
   });
 
+  // Pedido do Marcos (22/07/2026, achado ao usar a tela) — backend já aceitava categoriaId em
+  // GET /lancamentos desde o filtro de forma de pagamento, só faltava o dropdown no toolbar.
+  test('Lançamentos: filtro por subcategoria esconde lançamentos de outra categoria', async ({ page }) => {
+    await loginAs(page, 'admin@sawhub.com.br');
+    await page.getByRole('link', { name: 'Financeiro' }).click();
+    await page.getByRole('link', { name: 'Lançamentos' }).click();
+    await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
+
+    const descricao = `Subcategoria teste E2E ${Date.now()}`;
+    const main = page.getByRole('main');
+    await main.getByRole('button', { name: 'Novo lançamento' }).click();
+    await main.getByLabel('Subcategoria').selectOption({ label: 'Produtos Digitais' });
+    await main.getByLabel('Descrição').fill(descricao);
+    await main.getByLabel('Valor (R$)').fill('42.00');
+    await main.getByRole('button', { name: 'Salvar lançamento' }).click();
+
+    const linha = main.getByTestId('lancamento-row').filter({ hasText: descricao });
+    await expect(linha).toBeVisible();
+
+    // Filtra por outra subcategoria — a linha some.
+    await main.getByLabel('Categoria financeira (filtro)').selectOption({ label: 'Eventos' });
+    await expect(linha).toHaveCount(0);
+
+    // Volta pra subcategoria certa — a linha reaparece.
+    await main.getByLabel('Categoria financeira (filtro)').selectOption({ label: 'Produtos Digitais' });
+    await expect(linha).toBeVisible();
+  });
+
   // Pedido do Marcos (22/07/2026, achado na auditoria de clareza — "métricas de venda de ingresso
   // precisam aparecer também no Financeiro") — mesma riqueza da planilha real "Eventos - Despesas
   // e Receitas": receita/despesa/resultado por evento Realizado no Dashboard.

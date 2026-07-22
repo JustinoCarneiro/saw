@@ -87,6 +87,7 @@ export function LancamentosPage() {
   const [de, setDe] = useState(primeiroDiaDoMes());
   const [ate, setAte] = useState(ultimoDiaDoMes());
   const [tipo, setTipo] = useState<TipoLancamento | ''>('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState('');
   const [status, setStatus] = useState<StatusLancamento | ''>('');
   const [eventoId, setEventoId] = useState('');
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoLancamento | ''>('');
@@ -106,7 +107,8 @@ export function LancamentosPage() {
         params: {
           de: filtroPeriodoLigado ? de : SEM_FILTRO_DE,
           ate: filtroPeriodoLigado ? ate : SEM_FILTRO_ATE,
-          tipo: tipo || undefined, status: status || undefined, eventoId: eventoId || undefined,
+          tipo: tipo || undefined, categoriaId: categoriaFiltro || undefined,
+          status: status || undefined, eventoId: eventoId || undefined,
           formaPagamento: formaPagamento || undefined,
         },
       })
@@ -120,7 +122,7 @@ export function LancamentosPage() {
       .catch(() => setError('Não foi possível carregar as categorias financeiras.'));
   };
 
-  useEffect(carregar, [filtroPeriodoLigado, de, ate, tipo, status, eventoId, formaPagamento]);
+  useEffect(carregar, [filtroPeriodoLigado, de, ate, tipo, categoriaFiltro, status, eventoId, formaPagamento]);
 
   useEffect(() => {
     carregarCategorias();
@@ -155,6 +157,16 @@ export function LancamentosPage() {
             <option value="RECEITA">Receita</option>
             <option value="DESPESA">Despesa</option>
           </select>
+          {/* aria-label não pode conter "Subcategoria" puro — o form de "Novo lançamento" tem um
+              campo com esse label exato, e getByLabel('Subcategoria') do E2E vira substring match
+              ambíguo (2 elementos) se este filtro reusar a mesma palavra. */}
+          <select className={styles.select} aria-label="Categoria financeira (filtro)" value={categoriaFiltro}
+                  onChange={(e) => setCategoriaFiltro(e.target.value)}>
+            <option value="">Todas as subcategorias</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
           <select className={styles.select} value={status} onChange={(e) => setStatus(e.target.value as StatusLancamento | '')}>
             <option value="">Todos os status</option>
             <option value="PREVISTO">Previsto</option>
@@ -183,6 +195,7 @@ export function LancamentosPage() {
               de: filtroPeriodoLigado ? de : SEM_FILTRO_DE,
               ate: filtroPeriodoLigado ? ate : SEM_FILTRO_ATE,
               tipo: tipo || undefined,
+              categoriaId: categoriaFiltro || undefined,
             }}
             exportFilename="lancamentos.csv"
             importUrl="/admin/financeiro/lancamentos/import"
