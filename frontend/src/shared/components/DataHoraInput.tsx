@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 export const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 export const MINUTOS = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
@@ -31,38 +33,54 @@ export function DataHoraInput({ value, onChange, required, inputClassName, selec
     onChange(`${novaData}T${novaHora}:${novoMinuto}`);
   }
 
+  const legendaStyle: CSSProperties = {
+    fontSize: 10.5,
+    color: 'var(--text-soft)',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+    letterSpacing: '.02em',
+  };
+
   return (
-    <div style={{ display: 'flex', gap: 6 }}>
-      <input
-        className={inputClassName}
-        type="date"
-        value={data}
-        onChange={(e) => atualizar(e.target.value, h, m)}
-        required={required}
-        style={{ flex: 1 }}
-      />
-      <select
-        className={selectClassName}
-        aria-label="Hora"
-        value={h}
-        onChange={(e) => atualizar(data, e.target.value, m)}
-        required={required}
-        style={{ width: 68 }}
-      >
-        <option value="" disabled>--</option>
-        {HORAS.map((v) => <option key={v} value={v}>{v}</option>)}
-      </select>
-      <select
-        className={selectClassName}
-        aria-label="Minuto"
-        value={m}
-        onChange={(e) => atualizar(data, h, e.target.value)}
-        required={required}
-        style={{ width: 68 }}
-      >
-        <option value="" disabled>--</option>
-        {MINUTOS.map((v) => <option key={v} value={v}>{v}</option>)}
-      </select>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <span style={legendaStyle}>Data</span>
+        <input
+          className={inputClassName}
+          type="date"
+          value={data}
+          onChange={(e) => atualizar(e.target.value, h, m)}
+          required={required}
+        />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span style={legendaStyle}>Hora</span>
+        <select
+          className={selectClassName}
+          aria-label="Hora"
+          value={h}
+          onChange={(e) => atualizar(data, e.target.value, m)}
+          required={required}
+          style={{ width: 68 }}
+        >
+          <option value="" disabled>--</option>
+          {HORAS.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span style={legendaStyle}>Min</span>
+        <select
+          className={selectClassName}
+          aria-label="Minuto"
+          value={m}
+          onChange={(e) => atualizar(data, h, e.target.value)}
+          required={required}
+          style={{ width: 68 }}
+        >
+          <option value="" disabled>--</option>
+          {MINUTOS.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+      </div>
     </div>
   );
 }
