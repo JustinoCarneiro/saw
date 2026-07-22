@@ -12,7 +12,6 @@ import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -31,8 +30,6 @@ class AtaProcessamentoServiceTest {
     @Mock
     private AtaRepository ataRepository;
     @Mock
-    private AtaEncaminhamentoSugeridoRepository sugeridoRepository;
-    @Mock
     private TranscricaoService transcricaoService;
     @Mock
     private AtaRascunhoService ataRascunhoService;
@@ -40,8 +37,7 @@ class AtaProcessamentoServiceTest {
     private AudioStorageService audioStorageService;
 
     private AtaProcessamentoService service() {
-        return new AtaProcessamentoService(ataRepository, sugeridoRepository, transcricaoService,
-                ataRascunhoService, audioStorageService);
+        return new AtaProcessamentoService(ataRepository, transcricaoService, ataRascunhoService, audioStorageService);
     }
 
     private static Ata ataProcessando() {
@@ -56,13 +52,12 @@ class AtaProcessamentoServiceTest {
     }
 
     @Test
-    void processarComSucessoConcluiEPersisteSugestoes() {
+    void processarComSucessoConcluiComResumoEDecisoes() {
         Ata ata = ataProcessando();
         when(audioStorageService.resolver("audio.mp3")).thenReturn(Path.of("/tmp/audio.mp3"));
         when(transcricaoService.transcrever(any())).thenReturn("transcrição da mentoria");
-        when(ataRascunhoService.gerarRascunho("transcrição da mentoria")).thenReturn(
-                new RascunhoAta("Resumo gerado pela IA", "Decisões geradas pela IA", List.of(
-                        new RascunhoAta.EncaminhamentoSugerido("Atualizar ficha técnica", 2))));
+        when(ataRascunhoService.gerarRascunho("transcrição da mentoria"))
+                .thenReturn(new RascunhoAta("Resumo gerado pela IA", "Decisões geradas pela IA"));
         when(ataRepository.findById(ata.getId())).thenReturn(Optional.of(ata));
         when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -90,11 +85,10 @@ class AtaProcessamentoServiceTest {
     // M28 (change request, 21/07/2026) — "colar transcrição do Google Meet": mesma orquestração
     // de processar(), mas pula transcricaoService/audioStorageService por completo.
     @Test
-    void processarTranscricaoColadaComSucessoConcluiEPersisteSugestoesSemChamarTranscricaoService() {
+    void processarTranscricaoColadaComSucessoConcluiSemChamarTranscricaoService() {
         Ata ata = ataProcessando();
-        when(ataRascunhoService.gerarRascunho("transcrição colada do Meet")).thenReturn(
-                new RascunhoAta("Resumo gerado pela IA", "Decisões geradas pela IA", List.of(
-                        new RascunhoAta.EncaminhamentoSugerido("Atualizar ficha técnica", 2))));
+        when(ataRascunhoService.gerarRascunho("transcrição colada do Meet"))
+                .thenReturn(new RascunhoAta("Resumo gerado pela IA", "Decisões geradas pela IA"));
         when(ataRepository.findById(ata.getId())).thenReturn(Optional.of(ata));
         when(ataRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

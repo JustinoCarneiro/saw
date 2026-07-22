@@ -5,11 +5,13 @@ import com.sawhub.hub.mentoria.dto.AtualizarDecisoesRequest;
 import com.sawhub.hub.mentoria.dto.AtualizarResumoRequest;
 import com.sawhub.hub.mentoria.dto.AtualizarSugestaoRequest;
 import com.sawhub.hub.mentoria.dto.ColarTranscricaoRequest;
+import com.sawhub.hub.mentoria.dto.CriarSugestaoRequest;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Modulo;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -69,10 +71,27 @@ public class AtaController {
         return AtaResponse.from(ata, ataService.listarSugestoes(mentoriaId));
     }
 
+    // Auditoria de UX (22/07/2026) — encaminhamento digitado manualmente pelo mentor, não mais
+    // sugerido pela IA (ver AtaEncaminhamentoSugerido).
+    @PostMapping("/sugestoes")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AtaResponse criarSugestao(@PathVariable UUID mentoriaId, @Valid @RequestBody CriarSugestaoRequest request) {
+        ataService.criarSugestao(mentoriaId, request.titulo(), request.pesoSugerido());
+        Ata ata = ataService.buscarPorMentoria(mentoriaId);
+        return AtaResponse.from(ata, ataService.listarSugestoes(mentoriaId));
+    }
+
     @PatchMapping("/sugestoes/{sugestaoId}")
     public AtaResponse editarSugestao(@PathVariable UUID mentoriaId, @PathVariable UUID sugestaoId,
                                        @Valid @RequestBody AtualizarSugestaoRequest request) {
-        ataService.editarSugestao(mentoriaId, sugestaoId, request.titulo(), request.pesoSugerido(), request.aceito());
+        ataService.editarSugestao(mentoriaId, sugestaoId, request.titulo(), request.pesoSugerido());
+        Ata ata = ataService.buscarPorMentoria(mentoriaId);
+        return AtaResponse.from(ata, ataService.listarSugestoes(mentoriaId));
+    }
+
+    @DeleteMapping("/sugestoes/{sugestaoId}")
+    public AtaResponse removerSugestao(@PathVariable UUID mentoriaId, @PathVariable UUID sugestaoId) {
+        ataService.removerSugestao(mentoriaId, sugestaoId);
         Ata ata = ataService.buscarPorMentoria(mentoriaId);
         return AtaResponse.from(ata, ataService.listarSugestoes(mentoriaId));
     }

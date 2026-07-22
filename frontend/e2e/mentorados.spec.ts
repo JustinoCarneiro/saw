@@ -201,19 +201,19 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     // importa aqui.
     await expect(page.getByText('IA concluída')).toBeVisible({ timeout: 15_000 });
 
-    // 7) Transcrição, resumo (pré-preenchido pelo rascunho) e sugestões batem com o stub.
-    // Título da sugestão é um <input> (SugestaoRow) — o valor não é "texto" pro DOM, lê via
-    // evaluateAll em vez de getByText (que só casa com nós de texto renderizado).
+    // 7) Transcrição e resumo (pré-preenchido pelo rascunho) batem com o stub. Auditoria de UX
+    // (22/07/2026) — encaminhamentos não são mais sugeridos pela IA (processo real da SAW no
+    // Notion é digitar direto); o mentor adiciona manualmente aqui.
     await expect(page.getByText(/Transcrição de teste E2E/)).toBeVisible();
     await expect(page.getByPlaceholder(/Escreva o resumo da mentoria/)).toHaveValue(/Resumo gerado pela IA \(stub E2E\)/);
-    const titulosSugestoes = await page
-      .locator('[data-testid^="sugestao-titulo-"]')
-      .evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value));
-    expect(titulosSugestoes).toContain('Atualizar ficha técnica com os novos preços');
-    expect(titulosSugestoes).toContain('Revisar cardápio até a próxima mentoria');
+    await page.getByPlaceholder('Novo encaminhamento…').fill('Atualizar ficha técnica com os novos preços');
+    await page.getByRole('button', { name: 'Adicionar' }).click();
+    // Título da sugestão é um <input> (SugestaoRow) — toHaveValue espera/re-tenta até o POST +
+    // re-render (onCriado→onSalvo→carregar) terminarem, ao contrário de evaluateAll (one-shot).
+    await expect(page.locator('[data-testid^="sugestao-titulo-"]')).toHaveValue('Atualizar ficha técnica com os novos preços');
 
-    // 8) Publica com as sugestões da IA aceitas por padrão (ver Ata.java) — fecha o pipeline
-    // completo, do upload até virar ata publicada de verdade.
+    // 8) Publica com o encaminhamento digitado manualmente — fecha o pipeline completo, do
+    // upload até virar ata publicada de verdade.
     await page.getByRole('button', { name: 'Publicar ata' }).click();
     await page.getByRole('button', { name: 'Sim, publicar' }).click();
     await expect(page.getByText('Publicada', { exact: true })).toBeVisible();

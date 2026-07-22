@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 /** Implementação real do gerador de rascunho (Claude Sonnet 5, decisão do ROADMAP.md M06) —
- * usa tool use pra forçar saída estruturada (resumo + encaminhamentos), em vez de tentar parsear
+ * usa tool use pra forçar saída estruturada (resumo + decisões), em vez de tentar parsear
  * texto livre. Mesmo raciocínio de fail-fast do {@link WhisperTranscricaoService}: sem
  * {@code ANTHROPIC_API_KEY}, nem tenta a chamada. */
 @Service
@@ -83,30 +83,28 @@ public class ClaudeAtaRascunhoService implements AtaRascunhoService {
                 .orElseThrow(() -> new IaIndisponivelException("Claude não retornou o rascunho estruturado esperado."));
     }
 
-    @SuppressWarnings("unchecked")
     private RascunhoAta converterParaRascunho(Map<String, Object> input) {
         String resumo = (String) input.get("resumo");
         // Change request 17/07/2026 ("campo Decisões na ata") — aditivo: se o modelo não
         // devolver "decisoes" (schema antigo em cache, resposta inesperada), o Ata nasce só sem
         // essa seção em vez de quebrar o processamento inteiro.
         String decisoes = (String) input.get("decisoes");
-        List<Map<String, Object>> encaminhamentosRaw = (List<Map<String, Object>>) input.getOrDefault("encaminhamentos", List.of());
-        List<RascunhoAta.EncaminhamentoSugerido> encaminhamentos = encaminhamentosRaw.stream()
-                .map(e -> new RascunhoAta.EncaminhamentoSugerido((String) e.get("titulo"), ((Number) e.get("peso")).intValue()))
-                .toList();
-        return new RascunhoAta(resumo, decisoes, encaminhamentos);
+        return new RascunhoAta(resumo, decisoes);
     }
 
+    // Auditoria de UX (22/07/2026, pedido do Marcos) — "encaminhamentos sugeridos pela IA" saiu
+    // do escopo do rascunho: no processo real da SAW (Notion) os encaminhamentos são digitados
+    // manualmente pelo mentor, não sugeridos por IA pra revisão. resumo/decisões continuam sendo
+    // o diferencial de IA confirmado com o cliente (CLAUDE.md § "Diferenciais do MVP") — só a
+    // geração de encaminhamentos saiu do prompt/schema.
     private static String prompt(String transcricao) {
         return """
                 Você é assistente de um mentor de restaurantes (SAW). Leia a transcrição de uma \
                 sessão de mentoria e registre, usando a ferramenta disponível: um resumo objetivo \
-                (3-6 frases, em português, cobrindo os principais pontos discutidos), as decisões \
+                (3-6 frases, em português, cobrindo os principais pontos discutidos) e as decisões \
                 tomadas na reunião (frases objetivas, uma por decisão — deixe em branco/vazio se \
-                nenhuma decisão explícita foi tomada, não invente) e uma lista de encaminhamentos \
-                sugeridos (ações concretas que o mentorado deveria fazer até a próxima mentoria). \
-                Para cada encaminhamento, defina peso 2 se for prioritário/urgente ou peso 1 caso \
-                contrário. Não invente informação que não esteja na transcrição.
+                nenhuma decisão explícita foi tomada, não invente). Não invente informação que não \
+                esteja na transcrição.
 
                 Transcrição:
                 %s
@@ -116,25 +114,14 @@ public class ClaudeAtaRascunhoService implements AtaRascunhoService {
     private static Map<String, Object> ferramentaRegistrarRascunho() {
         return Map.of(
                 "name", NOME_FERRAMENTA,
-                "description", "Registra o resumo, as decisões e os encaminhamentos sugeridos da mentoria.",
+                "description", "Registra o resumo e as decisões da mentoria.",
                 "input_schema", Map.of(
                         "type", "object",
                         "properties", Map.of(
                                 "resumo", Map.of("type", "string"),
-                                "decisoes", Map.of("type", "string"),
-                                "encaminhamentos", Map.of(
-                                        "type", "array",
-                                        "items", Map.of(
-                                                "type", "object",
-                                                "properties", Map.of(
-                                                        "titulo", Map.of("type", "string"),
-                                                        "peso", Map.of("type", "integer", "enum", List.of(1, 2))
-                                                ),
-                                                "required", List.of("titulo", "peso")
-                                        )
-                                )
+                                "decisoes", Map.of("type", "string")
                         ),
-                        "required", List.of("resumo", "decisoes", "encaminhamentos")
+                        "required", List.of("resumo", "decisoes")
                 )
         );
     }

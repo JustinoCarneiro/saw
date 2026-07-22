@@ -10,9 +10,11 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/** Rascunho de encaminhamento gerado pela IA a partir da transcrição — só vira
- * {@link com.sawhub.hub.mentorado.Encaminhamento} de verdade quando a ata é publicada e a
- * sugestão está {@code aceito=true} (revisão humana obrigatória, ver ROADMAP.md M06). */
+/** Encaminhamento da ata, digitado manualmente pelo mentor (auditoria de UX 22/07/2026 — o
+ * processo real da SAW no Notion não tem sugestão por IA, mesmo raciocínio de "não existem
+ * planos, mas sim produtos": refletir o processo real, não inventar em cima dele) — só vira
+ * {@link com.sawhub.hub.mentorado.Encaminhamento} de verdade quando a ata é publicada e a linha
+ * está {@code aceito=true} (todo item criado manualmente já nasce aceito; ver {@link AtaService}). */
 @Entity
 @Table(name = "ata_encaminhamento_sugerido")
 public class AtaEncaminhamentoSugerido extends BaseEntity {

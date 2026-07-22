@@ -19,11 +19,6 @@ export const RESUMO_STUB = 'Resumo gerado pela IA (stub E2E): revisão de cardá
 export const DECISOES_STUB = 'Decisão gerada pela IA (stub E2E): manter o cardápio atual até a próxima '
   + 'mentoria, só atualizando os preços da ficha técnica.';
 
-export const ENCAMINHAMENTOS_STUB = [
-  { titulo: 'Atualizar ficha técnica com os novos preços', peso: 2 },
-  { titulo: 'Revisar cardápio até a próxima mentoria', peso: 1 },
-];
-
 function lerCorpo(req) {
   return new Promise((resolve) => {
     const chunks = [];
@@ -48,7 +43,7 @@ const server = createServer(async (req, res) => {
         {
           type: 'tool_use',
           name: 'registrar_rascunho_ata',
-          input: { resumo: RESUMO_STUB, decisoes: DECISOES_STUB, encaminhamentos: ENCAMINHAMENTOS_STUB },
+          input: { resumo: RESUMO_STUB, decisoes: DECISOES_STUB },
         },
       ],
     }));

@@ -62,8 +62,9 @@ O cliente foi claro: **este sistema é a espinha dorsal operacional da SAW**, n�
 
 ## Diferenciais do MVP
 Cliente pediu explicitamente algo que "feche o projeto na hora". **Confirmado para esta primeira leva** (07/07/2026):
-- **Transcrição + rascunho de ata automático via IA** a partir do áudio da mentoria (E5) — o mentor sobe o áudio, o sistema transcreve e gera um rascunho de ata (resumo, encaminhamentos sugeridos) pra revisão humana antes de publicar. Resolve uma dor real (escrever ata manualmente) e é coerente com o resto do produto usar IA.
+- **Transcrição + rascunho de ata automático via IA** a partir do áudio da mentoria (E5) — o mentor sobe o áudio (ou cola a transcrição do Google Meet), o sistema transcreve e gera um rascunho de resumo/decisões pra revisão humana antes de publicar. Resolve uma dor real (escrever ata manualmente) e é coerente com o resto do produto usar IA.
 - Implica: endpoint de upload de áudio, integração com API de transcrição (ex.: Whisper), custo por uso a considerar no orçamento de infra.
+- **Auditoria de UX (22/07/2026):** os **encaminhamentos** da ata deixaram de ser sugeridos pela IA — o processo real da SAW no Notion é o mentor digitar direto, sem passo de "revisar sugestão"; resumo/decisões continuam gerados por IA (Claude), só a lista de encaminhamentos virou entrada manual (formulário de adicionar/remover em `AtaDetalhePage.tsx`).
 
 ## Épicos
 > Histórias de usuário completas e critérios de aceite BDD em `./docs/spec.md`.

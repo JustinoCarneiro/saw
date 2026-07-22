@@ -119,9 +119,19 @@ public class AtaService {
         return ataRepository.save(ata);
     }
 
+    // Auditoria de UX (22/07/2026) — encaminhamento digitado manualmente pelo mentor (processo
+    // real da SAW no Notion), não mais sugerido pela IA. Nasce aceito=true: quem cria já é quem
+    // decide que aquilo vai pro publicar, não tem passo de "revisão" separado como tinha a
+    // sugestão da IA.
     @Transactional
-    public AtaEncaminhamentoSugerido editarSugestao(UUID mentoriaId, UUID sugestaoId, String titulo,
-                                                     Integer pesoSugerido, boolean aceito) {
+    public AtaEncaminhamentoSugerido criarSugestao(UUID mentoriaId, String titulo, Integer pesoSugerido) {
+        Ata ata = buscarPorMentoria(mentoriaId);
+        ata.exigirRascunho();
+        return sugeridoRepository.save(new AtaEncaminhamentoSugerido(ata, titulo, pesoSugerido, true));
+    }
+
+    @Transactional
+    public AtaEncaminhamentoSugerido editarSugestao(UUID mentoriaId, UUID sugestaoId, String titulo, Integer pesoSugerido) {
         Ata ata = buscarPorMentoria(mentoriaId);
         // Achado (baixo) da revisão de segurança do M06: sem isto, uma sugestão continuava editável
         // depois da ata PUBLICADA, divergindo do que já foi materializado em Encaminhamento — mesma
@@ -130,8 +140,21 @@ public class AtaService {
         AtaEncaminhamentoSugerido sugestao = sugeridoRepository.findById(sugestaoId)
                 .filter(s -> s.getAta().getId().equals(ata.getId()))
                 .orElseThrow(() -> new IllegalArgumentException("Sugestão não encontrada para esta ata."));
-        sugestao.editar(titulo, pesoSugerido, aceito);
+        sugestao.editar(titulo, pesoSugerido, true);
         return sugeridoRepository.save(sugestao);
+    }
+
+    // Auditoria de UX (22/07/2026) — substitui o antigo checkbox "aceito" (desmarcar = rejeitar):
+    // agora que a lista é digitada manualmente, remover a linha é a única forma de excluir um
+    // encaminhamento do publicar.
+    @Transactional
+    public void removerSugestao(UUID mentoriaId, UUID sugestaoId) {
+        Ata ata = buscarPorMentoria(mentoriaId);
+        ata.exigirRascunho();
+        AtaEncaminhamentoSugerido sugestao = sugeridoRepository.findById(sugestaoId)
+                .filter(s -> s.getAta().getId().equals(ata.getId()))
+                .orElseThrow(() -> new IllegalArgumentException("Sugestão não encontrada para esta ata."));
+        sugeridoRepository.delete(sugestao);
     }
 
     /** Publica a ata e materializa as sugestões aceitas em {@link Encaminhamento} de verdade —

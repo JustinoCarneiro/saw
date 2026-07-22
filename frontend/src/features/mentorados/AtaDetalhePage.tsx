@@ -75,8 +75,14 @@ export function AtaDetalhePage() {
         </Card>
       )}
 
-      {!publicada && (
-        <UploadAudioForm mentoriaId={mentoriaId} desabilitado={ata.statusProcessamento === 'PROCESSANDO'} onEnviado={carregar} />
+      {(ata.transcricao || !publicada) && (
+        <TranscricaoCard
+          mentoriaId={mentoriaId}
+          transcricaoAtual={ata.transcricao}
+          podeEditar={!publicada}
+          desabilitado={ata.statusProcessamento === 'PROCESSANDO'}
+          onEnviado={carregar}
+        />
       )}
 
       {mentoria.tipo === 'GRUPO' && <PresencaCard mentoriaId={mentoriaId} mentoria={mentoria} onSalvo={carregar} />}
@@ -87,16 +93,7 @@ export function AtaDetalhePage() {
 
       <MateriaisCard mentoriaId={mentoriaId} mentoria={mentoria} podeEditar={!publicada} onSalvo={carregar} />
 
-      {ata.sugestoes.length > 0 && (
-        <SugestoesCard mentoriaId={mentoriaId} sugestoes={ata.sugestoes} podeEditar={!publicada} onSalvo={carregar} />
-      )}
-
-      {ata.transcricao && (
-        <Card style={{ padding: 20, marginBottom: 16 }}>
-          <div className={styles.sectionTitle}>Transcrição</div>
-          <div className={styles.transcricao}>{ata.transcricao}</div>
-        </Card>
-      )}
+      <SugestoesCard mentoriaId={mentoriaId} sugestoes={ata.sugestoes} podeEditar={!publicada} onSalvo={carregar} />
 
       {!publicada && (
         <PublicarButton mentoriaId={mentoriaId} desabilitado={ata.statusProcessamento === 'PROCESSANDO'} onPublicado={carregar} />
@@ -107,11 +104,15 @@ export function AtaDetalhePage() {
 
 // M28 (change request, 21/07/2026) — "colar transcrição do Google Meet": aditivo, não substitui o
 // upload de áudio (Whisper). O mentor escolhe qual caminho usar; os dois terminam no mesmo
-// pipeline de IA (resumo/decisões/sugestões via Claude) e no mesmo polling de status abaixo.
+// pipeline de IA (resumo/decisões via Claude) e no mesmo polling de status abaixo.
 type ModoTranscricao = 'AUDIO' | 'TEXTO';
 
-function UploadAudioForm({ mentoriaId, desabilitado, onEnviado }: {
-  mentoriaId: string; desabilitado: boolean; onEnviado: () => void;
+// Auditoria de UX (22/07/2026) — antes existiam duas seções "Transcrição" na página (o form de
+// upload/colar no topo, e um card só de exibição perto do fim) — juntas aqui numa seção só: o
+// texto já capturado (se houver) aparece primeiro, e o form pra (re)gerar vem logo abaixo dele,
+// não numa posição totalmente separada da página.
+function TranscricaoCard({ mentoriaId, transcricaoAtual, podeEditar, desabilitado, onEnviado }: {
+  mentoriaId: string; transcricaoAtual: string | null; podeEditar: boolean; desabilitado: boolean; onEnviado: () => void;
 }) {
   const [modo, setModo] = useState<ModoTranscricao>('AUDIO');
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -157,68 +158,73 @@ function UploadAudioForm({ mentoriaId, desabilitado, onEnviado }: {
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}>Transcrição da mentoria</div>
-      <p className={styles.muted}>
-        Suba a gravação ou cole a transcrição do Google Meet — os dois caminhos geram
-        automaticamente a transcrição/resumo/decisões/sugestões (revisão humana obrigatória antes
-        de publicar).
-      </p>
-      <div className={styles.modoTabs} role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={modo === 'AUDIO'}
-          className={`${styles.modoTab} ${modo === 'AUDIO' ? styles.modoTabActive : ''}`}
-          onClick={() => setModo('AUDIO')}
-          disabled={desabilitado || enviando}
-        >
-          Subir áudio
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={modo === 'TEXTO'}
-          className={`${styles.modoTab} ${modo === 'TEXTO' ? styles.modoTabActive : ''}`}
-          onClick={() => setModo('TEXTO')}
-          disabled={desabilitado || enviando}
-        >
-          Colar transcrição
-        </button>
-      </div>
-      {modo === 'AUDIO' ? (
-        <form onSubmit={handleSubmitAudio} className={styles.uploadForm}>
-          <input
-            type="file"
-            accept="audio/*"
-            onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
-            disabled={desabilitado || enviando}
-          />
-          <button type="submit" className={styles.actionButton} disabled={!arquivo || desabilitado || enviando}>
-            {enviando ? 'Enviando…' : 'Enviar áudio'}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleSubmitTexto} className={styles.textForm}>
-          <textarea
-            className={styles.textarea}
-            rows={6}
-            placeholder="Cole aqui a transcrição gerada pelo Google Meet…"
-            value={transcricaoColada}
-            onChange={(e) => setTranscricaoColada(e.target.value)}
-            disabled={desabilitado || enviando}
-          />
-          <div className={styles.formActions}>
+      <div className={styles.sectionTitle}>Transcrição</div>
+      {transcricaoAtual && <div className={styles.transcricao}>{transcricaoAtual}</div>}
+      {podeEditar && (
+        <>
+          <p className={styles.muted} style={{ marginTop: transcricaoAtual ? 12 : 0 }}>
+            {transcricaoAtual
+              ? 'Regravar ou colar uma nova transcrição substitui a de cima.'
+              : 'Suba a gravação ou cole a transcrição do Google Meet — os dois caminhos geram automaticamente o resumo/decisões (revisão humana obrigatória antes de publicar).'}
+          </p>
+          <div className={styles.modoTabs} role="tablist">
             <button
-              type="submit"
-              className={styles.actionButton}
-              disabled={!transcricaoColada.trim() || desabilitado || enviando}
+              type="button"
+              role="tab"
+              aria-selected={modo === 'AUDIO'}
+              className={`${styles.modoTab} ${modo === 'AUDIO' ? styles.modoTabActive : ''}`}
+              onClick={() => setModo('AUDIO')}
+              disabled={desabilitado || enviando}
             >
-              {enviando ? 'Processando…' : 'Processar transcrição'}
+              Subir áudio
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={modo === 'TEXTO'}
+              className={`${styles.modoTab} ${modo === 'TEXTO' ? styles.modoTabActive : ''}`}
+              onClick={() => setModo('TEXTO')}
+              disabled={desabilitado || enviando}
+            >
+              Colar transcrição
             </button>
           </div>
-        </form>
+          {modo === 'AUDIO' ? (
+            <form onSubmit={handleSubmitAudio} className={styles.uploadForm}>
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
+                disabled={desabilitado || enviando}
+              />
+              <button type="submit" className={styles.actionButton} disabled={!arquivo || desabilitado || enviando}>
+                {enviando ? 'Enviando…' : 'Enviar áudio'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmitTexto} className={styles.textForm}>
+              <textarea
+                className={styles.textarea}
+                rows={6}
+                placeholder="Cole aqui a transcrição gerada pelo Google Meet…"
+                value={transcricaoColada}
+                onChange={(e) => setTranscricaoColada(e.target.value)}
+                disabled={desabilitado || enviando}
+              />
+              <div className={styles.formActions}>
+                <button
+                  type="submit"
+                  className={styles.actionButton}
+                  disabled={!transcricaoColada.trim() || desabilitado || enviando}
+                >
+                  {enviando ? 'Processando…' : 'Processar transcrição'}
+                </button>
+              </div>
+            </form>
+          )}
+          {error && <div className={styles.error}>{error}</div>}
+        </>
       )}
-      {error && <div className={styles.error}>{error}</div>}
     </Card>
   );
 }
@@ -473,21 +479,26 @@ function MateriaisCard({ mentoriaId, mentoria, podeEditar, onSalvo }: {
   );
 }
 
+// Auditoria de UX (22/07/2026, pedido do Marcos) — "encaminhamentos sugeridos pela IA" saiu:
+// no processo real da SAW (Notion) o mentor digita os encaminhamentos, não revisa sugestão de
+// IA. Lista sempre visível (mesmo vazia) pra dar onde adicionar o primeiro item.
 function SugestoesCard({ mentoriaId, sugestoes, podeEditar, onSalvo }: {
   mentoriaId: string; sugestoes: SugestaoEncaminhamento[]; podeEditar: boolean; onSalvo: () => void;
 }) {
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}>Encaminhamentos sugeridos pela IA</div>
+      <div className={styles.sectionTitle}>Encaminhamentos</div>
       <p className={styles.muted}>
-        Revise antes de publicar — só os aceitos viram encaminhamento de verdade (e passam a contar
-        no ranking) na publicação da ata.
+        O que o mentorado leva pra fazer até a próxima mentoria — vira tarefa de verdade (e passa a
+        contar no ranking) na publicação da ata.
       </p>
+      {sugestoes.length === 0 && !podeEditar && <div className={styles.muted}>Nenhum encaminhamento.</div>}
       <div className={styles.sugestoesList}>
         {sugestoes.map((s) => (
           <SugestaoRow key={s.id} mentoriaId={mentoriaId} sugestao={s} podeEditar={podeEditar} onSalvo={onSalvo} />
         ))}
       </div>
+      {podeEditar && <NovaSugestaoForm mentoriaId={mentoriaId} onCriado={onSalvo} />}
     </Card>
   );
 }
@@ -497,29 +508,33 @@ function SugestaoRow({ mentoriaId, sugestao, podeEditar, onSalvo }: {
 }) {
   const [titulo, setTitulo] = useState(sugestao.titulo);
   const [peso, setPeso] = useState(sugestao.pesoSugerido);
-  const [aceito, setAceito] = useState(sugestao.aceito);
   const [salvando, setSalvando] = useState(false);
+  const [removendo, setRemovendo] = useState(false);
 
-  const alterado = titulo !== sugestao.titulo || peso !== sugestao.pesoSugerido || aceito !== sugestao.aceito;
+  const alterado = titulo !== sugestao.titulo || peso !== sugestao.pesoSugerido;
 
   async function salvar() {
     setSalvando(true);
     try {
-      await apiClient.patch(`/admin/mentorias/${mentoriaId}/ata/sugestoes/${sugestao.id}`, { titulo, pesoSugerido: peso, aceito });
+      await apiClient.patch(`/admin/mentorias/${mentoriaId}/ata/sugestoes/${sugestao.id}`, { titulo, pesoSugerido: peso });
       onSalvo();
     } finally {
       setSalvando(false);
     }
   }
 
+  async function remover() {
+    setRemovendo(true);
+    try {
+      await apiClient.delete(`/admin/mentorias/${mentoriaId}/ata/sugestoes/${sugestao.id}`);
+      onSalvo();
+    } finally {
+      setRemovendo(false);
+    }
+  }
+
   return (
     <div className={styles.sugestaoRow}>
-      <input
-        type="checkbox"
-        checked={aceito}
-        onChange={(e) => setAceito(e.target.checked)}
-        disabled={!podeEditar}
-      />
       <input
         className={styles.sugestaoTitulo}
         data-testid={`sugestao-titulo-${sugestao.id}`}
@@ -536,7 +551,58 @@ function SugestaoRow({ mentoriaId, sugestao, podeEditar, onSalvo }: {
           {salvando ? 'Salvando…' : 'Salvar'}
         </button>
       )}
+      {podeEditar && (
+        <button className={styles.actionButtonDanger} onClick={remover} disabled={removendo}>
+          {removendo ? 'Removendo…' : 'Remover'}
+        </button>
+      )}
     </div>
+  );
+}
+
+// Auditoria de UX (22/07/2026) — adiciona um encaminhamento digitado direto, sem passo de
+// "sugestão pra revisar" (ver comentário de SugestoesCard acima).
+function NovaSugestaoForm({ mentoriaId, onCriado }: { mentoriaId: string; onCriado: () => void }) {
+  const [titulo, setTitulo] = useState('');
+  const [peso, setPeso] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+
+  async function adicionar(e: FormEvent) {
+    e.preventDefault();
+    if (!titulo.trim()) return;
+    setError(null);
+    setSalvando(true);
+    try {
+      await apiClient.post(`/admin/mentorias/${mentoriaId}/ata/sugestoes`, { titulo, pesoSugerido: peso });
+      setTitulo('');
+      setPeso(1);
+      onCriado();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível adicionar o encaminhamento.'));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={adicionar} className={styles.sugestaoRow} style={{ marginTop: 10 }}>
+      <input
+        className={styles.sugestaoTitulo}
+        placeholder="Novo encaminhamento…"
+        value={titulo}
+        onChange={(e) => setTitulo(e.target.value)}
+        disabled={salvando}
+      />
+      <select className={styles.sugestaoPeso} value={peso} onChange={(e) => setPeso(Number(e.target.value))} disabled={salvando}>
+        <option value={1}>Peso 1</option>
+        <option value={2}>Peso 2</option>
+      </select>
+      <button type="submit" className={styles.actionButton} disabled={!titulo.trim() || salvando}>
+        {salvando ? 'Adicionando…' : 'Adicionar'}
+      </button>
+      {error && <div className={styles.error}>{error}</div>}
+    </form>
   );
 }
 

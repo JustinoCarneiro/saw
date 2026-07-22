@@ -23,16 +23,13 @@ public class AtaProcessamentoService {
     private static final Logger log = LoggerFactory.getLogger(AtaProcessamentoService.class);
 
     private final AtaRepository ataRepository;
-    private final AtaEncaminhamentoSugeridoRepository sugeridoRepository;
     private final TranscricaoService transcricaoService;
     private final AtaRascunhoService ataRascunhoService;
     private final AudioStorageService audioStorageService;
 
-    public AtaProcessamentoService(AtaRepository ataRepository, AtaEncaminhamentoSugeridoRepository sugeridoRepository,
-                                    TranscricaoService transcricaoService, AtaRascunhoService ataRascunhoService,
-                                    AudioStorageService audioStorageService) {
+    public AtaProcessamentoService(AtaRepository ataRepository, TranscricaoService transcricaoService,
+                                    AtaRascunhoService ataRascunhoService, AudioStorageService audioStorageService) {
         this.ataRepository = ataRepository;
-        this.sugeridoRepository = sugeridoRepository;
         this.transcricaoService = transcricaoService;
         this.ataRascunhoService = ataRascunhoService;
         this.audioStorageService = audioStorageService;
@@ -71,9 +68,6 @@ public class AtaProcessamentoService {
                 .orElseThrow(() -> new IllegalArgumentException("Ata não encontrada."));
         ata.concluirProcessamento(transcricao, rascunho.resumo(), rascunho.decisoes());
         ataRepository.save(ata);
-        for (RascunhoAta.EncaminhamentoSugerido sugestao : rascunho.encaminhamentos()) {
-            sugeridoRepository.save(new AtaEncaminhamentoSugerido(ata, sugestao.titulo(), sugestao.peso(), true));
-        }
     }
 
     @Transactional

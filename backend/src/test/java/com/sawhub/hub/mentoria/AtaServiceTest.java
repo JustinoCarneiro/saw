@@ -272,7 +272,7 @@ class AtaServiceTest {
         when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ataDestino));
         when(sugeridoRepository.findById(sugestaoDeOutraAta.getId())).thenReturn(Optional.of(sugestaoDeOutraAta));
 
-        assertThatThrownBy(() -> service().editarSugestao(mentoriaId, sugestaoDeOutraAta.getId(), "Y", 1, true))
+        assertThatThrownBy(() -> service().editarSugestao(mentoriaId, sugestaoDeOutraAta.getId(), "Y", 1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("não encontrada");
     }
@@ -289,7 +289,76 @@ class AtaServiceTest {
         ata.publicar();
         when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ata));
 
-        assertThatThrownBy(() -> service().editarSugestao(mentoriaId, UUID.randomUUID(), "Y", 1, true))
+        assertThatThrownBy(() -> service().editarSugestao(mentoriaId, UUID.randomUUID(), "Y", 1))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    // Auditoria de UX (22/07/2026) — encaminhamento digitado manualmente pelo mentor, não mais
+    // sugerido pela IA: nasce sempre aceito=true (quem cria já decidiu que aquilo vai publicar).
+    @Test
+    void criarSugestaoNasceAceita() {
+        UUID mentoriaId = UUID.randomUUID();
+        Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
+        mentoria.realizar();
+        Ata ata = new Ata(mentoria);
+        when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ata));
+        when(sugeridoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AtaEncaminhamentoSugerido criada = service().criarSugestao(mentoriaId, "Digitalizar cardápio", 1);
+
+        assertThat(criada.getTitulo()).isEqualTo("Digitalizar cardápio");
+        assertThat(criada.getPesoSugerido()).isEqualTo(1);
+        assertThat(criada.isAceito()).isTrue();
+    }
+
+    @Test
+    void criarSugestaoEmAtaJaPublicadaLancaErro() {
+        UUID mentoriaId = UUID.randomUUID();
+        Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
+        mentoria.realizar();
+        Ata ata = new Ata(mentoria);
+        ata.publicar();
+        when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ata));
+
+        assertThatThrownBy(() -> service().criarSugestao(mentoriaId, "Y", 1))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void removerSugestaoTiraDaListaDefinitivamente() {
+        UUID mentoriaId = UUID.randomUUID();
+        Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
+        mentoria.realizar();
+        Ata ata = new Ata(mentoria);
+        ReflectionTestUtils.setField(ata, "id", UUID.randomUUID());
+        AtaEncaminhamentoSugerido sugestao = new AtaEncaminhamentoSugerido(ata, "Item por engano", 1, true);
+        ReflectionTestUtils.setField(sugestao, "id", UUID.randomUUID());
+        when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ata));
+        when(sugeridoRepository.findById(sugestao.getId())).thenReturn(Optional.of(sugestao));
+
+        service().removerSugestao(mentoriaId, sugestao.getId());
+
+        verify(sugeridoRepository).delete(sugestao);
+    }
+
+    @Test
+    void removerSugestaoDeOutraAtaLancaErro() {
+        UUID mentoriaId = UUID.randomUUID();
+        Mentoria mentoria = mentoriaConfirmada(Set.of(mentorado("Maria")));
+        mentoria.realizar();
+        Ata ataDestino = new Ata(mentoria);
+        ReflectionTestUtils.setField(ataDestino, "id", UUID.randomUUID());
+
+        Ata outraAta = mock(Ata.class);
+        when(outraAta.getId()).thenReturn(UUID.randomUUID());
+        AtaEncaminhamentoSugerido sugestaoDeOutraAta = new AtaEncaminhamentoSugerido(outraAta, "X", 1, true);
+        ReflectionTestUtils.setField(sugestaoDeOutraAta, "id", UUID.randomUUID());
+
+        when(ataRepository.findByMentoriaId(mentoriaId)).thenReturn(Optional.of(ataDestino));
+        when(sugeridoRepository.findById(sugestaoDeOutraAta.getId())).thenReturn(Optional.of(sugestaoDeOutraAta));
+
+        assertThatThrownBy(() -> service().removerSugestao(mentoriaId, sugestaoDeOutraAta.getId()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("não encontrada");
     }
 }
