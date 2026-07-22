@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
 import { apiClient } from '../../shared/lib/apiClient';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import { Card } from '../../shared/components/Card';
@@ -11,6 +12,8 @@ import styles from './RankingComercialPage.module.css';
 const COLUMNS = '1.6fr 1fr 1fr 2fr 1fr';
 
 export function RankingComercialPage() {
+  const { user } = useAuth();
+  const podeDefinirMeta = user?.area === 'ADMIN';
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [ranking, setRanking] = useState<RankingComercialItem[] | null>(null);
@@ -49,9 +52,11 @@ export function RankingComercialPage() {
     <div>
       <div className={styles.toolbar}>
         <PeriodoPicker ano={ano} mes={mes} onChange={(a, m) => { setAno(a); setMes(m); }} />
-        <button className={styles.newButton} onClick={() => setShowMetaForm((v) => !v)}>
-          <span style={{ fontSize: 16 }}>+</span>Definir meta
-        </button>
+        {podeDefinirMeta && (
+          <button className={styles.newButton} onClick={() => setShowMetaForm((v) => !v)}>
+            <span style={{ fontSize: 16 }}>+</span>Definir meta
+          </button>
+        )}
       </div>
 
       {error && <div className={styles.error}>{error}</div>}
@@ -60,7 +65,7 @@ export function RankingComercialPage() {
         Meta e Realizado contam vendas fechadas (quantidade, não R$) no período, venda de ingresso de evento não entra aqui, ela conta na ocorrência do evento, não no mês da venda.
       </div>
 
-      {showMetaForm && (
+      {podeDefinirMeta && showMetaForm && (
         <DefinirMetaForm
           vendedores={vendedores}
           metas={metas}

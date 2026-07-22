@@ -11,8 +11,30 @@ import { AreaPill, areaLabel, areaDotColor } from '../../shared/components/Pill'
 import { Tooltip } from '../../shared/components/Tooltip';
 import { Topbar } from '../../shared/components/Topbar';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
-import type { Area, Colaborador, DesempenhoColaborador, Modulo, PermissionMatrixRow } from '../../shared/lib/types';
+import type {
+  Area,
+  CategoriaFinanceira,
+  Colaborador,
+  DesempenhoColaborador,
+  Modulo,
+  PermissionMatrixRow,
+} from '../../shared/lib/types';
 import styles from './TeamPage.module.css';
+
+// Pedido do Marcos (22/07/2026) — "pagar qualquer colaborador de qualquer área (salário, 13º,
+// comissão etc.), mais descritivo que um lançamento manual". Não é um conceito do backend: gera
+// um POST comum em /admin/financeiro/lancamentos (mesmo endpoint de "Novo lançamento" no
+// Financeiro), só que a descrição já nasce padronizada (tipo + nome da pessoa + período) em vez
+// do Admin digitar isso de cabeça toda vez. Existe só aqui no frontend de propósito — não precisa
+// de enum novo no banco nem de decidir se `team` pode depender de `financeiro`.
+type TipoPagamentoColaborador = 'SALARIO' | 'DECIMO_TERCEIRO' | 'COMISSAO' | 'OUTRO';
+
+const TIPO_PAGAMENTO_LABEL: Record<TipoPagamentoColaborador, string> = {
+  SALARIO: 'Salário',
+  DECIMO_TERCEIRO: '13º salário',
+  COMISSAO: 'Comissão',
+  OUTRO: 'Pagamento',
+};
 
 const TEAM_COLUMNS = '1.6fr 1.5fr 1fr';
 const DESEMPENHO_COLUMNS = '1.6fr 1.5fr 1.2fr 1fr 1fr 1.4fr';
@@ -42,6 +64,8 @@ export function TeamPage() {
   const [matrix, setMatrix] = useState<PermissionMatrixRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
+  const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
+  const [pagando, setPagando] = useState(false);
 
   const now = new Date();
   const [ano, setAno] = useState(now.getFullYear());
@@ -62,6 +86,12 @@ export function TeamPage() {
   };
 
   useEffect(carregar, []);
+
+  useEffect(() => {
+    apiClient.get<CategoriaFinanceira[]>('/admin/financeiro/categorias')
+      .then((res) => setCategorias(res.data))
+      .catch(() => setError('Não foi possível carregar as subcategorias financeiras.'));
+  }, []);
 
   useEffect(() => {
     setDesempenho(null);
@@ -94,6 +124,9 @@ export function TeamPage() {
             <button className={styles.newButton} onClick={() => setCriando(true)} data-testid="novo-colaborador-botao">
               <span style={{ fontSize: 16 }}>+</span>Novo colaborador
             </button>
+            <button className={styles.newButton} onClick={() => setPagando(true)} data-testid="novo-pagamento-botao">
+              <span style={{ fontSize: 16 }}>+</span>Novo pagamento
+            </button>
           </div>
         </div>
 
@@ -101,6 +134,15 @@ export function TeamPage() {
           <ColaboradorForm
             onSalvo={() => { setCriando(false); carregar(); }}
             onCancelar={() => setCriando(false)}
+          />
+        )}
+
+        {pagando && colaboradores && (
+          <PagamentoColaboradorForm
+            colaboradores={colaboradores}
+            categorias={categorias}
+            onSalvo={() => setPagando(false)}
+            onCancelar={() => setPagando(false)}
           />
         )}
 
@@ -292,6 +334,135 @@ function ColaboradorForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCance
           <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
           <button type="submit" className={styles.actionButton} disabled={submitting}>
             {submitting ? 'Salvando…' : 'Salvar'}
+          </button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+// Pedido do Marcos (22/07/2026) — "pagar qualquer colaborador de qualquer área, mais descritivo
+// que hoje": Admin escolhe colaborador + tipo de pagamento + subcategoria + valor + período, e a
+// descrição do lançamento nasce padronizada (nunca digitada solta). Só DESPESA na subcategoria —
+// pagamento a colaborador nunca é receita.
+function PagamentoColaboradorForm({ colaboradores, categorias, onSalvo, onCancelar }: {
+  colaboradores: Colaborador[];
+  categorias: CategoriaFinanceira[];
+  onSalvo: () => void;
+  onCancelar: () => void;
+}) {
+  const now = new Date();
+  const [colaboradorId, setColaboradorId] = useState('');
+  const [tipoPagamento, setTipoPagamento] = useState<TipoPagamentoColaborador>('SALARIO');
+  const [categoriaId, setCategoriaId] = useState('');
+  const [valor, setValor] = useState('');
+  const [ano, setAno] = useState(now.getFullYear());
+  const [mes, setMes] = useState(now.getMonth() + 1);
+  const [jaPago, setJaPago] = useState(true);
+  const [observacao, setObservacao] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const categoriasDespesa = categorias.filter((c) => c.tipo === 'DESPESA');
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const colaborador = colaboradores.find((c) => c.id === colaboradorId);
+    if (!colaborador) {
+      setError('Selecione um colaborador.');
+      return;
+    }
+    if (!categoriaId) {
+      setError('Selecione uma subcategoria.');
+      return;
+    }
+    setSubmitting(true);
+    const periodo = `${String(mes).padStart(2, '0')}/${ano}`;
+    const descricao = `${TIPO_PAGAMENTO_LABEL[tipoPagamento]} — ${colaborador.nome} (${periodo})`
+      + (observacao.trim() ? ` — ${observacao.trim()}` : '');
+    // Último dia do mês/ano escolhido — mesma convenção de "competência" que o resto do
+    // Financeiro usa pra um fato datado só por período, não por dia exato (ver PeriodoPicker).
+    const dataCompetencia = new Date(ano, mes, 0).toISOString().slice(0, 10);
+    try {
+      await apiClient.post('/admin/financeiro/lancamentos', {
+        tipo: 'DESPESA',
+        categoriaId,
+        descricao,
+        valor: Number(valor),
+        status: jaPago ? 'REALIZADO' : 'PREVISTO',
+        dataCompetencia,
+        dataVencimento: jaPago ? null : dataCompetencia,
+      });
+      onSalvo();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível registrar o pagamento. Confira os dados.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }} testId="pagamento-colaborador-form">
+      <div className={styles.formTitle}>Novo pagamento</div>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.formRow}>
+          <label className={styles.formField} style={{ flex: 2 }}>
+            Colaborador
+            <select className={styles.select} value={colaboradorId} onChange={(e) => setColaboradorId(e.target.value)} required>
+              <option value="">Selecione…</option>
+              {colaboradores.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome} ({AREA_LABEL[c.area]})</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.formField}>
+            Tipo de pagamento
+            <select className={styles.select} value={tipoPagamento}
+                    onChange={(e) => setTipoPagamento(e.target.value as TipoPagamentoColaborador)}>
+              {Object.entries(TIPO_PAGAMENTO_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.formField} style={{ flex: 2 }}>
+            Subcategoria (Financeiro)
+            <select className={styles.select} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} required>
+              <option value="">{categoriasDespesa.length === 0 ? 'Nenhuma subcategoria de despesa cadastrada' : 'Selecione…'}</option>
+              {categoriasDespesa.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className={styles.formRow}>
+          <label className={styles.formField}>
+            Valor (R$)
+            <input className={styles.textInput} type="number" min="0.01" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} required />
+          </label>
+          <div className={styles.formField} style={{ flex: '0 0 auto' }}>
+            Período
+            <PeriodoPicker ano={ano} mes={mes} onChange={(a, m) => { setAno(a); setMes(m); }} />
+          </div>
+          <label className={styles.formField}>
+            Já foi pago?
+            <select className={styles.select} value={jaPago ? 'sim' : 'nao'} onChange={(e) => setJaPago(e.target.value === 'sim')}>
+              <option value="sim">Sim (já aconteceu)</option>
+              <option value="nao">Não (previsto)</option>
+            </select>
+          </label>
+        </div>
+        <label className={styles.formField}>
+          Observação (opcional)
+          <input className={styles.textInput} value={observacao} onChange={(e) => setObservacao(e.target.value)} />
+        </label>
+
+        {error && <div className={styles.error}>{error}</div>}
+
+        <div className={styles.formActions}>
+          <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
+          <button type="submit" className={styles.actionButton} disabled={submitting}>
+            {submitting ? 'Salvando…' : 'Registrar pagamento'}
           </button>
         </div>
       </form>

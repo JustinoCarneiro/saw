@@ -40,6 +40,43 @@ test('M19 — H15.1: Fundador cadastra um novo colaborador com área definida', 
   await expect(linha.getByText('Marketing')).toBeVisible();
 });
 
+// Pedido do Marcos (22/07/2026) — "pagar qualquer colaborador de qualquer área, mais descritivo
+// pro financeiro": prova ponta a ponta que "Novo pagamento" em Gestão de Time gera um lançamento
+// de verdade no Financeiro, com descrição já nomeando o colaborador e o período (não texto livre
+// digitado). "Diretor" é subcategoria de despesa real, já seedada por DemoDataSeeder.
+// Observação carrega um marcador único (Date.now()) — a suíte não reseta o banco entre execuções,
+// então reruns encontram o lançamento de uma execução anterior com a mesma descrição-base; sem
+// isso, o filtro por texto vira strict-mode violation (mesma classe de flake já documentada em
+// comercial.spec.ts, "Define meta comercial...").
+test('M29 — Novo pagamento em Gestão de Time gera lançamento descritivo no Financeiro', async ({ page }) => {
+  await loginAs(page, 'admin@sawhub.com.br');
+  await page.getByRole('link', { name: 'Time' }).click();
+  await expect(page).toHaveURL(/\/admin\/time$/);
+
+  const marcador = `e2e-${Date.now()}`;
+  const main = page.getByRole('main');
+  await main.getByTestId('novo-pagamento-botao').click();
+  // Escopado pelo testId do form: a página também mostra "Desempenho do Time" com seu próprio
+  // PeriodoPicker (Mês/Ano) simultaneamente — getByLabel('Mês') solto bateria nos dois.
+  const form = main.getByTestId('pagamento-colaborador-form');
+  await form.getByLabel('Colaborador').selectOption({ label: 'Juliana Lima (Marketing)' });
+  await form.getByLabel('Tipo de pagamento').selectOption({ label: '13º salário' });
+  await form.getByLabel('Subcategoria (Financeiro)').selectOption({ label: 'Diretor' });
+  await form.getByLabel('Valor (R$)').fill('1500');
+  await form.getByLabel('Mês').selectOption({ label: 'Agosto' });
+  await form.getByLabel('Ano').selectOption('2026');
+  await form.getByLabel('Observação (opcional)').fill(marcador);
+  await form.getByRole('button', { name: 'Registrar pagamento' }).click();
+  await expect(main.getByRole('button', { name: 'Registrar pagamento' })).toHaveCount(0);
+
+  await page.goto('/admin/financeiro/lancamentos');
+  const financeiro = page.getByRole('main');
+  const linha = financeiro.getByTestId('lancamento-row').filter({ hasText: marcador });
+  await expect(linha).toBeVisible();
+  await expect(linha.getByText('13º salário — Juliana Lima (08/2026)', { exact: false })).toBeVisible();
+  await expect(linha.getByText('1.500,00', { exact: false })).toBeVisible();
+});
+
 // M20 — H15.6/H15.7: achado da auditoria de cobertura era que carteira/conversaoPct exibidos
 // aqui eram dado fixo do seeder, nunca calculado; e não havia visão de desempenho do time nenhuma.
 test('M20 — H15.6/H15.7: carteira e desempenho do time são computados, não fixos', async ({ page }) => {

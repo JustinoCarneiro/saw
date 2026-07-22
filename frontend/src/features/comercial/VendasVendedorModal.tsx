@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { Pill } from '../../shared/components/Pill';
 import { PRODUTO_VENDA_LABEL } from '../../shared/lib/labels';
 import type { FormaPagamento, Lead } from '../../shared/lib/types';
-import styles from './RankingComercialPage.module.css';
+import styles from './VendasVendedorModal.module.css';
 
 interface VendasVendedorModalProps {
   vendedorId: string;
@@ -67,31 +68,41 @@ export function VendasVendedorModal({
   const comissaoTotal = percentualComissao != null ? (totalVendido * percentualComissao) / 100 : 0;
 
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContent} style={{ maxWidth: '900px' }}>
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <button className={styles.closeButton} onClick={onClose} aria-label="Fechar" title="Fechar modal">✕</button>
-        <h2 className={styles.modalTitle}>
-          Vendas de {vendedorNome} ({mes.toString().padStart(2, '0')}/{ano})
-        </h2>
-        
-        {percentualComissao != null ? (
-          <p style={{ marginBottom: 16 }}>
-            Comissão definida: <strong>{percentualComissao}%</strong> 
-            {' | '} 
-            Total a pagar: <strong>{formatCurrency(comissaoTotal)}</strong>
-          </p>
-        ) : (
-          <p style={{ marginBottom: 16, color: 'var(--text-muted)' }}>
-            Nenhum % de comissão definido para este período.
-          </p>
-        )}
+        <h2 className={styles.title}>Vendas de {vendedorNome}</h2>
+        <div className={styles.subtitle}>{mes.toString().padStart(2, '0')}/{ano}</div>
+
+        <div className={styles.summary}>
+          {percentualComissao != null ? (
+            <>
+              <div className={styles.summaryItem}>
+                <span className={styles.summaryLabel}>Comissão definida</span>
+                <span className={styles.summaryValue}>{percentualComissao}%</span>
+              </div>
+              <div className={styles.summaryDivider} />
+              <div className={styles.summaryItem}>
+                <span className={styles.summaryLabel}>Total vendido</span>
+                <span className={styles.summaryValue}>{formatCurrency(totalVendido)}</span>
+              </div>
+              <div className={styles.summaryDivider} />
+              <div className={styles.summaryItem}>
+                <span className={styles.summaryLabel}>Total a pagar</span>
+                <span className={styles.summaryValueHighlight}>{formatCurrency(comissaoTotal)}</span>
+              </div>
+            </>
+          ) : (
+            <span className={styles.summaryEmpty}>Nenhum % de comissão definido para este período.</span>
+          )}
+        </div>
 
         {error && <div className={styles.error}>{error}</div>}
 
         {loading ? (
           <div className={styles.loading}>Carregando vendas…</div>
         ) : vendas.length === 0 ? (
-          <p>Nenhuma venda registrada neste período (excluindo ingressos).</p>
+          <div className={styles.empty}>Nenhuma venda registrada neste período (excluindo ingressos).</div>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
@@ -101,10 +112,10 @@ export function VendasVendedorModal({
                   <th>Cliente</th>
                   <th>Produto</th>
                   <th>Pgto</th>
-                  <th style={{ textAlign: 'right' }}>Total Venda</th>
-                  <th style={{ textAlign: 'right' }}>Pago no Ato</th>
+                  <th className={styles.right}>Total venda</th>
+                  <th className={styles.right}>Pago no ato</th>
                   <th>Status</th>
-                  {percentualComissao != null && <th style={{ textAlign: 'right' }}>Comissão</th>}
+                  {percentualComissao != null && <th className={styles.right}>Comissão</th>}
                 </tr>
               </thead>
               <tbody>
@@ -116,35 +127,31 @@ export function VendasVendedorModal({
 
                   return (
                     <tr key={v.id}>
-                      <td>{formatDate(v.dataFechamento)}</td>
+                      <td className={styles.muted}>{formatDate(v.dataFechamento)}</td>
                       <td>{v.nome}</td>
-                      <td>{v.produtoVenda ? PRODUTO_VENDA_LABEL[v.produtoVenda] : '-'}</td>
-                      <td>{v.formaPagamento ? FORMA_PAGAMENTO_LABEL[v.formaPagamento] : '-'}</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(v.valorTotalVenda)}</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(v.valorPagoNoAto)}</td>
+                      <td className={styles.muted}>{v.produtoVenda ? PRODUTO_VENDA_LABEL[v.produtoVenda] : '-'}</td>
+                      <td className={styles.muted}>{v.formaPagamento ? FORMA_PAGAMENTO_LABEL[v.formaPagamento] : '-'}</td>
+                      <td className={styles.right}>{formatCurrency(v.valorTotalVenda)}</td>
+                      <td className={`${styles.right} ${styles.muted}`}>{formatCurrency(v.valorPagoNoAto)}</td>
                       <td>
-                        <span className={styles.badge} style={{ background: isPago ? 'var(--success)' : 'var(--gold)', color: '#fff' }}>
+                        <Pill bg={isPago ? 'var(--success-bg)' : 'var(--warning-bg)'} color={isPago ? 'var(--success)' : 'var(--warning)'}>
                           {statusLabel}
-                        </span>
+                        </Pill>
                       </td>
                       {valorComissao != null && (
-                        <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                          {formatCurrency(valorComissao)}
-                        </td>
+                        <td className={styles.right}>{formatCurrency(valorComissao)}</td>
                       )}
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot>
-                <tr>
-                  <td colSpan={4} style={{ textAlign: 'right', fontWeight: 'bold' }}>Totais:</td>
-                  <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(totalVendido)}</td>
+                <tr className={styles.totalsRow}>
+                  <td colSpan={4} className={styles.right}>Totais</td>
+                  <td className={styles.right}>{formatCurrency(totalVendido)}</td>
                   <td colSpan={2}></td>
                   {percentualComissao != null && (
-                    <td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--success)' }}>
-                      {formatCurrency(comissaoTotal)}
-                    </td>
+                    <td className={`${styles.right} ${styles.totalsHighlight}`}>{formatCurrency(comissaoTotal)}</td>
                   )}
                 </tr>
               </tfoot>

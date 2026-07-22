@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { loginAs } from './helpers';
+import { csrfHeaders, loginAs } from './helpers';
 
 test.describe('Comercial (E13)', () => {
   test('Formulário público de solicitar acesso (H1.3) cria um lead e mostra confirmação', async ({ page }) => {
@@ -136,9 +136,13 @@ test.describe('Comercial (E13)', () => {
   // reruns encontram a meta de Agosto/2026 já definida por uma execução anterior — um valor fixo
   // não provaria que ESTA chamada de PUT realmente atualizou nada (mesma classe de flake já
   // documentada no LeadRepositoryTest do M05).
+  // Auditoria de UX (22/07/2026) — meta e % de comissão viraram Admin-only (o vendedor não pode
+  // definir a própria meta/comissão), então este teste passou a logar como admin, não mais como
+  // Comercial (ver teste de RBAC logo abaixo, que prova o vendedor não vê o botão nem consegue
+  // chamar o PUT direto).
   test('Define meta comercial de um vendedor e o valor certo aparece no ranking', async ({ page }) => {
-    await loginAs(page, 'comercial@sawhub.com.br');
-    await expect(page).toHaveURL(/\/admin\//);
+    await loginAs(page, 'admin@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\/dashboard/);
     await page.goto('/admin/comercial/ranking');
 
     const main = page.getByRole('main');
@@ -167,6 +171,25 @@ test.describe('Comercial (E13)', () => {
 
     await page.goto('/admin/comercial/leads');
     await expect(page.getByText('Sem acesso')).toBeVisible();
+  });
+
+  // Pedido do Marcos (22/07/2026) — "essa aba/botão só será visto por admin": Comercial acessa o
+  // módulo (Modulo.COMERCIAL), mas não pode definir a própria meta/comissão. Prova as duas pontas:
+  // botão escondido na UI E o backend rejeitando a chamada direta (não é só cosmético).
+  test('Comercial não vê "+ Definir meta" no Ranking e o backend rejeita a chamada direta', async ({ page }) => {
+    await loginAs(page, 'comercial@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/comercial/ranking');
+
+    const main = page.getByRole('main');
+    await expect(main.getByTestId('ranking-row').first()).toBeVisible();
+    await expect(main.getByRole('button', { name: 'Definir meta' })).toHaveCount(0);
+
+    const resposta = await page.request.put('/api/v1/admin/comercial/metas', {
+      headers: await csrfHeaders(page),
+      data: { vendedorId: '00000000-0000-0000-0000-000000000000', ano: 2026, mes: 8, metaFechamentos: 5 },
+    });
+    expect(resposta.status()).toBe(403);
   });
 
   // Change request pós-MVP ("importação de planilhas de eventos passados pra popular histórico",

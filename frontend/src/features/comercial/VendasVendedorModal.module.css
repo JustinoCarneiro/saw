@@ -1,0 +1,187 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 980px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-float);
+  padding: 24px 26px;
+}
+
+.closeButton {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text-soft);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 2px;
+  padding-right: 40px;
+}
+
+.subtitle {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  margin-bottom: 18px;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summaryDivider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+}
+
+.summaryLabel {
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.summaryValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.summaryValueHighlight {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.summaryEmpty {
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+.error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.loading,
+.empty {
+  padding: 24px 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  text-align: center;
+}
+
+.tableWrapper {
+  /* flex item por padrão recusa encolher abaixo da largura do conteúdo (min-width:auto do
+     flexbox) — sem min-width:0 aqui, a tabela larga empurrava pra fora do modal em vez de
+     ganhar scroll horizontal próprio (achado ao vivo, 22/07/2026). */
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 600;
+  text-align: left;
+}
+
+.table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--text);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.right {
+  text-align: right;
+}
+
+.muted {
+  color: var(--text-soft);
+}
+
+.totalsRow td {
+  padding: 12px 12px;
+  border-bottom: none;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.totalsHighlight {
+  color: var(--success);
+}

@@ -13,6 +13,7 @@ import com.sawhub.hub.comercial.dto.VendedorResumo;
 import com.sawhub.hub.common.dto.ImportResultResponse;
 import com.sawhub.hub.evento.EventoRepository;
 import com.sawhub.hub.evento.StatusEvento;
+import com.sawhub.hub.security.AppUserPrincipal;
 import com.sawhub.hub.security.RequiresModulo;
 import com.sawhub.hub.team.Area;
 import com.sawhub.hub.team.Colaborador;
@@ -29,6 +30,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -180,8 +183,15 @@ public class ComercialController {
         return metaComercialService.listar(ano, mes);
     }
 
+    // Pedido do Marcos (22/07/2026) — meta e % de comissão só podem ser definidos pelo Admin, não
+    // pelo próprio vendedor: área Comercial também acessa este módulo (Modulo.COMERCIAL), então o
+    // gate de módulo sozinho não bastava aqui, precisa de checagem de Area explícita.
     @PutMapping("/metas")
-    public MetaComercialResponse definirMeta(@Valid @RequestBody CriarMetaComercialRequest request) {
+    public MetaComercialResponse definirMeta(@AuthenticationPrincipal AppUserPrincipal principal,
+                                              @Valid @RequestBody CriarMetaComercialRequest request) {
+        if (principal.getArea() != Area.ADMIN) {
+            throw new AccessDeniedException("Só o Admin pode definir meta e comissão.");
+        }
         return MetaComercialResponse.from(metaComercialService.definir(request));
     }
 
