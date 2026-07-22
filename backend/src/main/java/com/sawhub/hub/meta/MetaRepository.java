@@ -1,6 +1,7 @@
 package com.sawhub.hub.meta;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +15,13 @@ public interface MetaRepository extends JpaRepository<Meta, UUID> {
             + "AND (:status IS NULL OR m.status = :status) "
             + "ORDER BY m.prazo ASC")
     List<Meta> buscarPorMentorado(@Param("mentoradoId") UUID mentoradoId, @Param("status") StatusMeta status);
+
+    // Fase 5 (H3.4) — edição/status/criação pelo Admin (MetaAdminService): findById() puro deixa
+    // `mentorado` como proxy LAZY não inicializado; MetaAdminResponse (fora da transação,
+    // open-in-view=false) lê nome/id do mentorado e quebraria com LazyInitializationException —
+    // mesma classe de bug já corrigida em buscarPorMentorado/listarTodasComMentorado acima.
+    @Query("SELECT m FROM Meta m LEFT JOIN FETCH m.mentorado WHERE m.id = :id")
+    Optional<Meta> buscarPorIdComMentorado(@Param("id") UUID id);
 
     // Fase 5 — achado ao vivo: findAll() (usado por MetaCsvService.exportar() e pela listagem
     // admin nova) deixa `mentorado`/`mentorado.usuario` como proxy LAZY não inicializado; como

@@ -88,7 +88,7 @@ public class TarefaService {
     private Encaminhamento buscarDoMentorado(Mentorado mentorado, UUID tarefaId) {
         return encaminhamentoRepository.buscarPorIdComMeta(tarefaId)
                 .filter(e -> e.getMentorado().getId().equals(mentorado.getId()))
-                .orElseThrow(() -> new NoSuchElementException("Tarefa não encontrada."));
+                .orElseThrow(() -> new NoSuchElementException("Encaminhamento não encontrado."));
     }
 
     // Mesma checagem de posse — vincular a uma Meta de outro mentorado é rejeitado como se a

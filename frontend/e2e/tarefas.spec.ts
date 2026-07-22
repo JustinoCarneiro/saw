@@ -9,15 +9,15 @@ test.describe('M10 — E4 Tarefas & Agenda', () => {
     await loginAs(page, 'marina@sabordamarina.com.br');
     await expect(page).toHaveURL(/\/mentorado/);
 
-    await page.getByRole('link', { name: 'Tarefas' }).click();
+    await page.getByRole('link', { name: 'Encaminhamentos' }).click();
     await expect(page).toHaveURL(/\/mentorado\/tarefas/);
 
     // Criar
-    await page.getByRole('button', { name: 'Nova tarefa' }).click();
+    await page.getByRole('button', { name: 'Novo encaminhamento' }).click();
     await page.getByLabel('Título').fill(titulo);
     await page.getByLabel('Prazo').fill('2026-12-31');
     await page.getByLabel('Prioridade').selectOption('ALTA');
-    await page.getByRole('button', { name: 'Criar tarefa' }).click();
+    await page.getByRole('button', { name: 'Criar encaminhamento' }).click();
 
     const linha = () => page.locator('[data-testid^="tarefa-row-"]', { hasText: titulo });
     await expect(linha()).toBeVisible();
@@ -30,11 +30,11 @@ test.describe('M10 — E4 Tarefas & Agenda', () => {
 
     // Buscar por um trecho do título único -> aparece; busca por algo que não bate -> some
     await page.getByRole('button', { name: 'Todas' }).click();
-    await page.getByPlaceholder('Buscar tarefas...').fill(titulo);
+    await page.getByPlaceholder('Buscar encaminhamentos...').fill(titulo);
     await expect(linha()).toBeVisible();
-    await page.getByPlaceholder('Buscar tarefas...').fill('xxxxxxxxxxxxxxxxxxxxnaoexiste');
-    await expect(page.getByText('Nenhuma tarefa encontrada.')).toBeVisible();
-    await page.getByPlaceholder('Buscar tarefas...').fill('');
+    await page.getByPlaceholder('Buscar encaminhamentos...').fill('xxxxxxxxxxxxxxxxxxxxnaoexiste');
+    await expect(page.getByText('Nenhum encaminhamento encontrado.')).toBeVisible();
+    await page.getByPlaceholder('Buscar encaminhamentos...').fill('');
 
     // Iniciar -> Em andamento
     await linha().getByRole('button', { name: 'Iniciar' }).click();
@@ -60,8 +60,8 @@ test.describe('M10 — E4 Tarefas & Agenda', () => {
   test('resumo reflete o dado real seedado de Fernanda Lima (10 tarefas, todas concluídas)', async ({ page }) => {
     // DemoDataSeeder: Fernanda tem 10 encaminhamentos, todos concluído=true no seed original.
     await loginAs(page, 'fernanda@cantinadafernanda.com.br');
-    await page.getByRole('link', { name: 'Tarefas' }).click();
-    await expect(page.getByText('10 tarefa(s) no total.')).toBeVisible();
+    await page.getByRole('link', { name: 'Encaminhamentos' }).click();
+    await expect(page.getByText('10 encaminhamento(s) no total.')).toBeVisible();
   });
 
   test('isolamento por tenant: mentorado só vê as próprias tarefas seedadas', async ({ page }) => {

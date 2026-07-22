@@ -110,12 +110,12 @@ public class Encaminhamento extends BaseEntity {
     /** A partir de PENDENTE ou EM_ANDAMENTO (H4.2 não exige passar por Em andamento primeiro). */
     public void concluir() {
         if (status == StatusTarefa.CONCLUIDA) {
-            throw new IllegalStateException("Tarefa já está concluída.");
+            throw new IllegalStateException("Encaminhamento já está concluído.");
         }
         this.status = StatusTarefa.CONCLUIDA;
     }
 
-    /** Reabre uma tarefa concluída por engano — volta pra PENDENTE. */
+    /** Reabre um encaminhamento concluído por engano — volta pra PENDENTE. */
     public void reabrir() {
         exigirStatus(StatusTarefa.CONCLUIDA);
         this.status = StatusTarefa.PENDENTE;
@@ -123,14 +123,14 @@ public class Encaminhamento extends BaseEntity {
 
     private void exigirNaoConcluida() {
         if (status == StatusTarefa.CONCLUIDA) {
-            throw new IllegalStateException("Tarefa já está concluída — não é mais editável.");
+            throw new IllegalStateException("Encaminhamento já está concluído — não é mais editável.");
         }
     }
 
     private void exigirStatus(StatusTarefa esperado) {
         if (status != esperado) {
             throw new IllegalStateException(
-                    "Tarefa precisa estar em " + esperado + " para essa transição (está em " + status + ").");
+                    "Encaminhamento precisa estar em " + esperado + " para essa transição (está em " + status + ").");
         }
     }
 

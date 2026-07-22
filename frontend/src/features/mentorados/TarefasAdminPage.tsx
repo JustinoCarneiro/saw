@@ -32,7 +32,7 @@ export function TarefasAdminPage() {
     apiClient
       .get<EncaminhamentoAdmin[]>('/admin/encaminhamentos')
       .then((res) => setTarefas(res.data))
-      .catch(() => setError('Não foi possível carregar as tarefas.'));
+      .catch(() => setError('Não foi possível carregar os encaminhamentos.'));
   };
 
   useEffect(carregar, []);
@@ -55,10 +55,10 @@ export function TarefasAdminPage() {
       <div className={styles.csvRow}>
         <CsvImportExport
           exportUrl="/admin/encaminhamentos/export"
-          exportFilename="tarefas.csv"
+          exportFilename="encaminhamentos.csv"
           importUrl="/admin/encaminhamentos/import"
           onImportado={carregar}
-          labelPrefix="Tarefas"
+          labelPrefix="Encaminhamentos"
         />
       </div>
 
@@ -66,7 +66,7 @@ export function TarefasAdminPage() {
 
       <DataGrid columns={COLUMNS} headers={['Mentorado', 'Título', 'Peso', 'Prioridade', 'Prazo', 'Status', 'Ações']}>
         {tarefas === null && !error && <div className={styles.loading}>Carregando…</div>}
-        {tarefas?.length === 0 && <div className={styles.loading}>Nenhuma tarefa cadastrada.</div>}
+        {tarefas?.length === 0 && <div className={styles.loading}>Nenhum encaminhamento cadastrado.</div>}
         {tarefas?.map((t) => (
           editandoId === t.id ? (
             <TarefaEditRow
@@ -148,7 +148,7 @@ function TarefaEditRow({ tarefa, onSalvo, onCancelar }: {
       await apiClient.put(`/admin/encaminhamentos/${tarefa.id}`, { titulo, prazo: prazo || null, prioridade });
       onSalvo();
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível salvar a tarefa.'));
+      setError(getApiErrorMessage(err, 'Não foi possível salvar o encaminhamento.'));
       setSalvando(false);
     }
   }

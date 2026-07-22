@@ -45,6 +45,6 @@ public class EncaminhamentoAdminService {
 
     private Encaminhamento buscar(UUID id) {
         return encaminhamentoRepository.buscarPorIdComMentorado(id)
-                .orElseThrow(() -> new NoSuchElementException("Tarefa não encontrada."));
+                .orElseThrow(() -> new NoSuchElementException("Encaminhamento não encontrado."));
     }
 }

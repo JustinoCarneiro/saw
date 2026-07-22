@@ -198,10 +198,10 @@ test.describe('Metas/Tarefas — Import/Export CSV e listagem admin (Fase 5)', (
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Exportar Tarefas' }).click(),
+      page.getByRole('button', { name: 'Exportar Encaminhamentos' }).click(),
     ]);
 
-    expect(download.suggestedFilename()).toBe('tarefas.csv');
+    expect(download.suggestedFilename()).toBe('encaminhamentos.csv');
   });
 
   test('Tarefas: importar CSV cria a tarefa e ela aparece na listagem admin', async ({ page }) => {
@@ -215,7 +215,7 @@ test.describe('Metas/Tarefas — Import/Export CSV e listagem admin (Fase 5)', (
 
     const main = page.getByRole('main');
     await main.getByTestId('csv-importar-input').setInputFiles({
-      name: 'tarefas.csv',
+      name: 'encaminhamentos.csv',
       mimeType: 'text/csv',
       buffer: Buffer.from(csv, 'utf-8'),
     });

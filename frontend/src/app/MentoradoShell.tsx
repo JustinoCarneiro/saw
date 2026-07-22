@@ -13,7 +13,7 @@ import styles from './MentoradoShell.module.css';
 const NAV_ITEMS = [
   { to: '/mentorado', label: 'Dashboard', end: true },
   { to: '/mentorado/metas', label: 'Metas', end: false },
-  { to: '/mentorado/tarefas', label: 'Tarefas', end: false },
+  { to: '/mentorado/tarefas', label: 'Encaminhamentos', end: false },
   { to: '/mentorado/mentorias', label: 'Mentorias & Atas', end: false },
   { to: '/mentorado/materiais', label: 'Materiais & Dicas', end: false },
   { to: '/mentorado/eventos', label: 'Eventos', end: false },

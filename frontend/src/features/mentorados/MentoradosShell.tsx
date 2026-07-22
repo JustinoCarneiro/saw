@@ -14,7 +14,7 @@ const TABS = [
   { to: '/admin/mentorados/lista', label: 'Mentorados' },
   { to: '/admin/mentorados/mentorias', label: 'Mentorias' },
   { to: '/admin/mentorados/metas', label: 'Metas' },
-  { to: '/admin/mentorados/tarefas', label: 'Tarefas' },
+  { to: '/admin/mentorados/tarefas', label: 'Encaminhamentos' },
 ];
 
 export function MentoradosShell() {

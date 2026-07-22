@@ -67,7 +67,7 @@ export function TarefasPage() {
     apiClient
       .get<Tarefa[]>('/mentorado/tarefas', { params: { status: filtro || undefined, busca: busca || undefined } })
       .then((res) => { if (requestId === requestIdRef.current) setTarefas(res.data); })
-      .catch((err) => { if (requestId === requestIdRef.current) setError(getApiErrorMessage(err, 'Não foi possível carregar suas tarefas.')); });
+      .catch((err) => { if (requestId === requestIdRef.current) setError(getApiErrorMessage(err, 'Não foi possível carregar seus encaminhamentos.')); });
     apiClient.get<ResumoTarefas>('/mentorado/tarefas/resumo')
       .then((res) => { if (requestId === requestIdRef.current) setResumo(res.data); });
   };
@@ -88,7 +88,7 @@ export function TarefasPage() {
 
   return (
     <div>
-      <h1 className={styles.title}>Tarefas</h1>
+      <h1 className={styles.title}>Encaminhamentos</h1>
       <p className={styles.subtitle}>Organize suas ações diárias e avance com consistência.</p>
 
       <div className={styles.toolbar}>
@@ -106,12 +106,12 @@ export function TarefasPage() {
         <div className={styles.toolbarRight}>
           <input
             className={styles.searchInput}
-            placeholder="Buscar tarefas..."
+            placeholder="Buscar encaminhamentos..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
           <button className={styles.newButton} onClick={() => setFormulario('criar')}>
-            <span style={{ fontSize: 16 }}>+</span>Nova tarefa
+            <span style={{ fontSize: 16 }}>+</span>Novo encaminhamento
           </button>
         </div>
       </div>
@@ -126,9 +126,9 @@ export function TarefasPage() {
 
       {error && <div className={styles.error}>{error}</div>}
 
-      <DataGrid columns={COLUMNS} headers={['Tarefa', 'Meta relacionada', 'Prazo', 'Prioridade', 'Status', 'Ações']}>
+      <DataGrid columns={COLUMNS} headers={['Encaminhamento', 'Meta relacionada', 'Prazo', 'Prioridade', 'Status', 'Ações']}>
         {tarefas === null && !error && <div className={styles.loading}>Carregando…</div>}
-        {tarefas?.length === 0 && <div className={styles.loading}>Nenhuma tarefa encontrada.</div>}
+        {tarefas?.length === 0 && <div className={styles.loading}>Nenhum encaminhamento encontrado.</div>}
         {tarefas?.map((t) => {
           const pill = statusPill(t);
           const prio = PRIORIDADE_INFO[t.prioridade];
@@ -169,7 +169,7 @@ export function TarefasPage() {
           <DataGridRow columns={COLUMNS}>
             <div>
               <div className={styles.strong}>Resumo geral</div>
-              <div className={styles.muted}>{resumo.total} tarefa(s) no total.</div>
+              <div className={styles.muted}>{resumo.total} encaminhamento(s) no total.</div>
             </div>
             <div />
             <div>
@@ -222,7 +222,7 @@ function TarefaForm({ tarefaExistente, onSalva, onCancelar }: {
       }
       onSalva();
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível salvar a tarefa. Confira os dados.'));
+      setError(getApiErrorMessage(err, 'Não foi possível salvar o encaminhamento. Confira os dados.'));
     } finally {
       setSubmitting(false);
     }
@@ -230,7 +230,7 @@ function TarefaForm({ tarefaExistente, onSalva, onCancelar }: {
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.formTitle}>{tarefaExistente ? 'Editar tarefa' : 'Nova tarefa'}</div>
+      <div className={styles.formTitle}>{tarefaExistente ? 'Editar encaminhamento' : 'Novo encaminhamento'}</div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <label className={styles.formField}>
           Título
@@ -265,7 +265,7 @@ function TarefaForm({ tarefaExistente, onSalva, onCancelar }: {
         <div className={styles.formActions}>
           <button type="button" className={styles.cancelButton} onClick={onCancelar}>Cancelar</button>
           <button type="submit" className={styles.actionButton} disabled={submitting}>
-            {submitting ? 'Salvando…' : tarefaExistente ? 'Salvar alterações' : 'Criar tarefa'}
+            {submitting ? 'Salvando…' : tarefaExistente ? 'Salvar alterações' : 'Criar encaminhamento'}
           </button>
         </div>
       </form>
