@@ -25,11 +25,20 @@ function formatarDataHora(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+// input[type=datetime-local] espera "YYYY-MM-DDTHH:mm" em horário local (sem timezone) —
+// toISOString() daria o instante em UTC, desalinhando a hora exibida do que foi de fato salvo.
+function paraDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function EventosPage() {
   const [status, setStatus] = useState<StatusEvento | ''>('');
   const [eventos, setEventos] = useState<Evento[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
+  const [editando, setEditando] = useState<Evento | null>(null);
   const [cancelando, setCancelando] = useState<Evento | null>(null);
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
 
@@ -85,6 +94,14 @@ export function EventosPage() {
 
       {criando && <EventoForm onSalvo={() => { setCriando(false); carregar(); }} onCancelar={() => setCriando(false)} />}
 
+      {editando && (
+        <EventoForm
+          evento={editando}
+          onSalvo={() => { setEditando(null); carregar(); }}
+          onCancelar={() => setEditando(null)}
+        />
+      )}
+
       {error && <div className={styles.error}>{error}</div>}
 
       <DataGrid columns={COLUMNS} headers={['Título', 'Tipo', 'Data/Hora', 'Status', 'Ações']}>
@@ -99,6 +116,7 @@ export function EventosPage() {
               <div className={styles.muted}>{formatarDataHora(ev.dataHora)}</div>
               <div><Pill bg={st.bg} color={st.color}>{st.label}</Pill></div>
               <div className={styles.acoes}>
+                <button className={styles.actionButton} onClick={() => setEditando(ev)}>Editar</button>
                 {ev.status === 'PROGRAMADO' && (
                   <button className={styles.actionButton} onClick={() => transicionar(ev.id, 'AO_VIVO')}>Iniciar</button>
                 )}
@@ -108,7 +126,6 @@ export function EventosPage() {
                 {(ev.status === 'PROGRAMADO' || ev.status === 'AO_VIVO') && (
                   <button className={styles.actionButtonDanger} onClick={() => setCancelando(ev)}>Cancelar</button>
                 )}
-                {(ev.status === 'REALIZADO' || ev.status === 'CANCELADO') && <span className={styles.muted}>—</span>}
               </div>
             </DataGridRow>
           );
@@ -134,14 +151,14 @@ export function EventosPage() {
   );
 }
 
-function EventoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar: () => void }) {
-  const [titulo, setTitulo] = useState('');
-  const [tipo, setTipo] = useState<TipoEvento>('AO_VIVO');
-  const [tema, setTema] = useState('');
-  const [dataHora, setDataHora] = useState('');
-  const [local, setLocal] = useState('');
-  const [linkOnline, setLinkOnline] = useState('');
-  const [vagas, setVagas] = useState('');
+function EventoForm({ evento, onSalvo, onCancelar }: { evento?: Evento; onSalvo: () => void; onCancelar: () => void }) {
+  const [titulo, setTitulo] = useState(evento?.titulo ?? '');
+  const [tipo, setTipo] = useState<TipoEvento>(evento?.tipo ?? 'AO_VIVO');
+  const [tema, setTema] = useState(evento?.tema ?? '');
+  const [dataHora, setDataHora] = useState(evento ? paraDatetimeLocal(evento.dataHora) : '');
+  const [local, setLocal] = useState(evento?.local ?? '');
+  const [linkOnline, setLinkOnline] = useState(evento?.linkOnline ?? '');
+  const [vagas, setVagas] = useState(evento?.vagas ? String(evento.vagas) : '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -150,12 +167,19 @@ function EventoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar: 
     setError(null);
     setSubmitting(true);
     try {
-      await apiClient.post('/admin/eventos', {
-        titulo, tipo, tema: tema || null,
+      const camposComuns = {
+        titulo, tema: tema || null,
         dataHora: dataHora ? new Date(dataHora).toISOString() : null,
         local: local || null, linkOnline: linkOnline || null,
         vagas: vagas ? Number(vagas) : null,
-      });
+      };
+      if (evento) {
+        // tipo (Ao vivo/Presencial) não faz parte de AtualizarEventoRequest — imutável após a
+        // criação (mesmo raciocínio de MENTORIA_CONTINUA/etc não trocarem de tipo depois).
+        await apiClient.put(`/admin/eventos/${evento.id}`, camposComuns);
+      } else {
+        await apiClient.post('/admin/eventos', { ...camposComuns, tipo });
+      }
       onSalvo();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível salvar o evento.'));
@@ -166,7 +190,7 @@ function EventoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar: 
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.formTitle}>Novo evento</div>
+      <div className={styles.formTitle}>{evento ? 'Editar evento' : 'Novo evento'}</div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <label className={styles.formField} style={{ flex: 2 }}>
@@ -175,7 +199,13 @@ function EventoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar: 
           </label>
           <label className={styles.formField}>
             Tipo
-            <select className={styles.select} value={tipo} onChange={(e) => setTipo(e.target.value as TipoEvento)}>
+            <select
+              className={styles.select}
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value as TipoEvento)}
+              disabled={!!evento}
+              title={evento ? 'O tipo não pode ser alterado depois de criado.' : undefined}
+            >
               <option value="AO_VIVO">Ao vivo</option>
               <option value="PRESENCIAL">Presencial</option>
             </select>

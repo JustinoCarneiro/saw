@@ -19,6 +19,7 @@ export function ConteudosPage() {
   const [conteudos, setConteudos] = useState<Conteudo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
+  const [editando, setEditando] = useState<Conteudo | null>(null);
 
   const carregar = () => {
     setConteudos(null);
@@ -60,6 +61,14 @@ export function ConteudosPage() {
 
       {criando && <ConteudoForm onSalvo={() => { setCriando(false); carregar(); }} onCancelar={() => setCriando(false)} />}
 
+      {editando && (
+        <ConteudoForm
+          conteudo={editando}
+          onSalvo={() => { setEditando(null); carregar(); }}
+          onCancelar={() => setEditando(null)}
+        />
+      )}
+
       {error && <div className={styles.error}>{error}</div>}
 
       <DataGrid columns={COLUMNS} headers={['Título', 'Tipo', 'Status', 'Ações']}>
@@ -75,6 +84,9 @@ export function ConteudosPage() {
               </Pill>
             </div>
             <div className={styles.acoes}>
+              <button className={styles.actionButton} onClick={() => setEditando(c)}>
+                Editar
+              </button>
               <button className={styles.actionButton} onClick={() => alternarPublicacao(c)}>
                 {c.publicado ? 'Despublicar' : 'Publicar'}
               </button>
@@ -86,11 +98,11 @@ export function ConteudosPage() {
   );
 }
 
-function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar: () => void }) {
-  const [titulo, setTitulo] = useState('');
-  const [tipo, setTipo] = useState<TipoConteudo>('DOCUMENTO');
-  const [url, setUrl] = useState('');
-  const [duracaoMinutos, setDuracaoMinutos] = useState('');
+function ConteudoForm({ conteudo, onSalvo, onCancelar }: { conteudo?: Conteudo; onSalvo: () => void; onCancelar: () => void }) {
+  const [titulo, setTitulo] = useState(conteudo?.titulo ?? '');
+  const [tipo, setTipo] = useState<TipoConteudo>(conteudo?.tipo ?? 'DOCUMENTO');
+  const [url, setUrl] = useState(conteudo?.url ?? '');
+  const [duracaoMinutos, setDuracaoMinutos] = useState(conteudo?.duracaoMinutos ? String(conteudo.duracaoMinutos) : '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -99,10 +111,12 @@ function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar
     setError(null);
     setSubmitting(true);
     try {
-      await apiClient.post('/admin/conteudos', {
-        titulo, tipo, url,
-        duracaoMinutos: duracaoMinutos ? Number(duracaoMinutos) : null,
-      });
+      const payload = { titulo, tipo, url, duracaoMinutos: duracaoMinutos ? Number(duracaoMinutos) : null };
+      if (conteudo) {
+        await apiClient.put(`/admin/conteudos/${conteudo.id}`, payload);
+      } else {
+        await apiClient.post('/admin/conteudos', payload);
+      }
       onSalvo();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível salvar o conteúdo.'));
@@ -113,7 +127,7 @@ function ConteudoForm({ onSalvo, onCancelar }: { onSalvo: () => void; onCancelar
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.formTitle}>Novo conteúdo</div>
+      <div className={styles.formTitle}>{conteudo ? 'Editar conteúdo' : 'Novo conteúdo'}</div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <label className={styles.formField} style={{ flex: 2 }}>

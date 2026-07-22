@@ -418,8 +418,19 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     const linha = main.locator('text=' + titulo).locator('xpath=ancestor::div[contains(@class,"row")]');
     await expect(linha.getByText('Rascunho')).toBeVisible();
 
-    await linha.getByRole('button', { name: 'Publicar' }).click();
-    await expect(linha.getByText('Publicado')).toBeVisible();
+    // Auditoria de UX (22/07/2026) — achado: PUT /admin/conteudos/{id} já existia no backend, mas
+    // a tela nunca chamava (só criar/publicar/despublicar). "Editar" fecha essa lacuna.
+    const tituloEditado = `${titulo} (editado)`;
+    await linha.getByRole('button', { name: 'Editar' }).click();
+    await expect(page.getByText('Editar conteúdo')).toBeVisible();
+    await expect(page.getByLabel('Título')).toHaveValue(titulo);
+    await page.getByLabel('Título').fill(tituloEditado);
+    await page.getByRole('button', { name: 'Salvar' }).click();
+    const linhaEditada = main.locator('text=' + tituloEditado).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await expect(linhaEditada.getByText('Rascunho')).toBeVisible();
+
+    await linhaEditada.getByRole('button', { name: 'Publicar' }).click();
+    await expect(linhaEditada.getByText('Publicado')).toBeVisible();
   });
 
   test('Eventos: criar e avançar até Realizado', async ({ page }) => {
@@ -435,6 +446,15 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await main.getByRole('button', { name: 'Salvar' }).click();
 
     const linha = main.locator('text=' + titulo).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await expect(linha.getByText('Programado')).toBeVisible();
+
+    // Auditoria de UX (22/07/2026) — mesmo achado do Conteúdos acima: PUT /admin/eventos/{id} já
+    // existia, faltava o botão. tipo (Ao vivo/Presencial) fica desabilitado — imutável após criar.
+    await linha.getByRole('button', { name: 'Editar' }).click();
+    await expect(page.getByText('Editar evento')).toBeVisible();
+    await expect(page.getByLabel('Tipo')).toBeDisabled();
+    await page.getByLabel('Local presencial (opcional)').fill('Sede SAW, Recife');
+    await main.getByRole('button', { name: 'Salvar' }).click();
     await expect(linha.getByText('Programado')).toBeVisible();
 
     await linha.getByRole('button', { name: 'Iniciar' }).click();
