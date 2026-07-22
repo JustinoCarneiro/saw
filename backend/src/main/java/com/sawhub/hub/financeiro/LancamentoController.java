@@ -51,8 +51,9 @@ public class LancamentoController {
                                             @RequestParam(required = false) TipoLancamento tipo,
                                             @RequestParam(required = false) UUID categoriaId,
                                             @RequestParam(required = false) StatusLancamento status,
-                                            @RequestParam(required = false) UUID eventoId) {
-        return lancamentoService.listar(de, ate, tipo, categoriaId, status, eventoId).stream()
+                                            @RequestParam(required = false) UUID eventoId,
+                                            @RequestParam(required = false) FormaPagamentoLancamento formaPagamento) {
+        return lancamentoService.listar(de, ate, tipo, categoriaId, status, eventoId, formaPagamento).stream()
                 .map(LancamentoResponse::from).toList();
     }
 

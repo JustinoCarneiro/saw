@@ -20,14 +20,14 @@ export function PeriodoPicker({ ano, mes, onChange }: PeriodoPickerProps) {
         <line x1="8" y1="2" x2="8" y2="6" />
         <line x1="3" y1="10" x2="21" y2="10" />
       </svg>
-      <select className={styles.select} value={mes} onChange={(e) => onChange(ano, Number(e.target.value))}>
+      <select className={styles.select} aria-label="Mês" value={mes} onChange={(e) => onChange(ano, Number(e.target.value))}>
         {MESES_PT.map((nome, i) => (
           <option key={nome} value={i + 1}>
             {nome}
           </option>
         ))}
       </select>
-      <select className={styles.select} value={ano} onChange={(e) => onChange(Number(e.target.value), mes)}>
+      <select className={styles.select} aria-label="Ano" value={ano} onChange={(e) => onChange(Number(e.target.value), mes)}>
         {anos.map((a) => (
           <option key={a} value={a}>
             {a}

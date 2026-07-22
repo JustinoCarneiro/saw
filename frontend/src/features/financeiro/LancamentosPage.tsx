@@ -7,6 +7,7 @@ import { Pill } from '../../shared/components/Pill';
 import type {
   CategoriaFinanceira,
   EventoResumoFinanceiro,
+  FormaPagamentoLancamento,
   GrupoDre,
   Lancamento,
   NaturezaFinanceira,
@@ -26,7 +27,16 @@ import styles from './LancamentosPage.module.css';
 // nunca bate NULL — um lançamento criado direto como Realizado, sem vencimento, sumiria da tela
 // se a base fosse esse endpoint). Liquidar/Parcial usam os endpoints de .../lancamentos/{id}/...,
 // idênticos aos de .../contas/{id}/... (mesmo LancamentoService por baixo).
-const COLUMNS = '.9fr 1.8fr 1.1fr .9fr 1.1fr .9fr 1.3fr';
+const COLUMNS = '.9fr 1.6fr 1fr .9fr .9fr 1.1fr .9fr 1.3fr';
+
+// Pedido do Marcos (22/07/2026) — mesma riqueza da coluna "Forma de Pagamento" da planilha real.
+const FORMA_PAGAMENTO_LABEL: Record<FormaPagamentoLancamento, string> = {
+  PIX: 'Pix',
+  PIX_RECORRENTE: 'Pix Recorrente',
+  CARTAO: 'Cartão',
+  BOLETO: 'Boleto',
+  HOTMART: 'Hotmart',
+};
 
 function primeiroDiaDoMes(): string {
   const d = new Date();
@@ -79,6 +89,7 @@ export function LancamentosPage() {
   const [tipo, setTipo] = useState<TipoLancamento | ''>('');
   const [status, setStatus] = useState<StatusLancamento | ''>('');
   const [eventoId, setEventoId] = useState('');
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoLancamento | ''>('');
   const [lancamentos, setLancamentos] = useState<Lancamento[] | null>(null);
   const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
   const [eventos, setEventos] = useState<EventoResumoFinanceiro[]>([]);
@@ -96,6 +107,7 @@ export function LancamentosPage() {
           de: filtroPeriodoLigado ? de : SEM_FILTRO_DE,
           ate: filtroPeriodoLigado ? ate : SEM_FILTRO_ATE,
           tipo: tipo || undefined, status: status || undefined, eventoId: eventoId || undefined,
+          formaPagamento: formaPagamento || undefined,
         },
       })
       .then((res) => setLancamentos(res.data))
@@ -108,7 +120,7 @@ export function LancamentosPage() {
       .catch(() => setError('Não foi possível carregar as categorias financeiras.'));
   };
 
-  useEffect(carregar, [filtroPeriodoLigado, de, ate, tipo, status, eventoId]);
+  useEffect(carregar, [filtroPeriodoLigado, de, ate, tipo, status, eventoId, formaPagamento]);
 
   useEffect(() => {
     carregarCategorias();
@@ -154,6 +166,13 @@ export function LancamentosPage() {
             <option value="">Todos os eventos</option>
             {eventos.map((ev) => (
               <option key={ev.id} value={ev.id}>{ev.titulo}</option>
+            ))}
+          </select>
+          <select className={styles.select} aria-label="Filtrar por forma de pagamento" value={formaPagamento}
+                  onChange={(e) => setFormaPagamento(e.target.value as FormaPagamentoLancamento | '')}>
+            <option value="">Todas as formas de pagamento</option>
+            {Object.entries(FORMA_PAGAMENTO_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
             ))}
           </select>
         </div>
@@ -218,7 +237,7 @@ export function LancamentosPage() {
 
       {error && <div className={styles.error}>{error}</div>}
 
-      <DataGrid columns={COLUMNS} headers={['Data', 'Descrição', 'Categoria', 'Vencimento', 'Valor', 'Status', 'Ações']}>
+      <DataGrid columns={COLUMNS} headers={['Data', 'Descrição', 'Subcategoria', 'Pagamento', 'Vencimento', 'Valor', 'Status', 'Ações']}>
         {lancamentos === null && !error && <div className={styles.loading}>Carregando…</div>}
         {lancamentos?.length === 0 && <div className={styles.loading}>Nenhum lançamento neste período.</div>}
         {lancamentos?.map((l) => {
@@ -232,6 +251,7 @@ export function LancamentosPage() {
                 {l.eventoTitulo && <div className={styles.muted}>{l.eventoTitulo}</div>}
               </div>
               <div className={styles.muted}>{l.categoria.nome}</div>
+              <div className={styles.muted}>{l.formaPagamento ? FORMA_PAGAMENTO_LABEL[l.formaPagamento] : '—'}</div>
               <div className={styles.muted}>
                 {l.dataVencimento ? new Date(l.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
               </div>
@@ -304,8 +324,8 @@ function NovaCategoriaForm({ onCriado, onCancelar }: {
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <label className={styles.formField} style={{ flex: 2 }}>
-            Nome
-            <input className={styles.textInput} value={nome} onChange={(e) => setNome(e.target.value)} required />
+            Subcategoria
+            <input className={styles.textInput} placeholder="Ex.: Aluguel, Água Mineral…" value={nome} onChange={(e) => setNome(e.target.value)} required />
           </label>
           <label className={styles.formField}>
             Tipo
@@ -336,7 +356,7 @@ function NovaCategoriaForm({ onCriado, onCancelar }: {
         </div>
         <div className={styles.formRow}>
           <label className={styles.formField}>
-            Grupo (opcional)
+            Categoria (opcional)
             <input className={styles.textInput} placeholder="Ex.: Estrutura, Pessoas…" value={grupo} onChange={(e) => setGrupo(e.target.value)} />
           </label>
           <label className={styles.formField}>
@@ -380,6 +400,7 @@ function NovoLancamentoForm({ categorias, eventos, onCriado, onCancelar }: {
   const [jaRealizado, setJaRealizado] = useState(true);
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [eventoId, setEventoId] = useState('');
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoLancamento | ''>('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -399,6 +420,7 @@ function NovoLancamentoForm({ categorias, eventos, onCriado, onCancelar }: {
         status: jaRealizado ? 'REALIZADO' : 'PREVISTO',
         dataCompetencia: data,
         dataVencimento: jaRealizado ? null : data,
+        formaPagamento: formaPagamento || null,
       });
       onCriado();
     } catch (err) {
@@ -420,16 +442,16 @@ function NovoLancamentoForm({ categorias, eventos, onCriado, onCancelar }: {
             </select>
           </label>
           <label className={styles.formField}>
-            Categoria
+            Subcategoria
             <select className={styles.select} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} required>
-              <option value="">{categoriasDoTipo.length === 0 ? 'Nenhuma categoria cadastrada' : 'Selecione…'}</option>
+              <option value="">{categoriasDoTipo.length === 0 ? 'Nenhuma subcategoria cadastrada' : 'Selecione…'}</option>
               {categoriasDoTipo.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
             {categoriasDoTipo.length === 0 && (
               <div className={styles.muted}>
-                Nenhuma categoria de {tipo === 'RECEITA' ? 'receita' : 'despesa'} cadastrada — crie uma em "+ Nova categoria".
+                Nenhuma subcategoria de {tipo === 'RECEITA' ? 'receita' : 'despesa'} cadastrada — crie uma em "+ Nova categoria".
               </div>
             )}
           </label>
@@ -460,6 +482,16 @@ function NovoLancamentoForm({ categorias, eventos, onCriado, onCancelar }: {
               <option value="">Sem evento</option>
               {eventos.map((ev) => (
                 <option key={ev.id} value={ev.id}>{ev.titulo}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.formField}>
+            Forma de pagamento (opcional)
+            <select className={styles.select} value={formaPagamento}
+                    onChange={(e) => setFormaPagamento(e.target.value as FormaPagamentoLancamento | '')}>
+              <option value="">Não informada</option>
+              {Object.entries(FORMA_PAGAMENTO_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
               ))}
             </select>
           </label>

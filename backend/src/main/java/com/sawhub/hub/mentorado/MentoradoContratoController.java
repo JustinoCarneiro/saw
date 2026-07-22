@@ -28,16 +28,21 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/** M23 (change request pós-MVP, 17/07/2026) — separado de {@link MentoradoAdminController} de
- * propósito: achado MÉDIO do revisor-seguranca dessa leva. CNPJ, sócios e valor de contrato são
- * dado comercial/financeiro sensível, e "criar mentorado direto" gera credencial de login — nenhum
- * dos dois deveria ficar sob {@code Modulo.MENTORADOS} (a área Gestão de Performance também tem
- * esse módulo, per CLAUDE.md ela só deveria ver Mentorados/Mentorias/Conteúdos/Painel
- * Consolidado, não dado comercial/financeiro). {@code Modulo.COMERCIAL} é o gate certo — Admin
- * continua com acesso total (EnumSet.allOf em AreaModuloMatrix). */
+/** M23 (change request pós-MVP, 17/07/2026) separou este controller de
+ * {@link MentoradoAdminController} de propósito: achado MÉDIO do revisor-seguranca daquela leva
+ * apontou que CNPJ, sócios e valor de contrato são dado comercial sensível, e "criar mentorado
+ * direto" gera credencial de login — nenhum dos dois deveria ficar sob {@code Modulo.MENTORADOS}
+ * puro (a área Gestão de Performance também tem esse módulo).
+ *
+ * <p>Pedido explícito do Marcos (22/07/2026) reverteu essa restrição: Gestão de Performance
+ * passou a precisar de acesso pleno à área de Mentorados, incluindo criar mentorado direto (sem
+ * lead prévio) e editar dados de contrato — não só o Fundador. Em vez de trocar o gate por
+ * {@code Modulo.MENTORADOS} (o que tiraria o acesso que Área Comercial já tinha, já que ela só tem
+ * {@code Modulo.COMERCIAL}), o gate aceita QUALQUER UM dos dois módulos (OR, ver
+ * {@link RequiresModulo}) — mantém quem já tinha acesso e soma Gestão de Performance. */
 @RestController
 @RequestMapping("/api/v1/admin/mentorados")
-@RequiresModulo(Modulo.COMERCIAL)
+@RequiresModulo({Modulo.COMERCIAL, Modulo.MENTORADOS})
 public class MentoradoContratoController {
 
     private final MentoradoAdminService mentoradoAdminService;

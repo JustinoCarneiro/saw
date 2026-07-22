@@ -81,8 +81,10 @@ sawhub:
   # Dev/demo local precisa setar SEED_DEMO_DATA=true explicitamente (ver scripts/dev-up.sh).
   seed-demo-data: ${SEED_DEMO_DATA:false}
   bootstrap:
-    fundador-nome: ${BOOTSTRAP_FUNDADOR_NOME:Matheus Brayan}
-    fundador-email: ${BOOTSTRAP_FUNDADOR_EMAIL:matheus@sawhub.com.br}
+    # Achado do Marcos (22/07/2026, conferido direto em produção) — Fundador é conta por papel
+    # ("admin@"), não nome de pessoa (mesmo raciocínio de "comercial@"/"gestao_perf@" no seed).
+    fundador-nome: ${BOOTSTRAP_FUNDADOR_NOME:Admin SAW HUB}
+    fundador-email: ${BOOTSTRAP_FUNDADOR_EMAIL:admin@sawhub.com.br}
     # Sem fallback de propósito (achado H1): a app falha no boot se a env não existir, em vez
     # de silenciosamente criar o Fundador com uma senha conhecida/versionada.
     fundador-senha: ${BOOTSTRAP_FUNDADOR_SENHA}

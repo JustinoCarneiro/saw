@@ -12,6 +12,10 @@ public record DashboardComercialResponse(
         List<FunilItem> funil,
         // M25 (Suposição 7) — "vendido no mês" (novosMentoradosNoMes) exclui INGRESSO_EVENTO;
         // essa seção mostra a venda de ingresso à parte, por evento REALIZADO no período.
-        List<VendaIngressoResumo> vendaIngressos
+        List<VendaIngressoResumo> vendaIngressos,
+        // Pedido do Marcos (22/07/2026) — segunda metade de "dashboard mais visual: venda de
+        // ingresso por evento + venda 'por fora' (produto + valor)" que faltava (reunião
+        // 17/07/2026). Exclui INGRESSO_EVENTO (já coberto por vendaIngressos acima).
+        List<VendaPorProdutoResumo> vendaPorFora
 ) {
 }

@@ -134,7 +134,7 @@ export function TeamPage() {
             </div>
 
             <div className={styles.sectionTitle}>
-              <Tooltip text="Módulos que sua área pode acessar (RBAC) — Fundador acessa tudo, as demais áreas só o que está marcado abaixo.">Permissões de acesso</Tooltip>
+              <Tooltip text="Módulos que sua área pode acessar (RBAC). Fundador acessa tudo, as demais áreas só o que está marcado abaixo.">Permissões de acesso</Tooltip>
             </div>
             <div className={styles.permList}>
               {MATRIX_MODULOS.map((m) => {

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { loginAs } from './helpers';
 
 test('Fundador sees the real seeded team and permission matrix', async ({ page }) => {
-  await loginAs(page, 'matheus@sawhub.com.br');
+  await loginAs(page, 'admin@sawhub.com.br');
   await page.getByRole('link', { name: 'Time' }).click();
   await expect(page).toHaveURL(/\/admin\/time$/);
 
@@ -10,7 +10,7 @@ test('Fundador sees the real seeded team and permission matrix', async ({ page }
   await expect(main.getByText('Gestão de Time')).toBeVisible();
 
   // Colaboradores seedados de verdade (DemoDataSeeder), não mock.
-  for (const nome of ['Lucas Alves', 'Paula Mendes', 'Ricardo Costa', 'Juliana Lima']) {
+  for (const nome of ['Gestão de Performance', 'Comercial', 'Ricardo Costa', 'Juliana Lima']) {
     await expect(main.getByText(nome).first()).toBeVisible();
   }
 
@@ -22,7 +22,7 @@ test('Fundador sees the real seeded team and permission matrix', async ({ page }
 });
 
 test('M19 — H15.1: Fundador cadastra um novo colaborador com área definida', async ({ page }) => {
-  await loginAs(page, 'matheus@sawhub.com.br');
+  await loginAs(page, 'admin@sawhub.com.br');
   await page.getByRole('link', { name: 'Time' }).click();
   await expect(page).toHaveURL(/\/admin\/time$/);
 
@@ -43,25 +43,29 @@ test('M19 — H15.1: Fundador cadastra um novo colaborador com área definida', 
 // M20 — H15.6/H15.7: achado da auditoria de cobertura era que carteira/conversaoPct exibidos
 // aqui eram dado fixo do seeder, nunca calculado; e não havia visão de desempenho do time nenhuma.
 test('M20 — H15.6/H15.7: carteira e desempenho do time são computados, não fixos', async ({ page }) => {
-  await loginAs(page, 'matheus@sawhub.com.br');
+  await loginAs(page, 'admin@sawhub.com.br');
   await page.getByRole('link', { name: 'Time' }).click();
   await expect(page).toHaveURL(/\/admin\/time$/);
 
   const main = page.getByRole('main');
-  const linhaLucas = main.locator('[data-testid^="colaborador-row-"]', { hasText: 'Lucas Alves' });
-  await expect(linhaLucas).toBeVisible();
-  // Carteira de Lucas Alves não é mais o valor fixo "38" que o DemoDataSeeder escrevia antes do
-  // M20 — outros specs desta suíte criam mentorias reais com ele como mentor, então o valor exato
-  // varia conforme a ordem de execução; o que importa é que não é mais aquele fake hardcoded.
-  await expect(linhaLucas.getByText('38')).toHaveCount(0);
+  // Escopado pelo e-mail (único), não pelo nome "Gestão de Performance" — esse nome é igual ao
+  // rótulo da própria área (AreaPill), e Ricardo Costa é outro colaborador da mesma área: hasText
+  // por nome bate nas duas linhas (strict-mode violation).
+  const linhaGestaoPerf = main.locator('[data-testid^="colaborador-row-"]', { hasText: 'gestao_perf@sawhub.com.br' });
+  await expect(linhaGestaoPerf).toBeVisible();
+  // Carteira do colaborador "Gestão de Performance" não é mais o valor fixo "38" que o
+  // DemoDataSeeder escrevia antes do M20 — outros specs desta suíte criam mentorias reais com ele
+  // como mentor, então o valor exato varia conforme a ordem de execução; o que importa é que não
+  // é mais aquele fake hardcoded.
+  await expect(linhaGestaoPerf.getByText('38')).toHaveCount(0);
 
   await expect(main.getByText('Desempenho do Time')).toBeVisible();
   await main.getByRole('combobox').first().selectOption('7');
 
-  // Paula Mendes já tem MetaComercial seedada pra 2026-07 (meta_fechamentos=5) — comercial.spec.ts
-  // fecha leads reais com ela como vendedora, então fechamentosRealizados/pctAtingido variam com a
-  // ordem de execução; a meta em si é fixa.
-  const linhaDesempenho = main.locator('[data-testid^="desempenho-row-"]', { hasText: 'Paula Mendes' });
+  // "Comercial" já tem MetaComercial seedada pra 2026-07 (meta_fechamentos=5) — comercial.spec.ts
+  // fecha leads reais com esse colaborador como vendedor, então fechamentosRealizados/pctAtingido
+  // variam com a ordem de execução; a meta em si é fixa.
+  const linhaDesempenho = main.locator('[data-testid^="desempenho-row-"]', { hasText: 'Comercial' });
   await expect(linhaDesempenho).toBeVisible();
   // getByText('5') sozinho é ambíguo: Meta e Realizado podem coincidir no mesmo valor
   // dependendo da ordem de execução (ver comentário acima) — escopa pra célula certa.

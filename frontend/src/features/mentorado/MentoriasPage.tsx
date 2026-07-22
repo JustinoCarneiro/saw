@@ -152,7 +152,7 @@ export function MentoriasPage() {
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>
-              <Tooltip text="Mentorias já Realizadas — abra pra ver a ata publicada de cada uma.">Histórico</Tooltip>
+              <Tooltip text="Mentorias já Realizadas. Abra pra ver a ata publicada de cada uma.">Histórico</Tooltip>
             </h2>
             {historico.length === 0 && <div className={styles.emptyState}>Nenhuma mentoria realizada ainda.</div>}
             <div className={styles.historicoList}>

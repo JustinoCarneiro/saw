@@ -31,6 +31,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class LancamentoCsvService {
 
     private static final String[] CABECALHO = {
+            "tipo", "categoria", "descricao", "valor", "dataCompetencia", "dataVencimento", "status", "formaPagamento"
+    };
+
+    // formaPagamento (22/07/2026, mesma riqueza da coluna "Forma de Pagamento" da planilha real) é
+    // opcional no import — CSV histórico sem essa coluna continua importando normalmente.
+    private static final String[] COLUNAS_OBRIGATORIAS = {
             "tipo", "categoria", "descricao", "valor", "dataCompetencia", "dataVencimento", "status"
     };
     private static final int LIMITE_LINHAS = 5000;
@@ -69,7 +75,8 @@ public class LancamentoCsvService {
                         l.getValor().toPlainString().replace('.', ','),
                         CsvUtils.formatarData(l.getDataCompetencia()),
                         l.getDataVencimento() == null ? "" : CsvUtils.formatarData(l.getDataVencimento()),
-                        l.getStatus().name());
+                        l.getStatus().name(),
+                        l.getFormaPagamento() == null ? "" : l.getFormaPagamento().name());
             }
         } catch (IOException e) {
             throw new UncheckedIOException("Não foi possível gerar o CSV.", e);
@@ -140,9 +147,23 @@ public class LancamentoCsvService {
         LocalDate dataCompetencia = CsvUtils.parseData(registro.get("dataCompetencia"));
         LocalDate dataVencimento = CsvUtils.parseDataOpcional(registro.get("dataVencimento"));
         StatusLancamento status = parseEnum(StatusLancamento.class, registro.get("status"), "Status");
+        FormaPagamentoLancamento formaPagamento = parseFormaPagamentoOpcional(registro);
 
-        return new LancamentoFinanceiro(tipo, categoria, descricao, valor, dataCompetencia, status,
-                null, dataVencimento);
+        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(tipo, categoria, descricao, valor, dataCompetencia,
+                status, null, dataVencimento);
+        lancamento.definirFormaPagamento(formaPagamento);
+        return lancamento;
+    }
+
+    private static FormaPagamentoLancamento parseFormaPagamentoOpcional(CSVRecord registro) {
+        if (!registro.isMapped("formaPagamento")) {
+            return null;
+        }
+        String bruto = registro.get("formaPagamento");
+        if (bruto == null || bruto.isBlank()) {
+            return null;
+        }
+        return parseEnum(FormaPagamentoLancamento.class, bruto, "Forma de pagamento");
     }
 
     private CategoriaFinanceira resolverCategoria(String nome, TipoLancamento tipo) {
@@ -179,10 +200,11 @@ public class LancamentoCsvService {
     }
 
     private static void exigirColunas(List<String> cabecalhoEncontrado) {
-        for (String esperada : CABECALHO) {
+        for (String esperada : COLUNAS_OBRIGATORIAS) {
             if (!cabecalhoEncontrado.contains(esperada)) {
                 throw new IllegalArgumentException(
-                        "CSV sem a coluna \"" + esperada + "\". Colunas esperadas: " + String.join(", ", CABECALHO));
+                        "CSV sem a coluna \"" + esperada + "\". Colunas esperadas: "
+                                + String.join(", ", COLUNAS_OBRIGATORIAS));
             }
         }
     }

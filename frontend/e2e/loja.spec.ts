@@ -181,7 +181,7 @@ test.describe('M14 — E8 Loja SAW (catálogo, carrinho, checkout)', () => {
     // Verificação de que Rascunho nunca vaza pro catálogo do mentorado já é coberta por
     // ProdutoServiceTest/LojaMentoradoServiceTest (unit) e por curl ao vivo (Consultoria Express
     // seedada, nunca publicada) — aqui o foco é só a UI/wiring do CRUD do Admin.
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
 
     await page.goto('/admin/comercial/produtos');
@@ -230,7 +230,7 @@ test.describe('M14 — E8 Loja SAW (catálogo, carrinho, checkout)', () => {
     expect(pedido).toBeTruthy();
 
     await page.context().clearCookies();
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
     await page.goto('/admin/comercial/pedidos');
 
@@ -277,7 +277,7 @@ test.describe('M14 — E8 Loja SAW (catálogo, carrinho, checkout)', () => {
     expect(webhookRes.ok()).toBe(true);
 
     await page.context().clearCookies();
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
     await page.goto('/admin/comercial/pedidos');
 

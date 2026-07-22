@@ -15,7 +15,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
 
     // 2) Paula (Comercial) leva o lead até Fechado.
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
     const main = page.getByRole('main');
@@ -39,7 +39,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     // LoginPage redireciona pra /admin se já houver sessão ativa (Paula) — sem limpar os cookies
     // primeiro, o formulário de login nunca aparece e o teste trava esperando o campo de e-mail.
     await page.context().clearCookies();
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
     await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
@@ -63,7 +63,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     // 4) Cria a mentoria com esse mentorado recém-criado.
     await page.goto('/admin/mentorados/mentorias');
     await main.getByRole('button', { name: 'Nova mentoria' }).click();
-    await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
+    await page.getByLabel('Mentor').selectOption({ label: 'Gestão de Performance' });
     await page.getByLabel(nome).check();
     // Auditoria de UX (22/07/2026) — DataHoraInput trocou o datetime-local nativo (formato AM/PM
     // dependente do navegador) por date + dois <select> de hora/minuto, sempre 24h. "Hora"
@@ -136,7 +136,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await page.getByRole('button', { name: 'Enviar solicitação' }).click();
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
 
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
     const linhaLead = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
@@ -154,7 +154,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
 
     await page.context().clearCookies();
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
     await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
@@ -165,7 +165,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
 
     await page.goto('/admin/mentorados/mentorias');
     await main.getByRole('button', { name: 'Nova mentoria' }).click();
-    await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
+    await page.getByLabel('Mentor').selectOption({ label: 'Gestão de Performance' });
     await page.getByLabel(nome).check();
     await page.getByLabel('Data e hora').fill('2026-08-16');
     await page.getByLabel('Hora', { exact: true }).selectOption('10');
@@ -242,7 +242,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await page.getByRole('button', { name: 'Enviar solicitação' }).click();
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
 
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
     const linhaLead = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
@@ -260,7 +260,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await expect(linhaLead.getByText('Fechado', { exact: true })).toBeVisible();
 
     await page.context().clearCookies();
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
     await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();
@@ -271,7 +271,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
 
     await page.goto('/admin/mentorados/mentorias');
     await main.getByRole('button', { name: 'Nova mentoria' }).click();
-    await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
+    await page.getByLabel('Mentor').selectOption({ label: 'Gestão de Performance' });
     await page.getByLabel(nome).check();
     await page.getByLabel('Data e hora').fill('2026-08-17');
     await page.getByLabel('Hora', { exact: true }).selectOption('10');
@@ -317,7 +317,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
   // relatado pelo cliente: só nome/e-mail/plano apareciam pra editar). areasInteresse removido
   // no M23 (change request pós-MVP, confirmado pelo cliente como não aplicável).
   test('Admin preenche telefone/bio/foto de um mentorado sem depender dele logar', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
@@ -347,7 +347,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     // Ana/Carlos, mentor Ricardo Costa: mentoria em grupo REALIZADA cuja ata fica
     // deliberadamente em RASCUNHO no seed (ver DemoDataSeeder + mentorias.spec.ts) — bom fixture
     // porque continua editável (ao contrário da ata de João, publicada no seed).
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/mentorias');
 
@@ -380,7 +380,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
   // E17/M27 (change request pós-MVP, 19/07/2026) — mesmo fixture GRUPO/REALIZADA de Ana+Carlos
   // (mentor Ricardo Costa) do teste de materiais acima; presença é aditiva, não afeta ata/materiais.
   test('Admin marca presença numa mentoria em grupo, e o valor persiste após reload', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/mentorias');
 
@@ -413,7 +413,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
   });
 
   test('Conteúdos: criar e publicar', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/conteudos/lista');
 
@@ -443,7 +443,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
   });
 
   test('Eventos: criar e avançar até Realizado', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/conteudos/eventos');
 
@@ -476,7 +476,7 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
   });
 
   test('RBAC: área sem Mentorados/Conteúdos não vê os módulos nem acessa via URL direta', async ({ page }) => {
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await expect(page.getByRole('link', { name: 'Gestão de Performance' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Conteúdos' })).toHaveCount(0);

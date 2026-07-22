@@ -15,7 +15,7 @@ roda em Docker.
 ```
 
 - Logs: `.dev/logs/{backend,frontend}.log`
-- Login de teste (Fundador, seedado): `matheus@sawhub.com.br` / `trocar-no-primeiro-login`
+- Login de teste (Fundador, seedado): `admin@sawhub.com.br` / `trocar-no-primeiro-login`
 
 **Não rode testes E2E contra este ambiente.** Os specs criam dados reais (leads, mentorias,
 lançamentos...) e nunca fazem teardown — rodar a suíte aqui deixa exatamente os dados que você

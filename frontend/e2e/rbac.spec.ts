@@ -3,7 +3,7 @@ import { loginAs } from './helpers';
 
 test.describe('RBAC por área', () => {
   test('Comercial só vê o módulo Comercial na sidebar e não acessa Time', async ({ page }) => {
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
     await expect(page.getByRole('link', { name: 'Comercial' })).toBeVisible();
@@ -30,7 +30,7 @@ test.describe('RBAC por área', () => {
   });
 
   test('Gestão de Performance vê Painel Consolidado mas não Time', async ({ page }) => {
-    await loginAs(page, 'lucas@sawhub.com.br');
+    await loginAs(page, 'gestao_perf@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
     // getByRole('navigation') de propósito no link "Gestão de Performance": o nome da área RBAC

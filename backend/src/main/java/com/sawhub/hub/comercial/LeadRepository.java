@@ -58,10 +58,27 @@ public interface LeadRepository extends JpaRepository<Lead, UUID> {
             @Param("status") StatusLead status, @Param("de") Instant de, @Param("ate") Instant ate,
             @Param("produtoExcluido") ProdutoVenda produtoExcluido);
 
+    /** Pedido do Marcos (22/07/2026) — "venda por fora" do Dashboard comercial: leads fechados no
+     * período com produto real (exclui INGRESSO_EVENTO, que tem seção própria), pra agregar por
+     * {@code produtoVenda} em {@code ComercialDashboardService}. Diferente das queries de contagem
+     * acima, esta devolve os `Lead`s de verdade porque precisa somar {@code valorTotalVenda}. */
+    @Query("SELECT l FROM Lead l WHERE l.status = :status AND l.dataFechamento BETWEEN :de AND :ate "
+            + "AND l.produtoVenda IS NOT NULL AND l.produtoVenda <> :produtoExcluido")
+    List<Lead> buscarFechadosNoPeriodoComProduto(@Param("status") StatusLead status,
+            @Param("de") Instant de, @Param("ate") Instant ate, @Param("produtoExcluido") ProdutoVenda produtoExcluido);
+
     /** Change request 17/07/2026 ("conciliação") — toda venda fechada de verdade passa por
      * {@link Lead#fecharVenda}, único caminho que seta valorTotalVenda (o caminho legado via
      * Plano nunca setava esse campo, e foi removido no M28). IS NOT NULL numa coluna pgcrypto
      * funciona normal — criptografia não afeta nulidade, só o conteúdo. */
     @Query("SELECT l FROM Lead l WHERE l.valorTotalVenda IS NOT NULL ORDER BY l.dataFechamento DESC")
     List<Lead> buscarComVendaFechada();
+
+    @Query("SELECT l FROM Lead l LEFT JOIN FETCH l.vendedor WHERE l.vendedor.id = :vendedorId AND l.status = :status "
+            + "AND l.dataFechamento BETWEEN :de AND :ate "
+            + "AND (l.produtoVenda IS NULL OR l.produtoVenda <> :produtoExcluido) "
+            + "ORDER BY l.dataFechamento DESC")
+    List<Lead> buscarFechadosDoVendedorNoPeriodoExcluindoProduto(@Param("vendedorId") UUID vendedorId,
+            @Param("status") StatusLead status, @Param("de") Instant de, @Param("ate") Instant ate,
+            @Param("produtoExcluido") ProdutoVenda produtoExcluido);
 }

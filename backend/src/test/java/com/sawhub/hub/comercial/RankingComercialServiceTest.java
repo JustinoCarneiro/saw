@@ -40,7 +40,7 @@ class RankingComercialServiceTest {
     @Test
     void rankingCalculaRealizadoEPercentualAtingido() {
         UUID paulaId = UUID.randomUUID();
-        MetaComercial meta = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 6);
+        MetaComercial meta = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 6, null);
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of(meta));
         when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(
                 eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(4L);
@@ -59,8 +59,8 @@ class RankingComercialServiceTest {
     void rankingOrdenaPorRealizadoDecrescente() {
         UUID paulaId = UUID.randomUUID();
         UUID ricardoId = UUID.randomUUID();
-        MetaComercial metaPaula = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 6);
-        MetaComercial metaRicardo = new MetaComercial(colaborador(ricardoId, "Ricardo"), 2026, 7, 6);
+        MetaComercial metaPaula = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 6, null);
+        MetaComercial metaRicardo = new MetaComercial(colaborador(ricardoId, "Ricardo"), 2026, 7, 6, null);
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of(metaPaula, metaRicardo));
         when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(
                 eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(2L);
@@ -75,7 +75,7 @@ class RankingComercialServiceTest {
     @Test
     void rankingComMetaZeroNaoDivideParZero() {
         UUID paulaId = UUID.randomUUID();
-        MetaComercial meta = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 0);
+        MetaComercial meta = new MetaComercial(colaborador(paulaId, "Paula"), 2026, 7, 0, null);
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of(meta));
         when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetweenExcluindoProduto(
                 eq(paulaId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(0L);

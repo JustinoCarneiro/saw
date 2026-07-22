@@ -160,7 +160,7 @@ function TranscricaoCard({ mentoriaId, transcricaoAtual, podeEditar, desabilitad
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
       <div className={styles.sectionTitle}>
-        <Tooltip text="Texto transcrito do áudio da mentoria (upload ou colado manualmente) — é a partir dele que a IA gera o rascunho de Resumo e Decisões abaixo.">Transcrição</Tooltip>
+        <Tooltip text="Texto transcrito do áudio da mentoria (upload ou colado manualmente). É a partir dele que a IA gera o rascunho de Resumo e Decisões abaixo.">Transcrição</Tooltip>
       </div>
       {transcricaoAtual && <div className={styles.transcricao}>{transcricaoAtual}</div>}
       {podeEditar && (
@@ -273,7 +273,7 @@ function PresencaCard({ mentoriaId, mentoria, onSalvo }: { mentoriaId: string; m
   return (
     <Card style={{ padding: 20, marginBottom: 16 }} testId="presenca-card">
       <div className={styles.sectionTitle}>
-        <Tooltip text="Só aparece em mentoria coletiva — marque quem participou. Alimenta a métrica de Frequência em mentoria do mentorado, não entra no cálculo do ranking do Painel Consolidado.">Presença</Tooltip>
+        <Tooltip text="Só aparece em mentoria coletiva. Marque quem participou. Alimenta a métrica de Frequência em mentoria do mentorado, não entra no cálculo do ranking do Painel Consolidado.">Presença</Tooltip>
       </div>
       <p className={styles.muted}>Marque quem participou desta mentoria em grupo.</p>
       <div className={styles.checkboxList}>
@@ -319,7 +319,7 @@ function ResumoCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: Ata
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
       <div className={styles.sectionTitle}>
-        <Tooltip text="Visão geral do que foi conversado na mentoria — o assunto, não necessariamente o que ficou fechado. Vem como rascunho editável.">Resumo</Tooltip>
+        <Tooltip text="Visão geral do que foi conversado na mentoria: o assunto, não necessariamente o que ficou fechado. Vem como rascunho editável.">Resumo</Tooltip>
       </div>
       <textarea
         className={styles.textarea}
@@ -367,7 +367,7 @@ function DecisoesCard({ mentoriaId, ata, onSalvo }: { mentoriaId: string; ata: A
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
       <div className={styles.sectionTitle}>
-        <Tooltip text="O que ficou combinado/definido na mentoria — diferente do Resumo, foca só nos pontos fechados. Também um rascunho editável.">Decisões</Tooltip>
+        <Tooltip text="O que ficou combinado/definido na mentoria. Diferente do Resumo, foca só nos pontos fechados. Também um rascunho editável.">Decisões</Tooltip>
       </div>
       <textarea
         className={styles.textarea}

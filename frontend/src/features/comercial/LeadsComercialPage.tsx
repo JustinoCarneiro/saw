@@ -6,6 +6,7 @@ import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import { formatBRL, formatarTelefone } from '../../shared/lib/format';
+import { PRODUTO_VENDA_LABEL } from '../../shared/lib/labels';
 import type {
   CategoriaIngresso,
   EventoVendaResumo,
@@ -30,18 +31,6 @@ const STATUS_LABEL: Record<StatusLead, { label: string; bg: string; color: strin
   PROPOSTA: { label: 'Proposta', bg: 'var(--warning-bg)', color: 'var(--warning)' },
   FECHADO: { label: 'Fechado', bg: 'var(--success-bg)', color: 'var(--success)' },
   PERDIDO: { label: 'Perdido', bg: 'var(--danger-bg)', color: 'var(--danger)' },
-};
-
-// M25 — catálogo confirmado via raio-x nas planilhas reais (docs/reuniao-2026-07-17-atualizacoes.md).
-const PRODUTO_VENDA_LABEL: Record<ProdutoVenda, string> = {
-  MENTORIA_CONTINUA: 'Mentoria contínua',
-  MENTORIA_INDIVIDUAL: 'Mentoria individual',
-  CONSULTORIA: 'Consultoria',
-  FORMULA_SAW: 'Fórmula SAW',
-  FORMACAO_PROFISSIONAL: 'Formação Profissional',
-  FICHA_TECNICA_LUCRATIVA: 'Ficha técnica Lucrativa',
-  INGRESSO_EVENTO: 'Ingresso de evento',
-  PRODUTO_DIGITAL: 'Produto digital (planilha, aula avulsa etc.)',
 };
 
 const ORIGEM_VENDA_LABEL: Record<OrigemVenda, string> = {
@@ -566,8 +555,7 @@ function FecharVendaForm({ lead, onFechado, onCancelar }: {
                      value={taxaPlataformaRetida} onChange={(e) => setTaxaPlataformaRetida(e.target.value)} />
             </label>
             <div className={styles.muted} style={{ alignSelf: 'flex-end', paddingBottom: 10 }}>
-              A Hotmart desconta a taxa dela antes de repassar — "Valor pago no ato" + esta taxa
-              deve bater com o valor total, mesmo quando o cliente pagou 100%.
+              A Hotmart desconta a taxa dela antes de repassar. "Valor pago no ato" + esta taxa devem bater com o valor total, mesmo quando o cliente pagou 100%.
             </div>
           </div>
         )}

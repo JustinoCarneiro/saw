@@ -2,10 +2,12 @@ package com.sawhub.hub.comercial;
 
 import com.sawhub.hub.comercial.dto.AvancarLeadRequest;
 import com.sawhub.hub.comercial.dto.CriarLeadRequest;
+import com.sawhub.hub.comercial.dto.CriarMetaComercialRequest;
 import com.sawhub.hub.comercial.dto.DashboardComercialResponse;
 import com.sawhub.hub.comercial.dto.EventoVendaResumo;
 import com.sawhub.hub.comercial.dto.FecharVendaRequest;
 import com.sawhub.hub.comercial.dto.LeadResponse;
+import com.sawhub.hub.comercial.dto.MetaComercialResponse;
 import com.sawhub.hub.comercial.dto.RankingItem;
 import com.sawhub.hub.comercial.dto.VendedorResumo;
 import com.sawhub.hub.common.dto.ImportResultResponse;
@@ -32,6 +34,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -49,18 +52,21 @@ public class ComercialController {
     private final LeadService leadService;
     private final ComercialDashboardService dashboardService;
     private final RankingComercialService rankingService;
+    private final MetaComercialService metaComercialService;
     private final ColaboradorRepository colaboradorRepository;
     private final LeadCsvService leadCsvService;
     private final EventoRepository eventoRepository;
     private final VendaIngressoCsvService vendaIngressoCsvService;
 
     public ComercialController(LeadService leadService, ComercialDashboardService dashboardService,
-                                RankingComercialService rankingService, ColaboradorRepository colaboradorRepository,
+                                RankingComercialService rankingService, MetaComercialService metaComercialService,
+                                ColaboradorRepository colaboradorRepository,
                                 LeadCsvService leadCsvService, EventoRepository eventoRepository,
                                 VendaIngressoCsvService vendaIngressoCsvService) {
         this.leadService = leadService;
         this.dashboardService = dashboardService;
         this.rankingService = rankingService;
+        this.metaComercialService = metaComercialService;
         this.colaboradorRepository = colaboradorRepository;
         this.leadCsvService = leadCsvService;
         this.eventoRepository = eventoRepository;
@@ -164,5 +170,23 @@ public class ComercialController {
     @GetMapping("/ranking")
     public List<RankingItem> ranking(@RequestParam @Min(2020) int ano, @RequestParam @Min(1) @Max(12) int mes) {
         return rankingService.ranking(ano, mes);
+    }
+
+    // Pedido do Marcos (22/07/2026) — até esta leva não existia jeito de definir meta pela UI
+    // (só o seed de demonstração); o Ranking só listava vendedor com meta já plantada no banco.
+    // GET pra edição (mostrar meta atual por vendedor); PUT é upsert por (vendedor, ano, mês).
+    @GetMapping("/metas")
+    public List<MetaComercialResponse> metas(@RequestParam @Min(2020) int ano, @RequestParam @Min(1) @Max(12) int mes) {
+        return metaComercialService.listar(ano, mes);
+    }
+
+    @PutMapping("/metas")
+    public MetaComercialResponse definirMeta(@Valid @RequestBody CriarMetaComercialRequest request) {
+        return MetaComercialResponse.from(metaComercialService.definir(request));
+    }
+
+    @GetMapping("/ranking/vendedores/{id}/vendas")
+    public List<LeadResponse> detalharVendasDoRanking(@PathVariable("id") UUID vendedorId, @RequestParam int ano, @RequestParam int mes) {
+        return rankingService.detalharVendas(vendedorId, ano, mes);
     }
 }

@@ -11,7 +11,7 @@ test.describe('M12 — E5 Mentorias & Atas (lado mentorado)', () => {
     await page.getByRole('link', { name: 'Mentorias & Atas' }).click();
     await expect(page).toHaveURL(/\/mentorado\/mentorias/);
 
-    const historico = page.locator('[data-testid^="mentoria-historico-"]', { hasText: 'Lucas Alves' });
+    const historico = page.locator('[data-testid^="mentoria-historico-"]', { hasText: 'Gestão de Performance' });
     await expect(historico).toBeVisible();
     await expect(historico.getByText('Realizada')).toBeVisible();
 
@@ -44,7 +44,7 @@ test.describe('M12 — E5 Mentorias & Atas (lado mentorado)', () => {
     await expect(page).toHaveURL(/\/mentorado/);
     await page.getByRole('link', { name: 'Mentorias & Atas' }).click();
 
-    const agenda = page.locator('[data-testid^="mentoria-agenda-"]', { hasText: 'Lucas Alves' });
+    const agenda = page.locator('[data-testid^="mentoria-agenda-"]', { hasText: 'Gestão de Performance' });
     await expect(agenda).toBeVisible();
     await expect(agenda.getByTestId(/^entrar-reuniao-/)).toBeDisabled();
 

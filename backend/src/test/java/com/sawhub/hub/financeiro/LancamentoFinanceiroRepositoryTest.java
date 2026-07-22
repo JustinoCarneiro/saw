@@ -228,7 +228,7 @@ class LancamentoFinanceiroRepositoryTest {
         entityManager.clear();
 
         var resultado = lancamentoRepository.buscarComFiltroPorCompetencia(null, categoria.getId(),
-                StatusLancamento.REALIZADO, null, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
+                StatusLancamento.REALIZADO, null, null, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
         entityManager.clear();
 
         assertThat(resultado).extracting(LancamentoFinanceiro::getId).contains(realizado.getId());

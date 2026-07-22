@@ -7,7 +7,7 @@ import { loginAs } from './helpers';
 // direto por URL (GET /admin/mentorados/{id}, endpoint novo — antes só existia listagem).
 test.describe('M28 — Página dedicada de mentorado', () => {
   test('Ver perfil abre a página com métricas, seções e histórico de mentorias', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
@@ -44,7 +44,7 @@ test.describe('M28 — Página dedicada de mentorado', () => {
   });
 
   test('Voltar pra lista de Mentorados e acesso direto por URL', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
@@ -66,7 +66,7 @@ test.describe('M28 — Página dedicada de mentorado', () => {
   // Ativar/desativar já existia na listagem — M28 moveu o botão pra dentro da página dedicada,
   // precisa continuar funcionando de lá.
   test('Ativar/desativar a partir da página dedicada persiste o status', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 

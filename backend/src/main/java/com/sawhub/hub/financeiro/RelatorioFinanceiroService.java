@@ -1,16 +1,20 @@
 package com.sawhub.hub.financeiro;
 
 import com.sawhub.hub.common.VariacaoCalculator;
+import com.sawhub.hub.evento.Evento;
+import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.StatusEvento;
 import com.sawhub.hub.financeiro.dto.CategoriaValor;
 import com.sawhub.hub.financeiro.dto.ComparativoMes;
-import com.sawhub.hub.financeiro.dto.ComposicaoReceita;
 import com.sawhub.hub.financeiro.dto.DashboardFaturamentoResponse;
 import com.sawhub.hub.financeiro.dto.DreResponse;
+import com.sawhub.hub.financeiro.dto.EventoResultadoResumo;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,11 +27,13 @@ public class RelatorioFinanceiroService {
 
     private final LancamentoFinanceiroRepository lancamentoRepository;
     private final CaixaMensalService caixaMensalService;
+    private final EventoRepository eventoRepository;
 
     public RelatorioFinanceiroService(LancamentoFinanceiroRepository lancamentoRepository,
-                                       CaixaMensalService caixaMensalService) {
+                                       CaixaMensalService caixaMensalService, EventoRepository eventoRepository) {
         this.lancamentoRepository = lancamentoRepository;
         this.caixaMensalService = caixaMensalService;
+        this.eventoRepository = eventoRepository;
     }
 
     public DreResponse dre(int ano, int mes) {
@@ -56,15 +62,11 @@ public class RelatorioFinanceiroService {
 
         BigDecimal faturamentoMensal = somaPorTipo(lancamentos, TipoLancamento.RECEITA);
 
-        Map<OrigemReceita, BigDecimal> porOrigem = new EnumMap<>(OrigemReceita.class);
-        for (LancamentoFinanceiro l : lancamentos) {
-            if (l.getTipo() != TipoLancamento.RECEITA || l.getCategoria().getOrigemReceita() == null) {
-                continue;
-            }
-            porOrigem.merge(l.getCategoria().getOrigemReceita(), l.getValor(), BigDecimal::add);
-        }
-        List<ComposicaoReceita> composicao = porOrigem.entrySet().stream()
-                .map(e -> new ComposicaoReceita(e.getKey(), e.getValue()))
+        // Composição por categoria (nome), não por OrigemReceita — ver comentário no DTO. Maior
+        // valor primeiro (widget do Dashboard é "de onde vem a maior parte da receita", DRE
+        // continua alfabético pra leitura de relatório).
+        List<CategoriaValor> composicao = somaPorCategoria(lancamentos, TipoLancamento.RECEITA).stream()
+                .sorted(Comparator.comparing(CategoriaValor::valor).reversed())
                 .toList();
 
         BigDecimal mrrAtual = somaMrr(lancamentos);
@@ -90,9 +92,45 @@ public class RelatorioFinanceiroService {
         long lancamentosPendentes = lancamentoRepository.countByStatusIn(
                 List.of(StatusLancamento.PREVISTO, StatusLancamento.PARCIAL));
         long lancamentosVencidos = lancamentoRepository.countByStatusIn(List.of(StatusLancamento.VENCIDO));
+        List<EventoResultadoResumo> resultadoPorEvento = resultadoPorEvento(ano, mes);
 
         return new DashboardFaturamentoResponse(faturamentoMensal, mrrAtual, churnPct, composicao,
-                resultadoDre, saldoCaixaAtual, lancamentosPendentes, lancamentosVencidos);
+                resultadoDre, saldoCaixaAtual, lancamentosPendentes, lancamentosVencidos, resultadoPorEvento);
+    }
+
+    /** ComercialDashboardService ("Vendas da loja") — {@code origemReceita} continua a chave
+     * certa aqui (diferente da composição acima): é uma pergunta de negócio direta ("quanto veio
+     * da Loja", que só cobre o módulo E8, hoje pausado), não uma listagem de todas as categorias. */
+    public BigDecimal receitaPorOrigem(int ano, int mes, OrigemReceita origem) {
+        return lancamentosRealizadosDoPeriodo(YearMonth.of(ano, mes)).stream()
+                .filter(l -> l.getTipo() == TipoLancamento.RECEITA)
+                .filter(l -> l.getCategoria().getOrigemReceita() == origem)
+                .map(LancamentoFinanceiro::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // Pedido do Marcos (22/07/2026, achado na auditoria de clareza — "métricas de venda de
+    // ingresso precisam aparecer também no Financeiro") — mesma riqueza da planilha real "Eventos
+    // - Despesas e Receitas" (P&L por evento). Escopado por evento REALIZADO com dataHora no
+    // período (mesmo filtro que ComercialDashboardService.resumoVendaIngresso já usa), mas os
+    // lançamentos somados NÃO são escopados por data — uma despesa de evento pode ser paga
+    // semanas antes/depois do evento em si, diferente do resto do DRE (que é por dataCompetencia).
+    private List<EventoResultadoResumo> resultadoPorEvento(int ano, int mes) {
+        YearMonth periodo = YearMonth.of(ano, mes);
+        Instant inicio = periodo.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant fim = periodo.plusMonths(1).atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+
+        return eventoRepository.buscarPorStatusEDataHoraBetween(StatusEvento.REALIZADO, inicio, fim).stream()
+                .map(this::resultadoDoEvento)
+                .toList();
+    }
+
+    private EventoResultadoResumo resultadoDoEvento(Evento evento) {
+        List<LancamentoFinanceiro> lancamentos = lancamentoRepository
+                .findByEventoIdAndStatus(evento.getId(), StatusLancamento.REALIZADO);
+        BigDecimal receita = somaPorTipo(lancamentos, TipoLancamento.RECEITA);
+        BigDecimal despesa = somaPorTipo(lancamentos, TipoLancamento.DESPESA);
+        return new EventoResultadoResumo(evento.getId(), evento.getTitulo(), receita, despesa, receita.subtract(despesa));
     }
 
     private List<LancamentoFinanceiro> lancamentosRealizadosDoPeriodo(YearMonth periodo) {

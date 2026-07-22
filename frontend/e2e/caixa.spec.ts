@@ -5,7 +5,7 @@ import { loginAs } from './helpers';
 // pós-MVP, E14, reunião 17/07/2026).
 test.describe('Caixa do mês (E14)', () => {
   test('Fundador cadastra conta bancária, registra posição do mês e vê nos totais', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Caixa' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/caixa$/);
@@ -25,13 +25,16 @@ test.describe('Caixa do mês (E14)', () => {
     await main.getByRole('button', { name: 'Registrar posição', exact: true }).click();
 
     await expect(main.getByText('Saldo por banco')).toBeVisible();
-    const linhaConta = main.getByText(nomeConta).locator('..');
+    // Escopado por testId (não .locator('..') do nome) — a suíte não reseta o banco entre
+    // execuções, e mais de uma conta bancária no ar faz o nome sozinho não bastar mais pra achar
+    // a linha certa (mesma classe de flake já documentada no LeadRepositoryTest do M05).
+    const linhaConta = main.getByTestId('conta-caixa-row').filter({ hasText: nomeConta });
     await expect(linhaConta.getByText(/Inicial/)).toBeVisible();
     await expect(linhaConta.getByText(/Final/)).toBeVisible();
   });
 
   test('Fundador registra transferência entre contas e vê na listagem', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Caixa' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/caixa$/);
@@ -55,8 +58,9 @@ test.describe('Caixa do mês (E14)', () => {
     await main.getByLabel('Descrição (opcional)').fill(descricao);
     await main.getByRole('button', { name: 'Registrar transferência' }).click();
 
-    await expect(main.getByText(descricao)).toBeVisible();
-    await expect(main.getByText(contaOrigem)).toBeVisible();
-    await expect(main.getByText(contaDestino)).toBeVisible();
+    const linha = main.getByTestId('transferencia-row').filter({ hasText: descricao });
+    await expect(linha).toBeVisible();
+    await expect(linha.getByText(contaOrigem)).toBeVisible();
+    await expect(linha.getByText(contaDestino)).toBeVisible();
   });
 });

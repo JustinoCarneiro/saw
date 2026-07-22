@@ -77,7 +77,7 @@ echo "  Frontend:  http://localhost:8081/login"
 echo "  Backend:   http://localhost:8080/api/v1"
 echo "  pgAdmin:   http://localhost:5050"
 echo
-echo "  Login de teste (Fundador): matheus@sawhub.com.br / trocar-no-primeiro-login"
+echo "  Login de teste (Fundador): admin@sawhub.com.br / trocar-no-primeiro-login"
 echo
 echo "  Logs:  docker compose -f docker-compose.yml -f docker-compose.full.yml logs -f [serviço]"
 echo "  Parar: ./scripts/full-down.sh"

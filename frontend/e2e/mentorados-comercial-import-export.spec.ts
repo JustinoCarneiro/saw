@@ -7,7 +7,7 @@ import { loginAs } from './helpers';
 // Blueprint, ROADMAP.md).
 test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
   test('Mentorados: exportar CSV dispara o download do arquivo', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
@@ -27,7 +27,7 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
   // que resta em Mentorados é "Importar mentorados (CSV)" (MentoradoDiretoCsvService, 19 colunas,
   // Comercial), que cria OU atualiza dependendo de o e-mail já existir.
   test('Mentorados: import único (CSV) atualiza um mentorado existente resolvido por e-mail', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
@@ -73,16 +73,16 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
   });
 
   test('Mentorados: import único (CSV) rejeita e-mail que já existe mas não é mentorado', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
-    // matheus@sawhub.com.br é login de Colaborador (Fundador), não de Mentorado — o import único
+    // admin@sawhub.com.br é login de Colaborador (Fundador), não de Mentorado — o import único
     // trata isso como erro de validação (e-mail em uso por outro tipo de conta), não como criação.
     const csv = 'email;nome;negocio;nomeFantasia;cnpj;socios;telefone;tipoContrato;valorContrato;'
         + 'dataFechamentoContrato;faturamentoAnual;quantidadeColaboradores;empresaRegularizada;quantidadeLojas;'
         + 'cmvDefinido;cmvDetalhe;tempoMedioAtendimento;culturaConstruida;processosDesenhados\n'
-        + 'matheus@sawhub.com.br;Qualquer;;;;;;MENTORIA_CONTINUA;;;;;;;;;;;\n';
+        + 'admin@sawhub.com.br;Qualquer;;;;;;MENTORIA_CONTINUA;;;;;;;;;;;\n';
 
     const main = page.getByRole('main');
     await main.getByRole('button', { name: 'Importar mentorados (CSV)' }).click();
@@ -97,7 +97,7 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
   });
 
   test('Comercial: exportar CSV dispara o download do arquivo', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
 
@@ -110,7 +110,7 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
   });
 
   test('Comercial: importar CSV cria leads novos sempre em Solicitação', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
 
@@ -131,7 +131,7 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
   });
 
   test('Comercial: importar CSV com uma linha inválida não cria nenhum lead', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
 
@@ -158,7 +158,7 @@ test.describe('Mentorados/Comercial — Import/Export CSV (M22/M28)', () => {
 // página de Mentorados pras abas dedicadas "Metas"/"Tarefas" nesta mesma leva.
 test.describe('Metas/Tarefas — Import/Export CSV e listagem admin (Fase 5)', () => {
   test('Metas: exportar CSV dispara o download (regressão do 500 por LazyInitializationException)', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/metas');
 
@@ -171,7 +171,7 @@ test.describe('Metas/Tarefas — Import/Export CSV e listagem admin (Fase 5)', (
   });
 
   test('Metas: importar CSV cria a meta e ela aparece na listagem admin', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/metas');
 
@@ -192,7 +192,7 @@ test.describe('Metas/Tarefas — Import/Export CSV e listagem admin (Fase 5)', (
   });
 
   test('Tarefas: exportar CSV dispara o download (regressão do 500 por LazyInitializationException)', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/tarefas');
 
@@ -205,7 +205,7 @@ test.describe('Metas/Tarefas — Import/Export CSV e listagem admin (Fase 5)', (
   });
 
   test('Tarefas: importar CSV cria a tarefa e ela aparece na listagem admin', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/tarefas');
 

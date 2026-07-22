@@ -141,7 +141,7 @@ export function ConsolidatedPage() {
             <div className={styles.kpiHeader}>
               <span className={styles.kpiBadge} style={{ background: 'var(--success-bg)' }}>{KPI_ICON.emDia}</span>
               <span className={styles.kpiLabel}>
-                <Tooltip text="Mentorados com progresso de encaminhamentos dentro do esperado — sem atraso nem sinal de atenção.">Em dia</Tooltip>
+                <Tooltip text="Mentorados com progresso de encaminhamentos dentro do esperado. Sem atraso nem sinal de atenção.">Em dia</Tooltip>
               </span>
             </div>
             <div className={styles.kpiValue} style={{ color: 'var(--success)' }}>
@@ -153,7 +153,7 @@ export function ConsolidatedPage() {
             <div className={styles.kpiHeader}>
               <span className={styles.kpiBadge} style={{ background: 'var(--warning-bg)' }}>{KPI_ICON.atencao}</span>
               <span className={styles.kpiLabel}>
-                <Tooltip text="Mentorados com progresso abaixo do ideal, mas ainda sem atraso — vale um acompanhamento mais de perto.">Em atenção</Tooltip>
+                <Tooltip text="Mentorados com progresso abaixo do ideal, mas ainda sem atraso. Vale um acompanhamento mais de perto.">Em atenção</Tooltip>
               </span>
             </div>
             <div className={styles.kpiValue} style={{ color: 'var(--warning)' }}>
@@ -293,7 +293,7 @@ export function ConsolidatedPage() {
 
           <Card style={{ padding: '20px 22px', height: 'fit-content' }}>
             <div className={styles.rankingTitle}>
-              <Tooltip text="Top 3 mentorados por % de crescimento de faturamento — valor informado no cadastro, sem tela de atualização própria hoje.">Ranking · Crescimento de Faturamento</Tooltip>
+              <Tooltip text="Top 3 mentorados por % de crescimento de faturamento. Valor informado no cadastro, sem tela de atualização própria hoje.">Ranking · Crescimento de Faturamento</Tooltip>
             </div>
             <div className={styles.rankingSubtitle}>Comparado ao período anterior</div>
             <div className={styles.rankingList}>

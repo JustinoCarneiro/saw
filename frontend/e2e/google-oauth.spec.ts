@@ -21,7 +21,7 @@ test.describe('M07 — Google OAuth (fast-follow do E1)', () => {
     await page.goto('/login');
     await expect(page.getByRole('link', { name: 'Entrar com Google' })).toBeVisible();
 
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
   });
 
@@ -75,6 +75,6 @@ test.describe('M07 — Google OAuth (fast-follow do E1)', () => {
     await expect(page.getByText(/e-mail do Google não está verificado/)).toBeVisible();
 
     // Restaura o default pro resto da suíte (outros specs podem reusar o stub sem saber disso).
-    await configurarStub(request, { email: 'matheus@sawhub.com.br', emailVerified: true });
+    await configurarStub(request, { email: 'admin@sawhub.com.br', emailVerified: true });
   });
 });

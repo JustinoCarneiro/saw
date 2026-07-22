@@ -37,8 +37,8 @@ class AppUserPrincipalTest {
     }
 
     private static AppUserPrincipal fundador() {
-        return new AppUserPrincipal(UUID.randomUUID(), "matheus@sawhub.com.br", "hash-bcrypt-secreto",
-                "Matheus Brayan", Perfil.ADMIN, Area.ADMIN, List.of("ROLE_ADMIN", "MODULO_TIME"));
+        return new AppUserPrincipal(UUID.randomUUID(), "admin@sawhub.com.br", "hash-bcrypt-secreto",
+                "Admin SAW HUB", Perfil.ADMIN, Area.ADMIN, List.of("ROLE_ADMIN", "MODULO_TIME"));
     }
 
     private static SecurityContext contextoCom(AppUserPrincipal principal) {

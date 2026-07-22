@@ -3,7 +3,7 @@ import { loginAs } from './helpers';
 
 test.describe('Financeiro (E14)', () => {
   test('Fundador vê o dashboard de faturamento com dados reais', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/dashboard$/);
 
@@ -11,11 +11,16 @@ test.describe('Financeiro (E14)', () => {
     await expect(main.getByText('Faturamento do mês')).toBeVisible();
     await expect(main.getByText('Receita recorrente (MRR)')).toBeVisible();
     await expect(main.getByText('Composição da receita')).toBeVisible();
-    await expect(main.getByText('Assinaturas (recorrência)')).toBeVisible();
+    // Pedido do Marcos (22/07/2026) — composição por categoria (nome), não mais por OrigemReceita:
+    // "Patrocínio"/"Produtos Digitais" (categorias reais da planilha, sem OrigemReceita própria)
+    // ficavam invisíveis aqui antes mesmo tendo venda de verdade (seedadas no DemoDataSeeder).
+    await expect(main.getByText('Mentoria Contínua')).toBeVisible();
+    await expect(main.getByText('Patrocínio')).toBeVisible();
+    await expect(main.getByText('Produtos Digitais')).toBeVisible();
   });
 
   test('DRE mostra a hierarquia estruturada com resultado calculado', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'DRE' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/dre$/);
@@ -32,7 +37,7 @@ test.describe('Financeiro (E14)', () => {
   });
 
   test('Lançamentos lista o seed real e permite criar um novo', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Lançamentos' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
@@ -42,7 +47,7 @@ test.describe('Financeiro (E14)', () => {
 
     const descricao = `Lançamento de teste E2E ${Date.now()}`;
     await main.getByRole('button', { name: 'Novo lançamento' }).click();
-    await main.getByLabel('Categoria').selectOption({ label: 'Loja SAW' });
+    await main.getByLabel('Subcategoria').selectOption({ label: 'Produtos Digitais' });
     await main.getByLabel('Descrição').fill(descricao);
     await main.getByLabel('Valor (R$)').fill('123.45');
     await main.getByRole('button', { name: 'Salvar lançamento' }).click();
@@ -54,7 +59,7 @@ test.describe('Financeiro (E14)', () => {
   // categoria nenhuma pra lançar nada e o Admin não tinha como criar uma (achado relatado pelo
   // cliente durante o teste do sistema em produção: dropdown de categoria vazio).
   test('Nova categoria criada aparece imediatamente no dropdown de lançamento', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Lançamentos' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
@@ -62,7 +67,7 @@ test.describe('Financeiro (E14)', () => {
     const nomeCategoria = `Categoria E2E ${Date.now()}`;
     const main = page.getByRole('main');
     await main.getByRole('button', { name: 'Nova categoria' }).click();
-    await main.getByLabel('Nome').fill(nomeCategoria);
+    await main.getByLabel('Subcategoria').fill(nomeCategoria);
     await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
     await main.getByLabel('Grupo DRE').selectOption({ label: 'Despesa Operacional' });
     await main.getByRole('button', { name: 'Salvar categoria' }).click();
@@ -71,13 +76,13 @@ test.describe('Financeiro (E14)', () => {
     await expect(main.getByRole('button', { name: 'Salvar categoria' })).toHaveCount(0);
     await main.getByRole('button', { name: 'Novo lançamento' }).click();
     await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
-    await expect(main.getByLabel('Categoria').locator(`option:has-text("${nomeCategoria}")`)).toHaveCount(1);
+    await expect(main.getByLabel('Subcategoria').locator(`option:has-text("${nomeCategoria}")`)).toHaveCount(1);
   });
 
   // E14 (última pendência) — raio-x da planilha real: Fixa/Variável é atributo da subcategoria,
   // não do lançamento (ver CategoriaFinanceira.natureza).
   test('Categoria com natureza Fixa aparece na quebra de Despesas fixas x variáveis do DRE', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Lançamentos' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
@@ -85,17 +90,17 @@ test.describe('Financeiro (E14)', () => {
     const nomeCategoria = `Aluguel E2E ${Date.now()}`;
     const main = page.getByRole('main');
     await main.getByRole('button', { name: 'Nova categoria' }).click();
-    await main.getByLabel('Nome').fill(nomeCategoria);
+    await main.getByLabel('Subcategoria').fill(nomeCategoria);
     await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
     await main.getByLabel('Grupo DRE').selectOption({ label: 'Custos' });
-    await main.getByLabel('Grupo (opcional)').fill('Estrutura');
+    await main.getByLabel('Categoria (opcional)').fill('Estrutura');
     await main.getByLabel('Natureza (opcional)').selectOption({ label: 'Fixa' });
     await main.getByRole('button', { name: 'Salvar categoria' }).click();
     await expect(main.getByRole('button', { name: 'Salvar categoria' })).toHaveCount(0);
 
     await main.getByRole('button', { name: 'Novo lançamento' }).click();
     await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
-    await main.getByLabel('Categoria').selectOption({ label: nomeCategoria });
+    await main.getByLabel('Subcategoria').selectOption({ label: nomeCategoria });
     await main.getByLabel('Descrição').fill(`Aluguel escritório E2E ${Date.now()}`);
     await main.getByLabel('Valor (R$)').fill('321.00');
     await main.getByRole('button', { name: 'Salvar lançamento' }).click();
@@ -110,7 +115,7 @@ test.describe('Financeiro (E14)', () => {
   // desde o M26, o cliente achou redundante ter 2 abas pro mesmo dado). "Já foi realizado? Não"
   // no form único substitui o antigo botão "Nova conta"/form dedicado.
   test('Lançamentos: criar um previsto e liquidar (fusão da antiga "Contas a pagar/receber")', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Lançamentos' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
@@ -125,7 +130,7 @@ test.describe('Financeiro (E14)', () => {
     await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
     // M26 — categoria é obrigatória em todo lançamento agora ("todas as vendas e valores
     // precisam ser mapeados no DRE"), não é mais "(opcional)" — ver ROADMAP.md § "Blueprint (M26)".
-    await main.getByLabel('Categoria').selectOption({ label: 'Infraestrutura' });
+    await main.getByLabel('Subcategoria').selectOption({ label: 'Sistemas' });
     await main.getByLabel('Já foi realizado?').selectOption({ label: 'Não (previsto)' });
     await main.getByLabel('Descrição').fill(descricao);
     await main.getByLabel('Valor (R$)').fill('77.00');
@@ -140,5 +145,89 @@ test.describe('Financeiro (E14)', () => {
 
     await expect(page.getByText(`Liquidar: ${descricao}`)).not.toBeVisible();
     await expect(linha.getByText('Pago')).toBeVisible();
+  });
+
+  // Pedido do Marcos (22/07/2026) — mesma riqueza da coluna "Forma de Pagamento" da planilha real:
+  // campo no form, coluna na listagem e filtro na toolbar.
+  test('Lançamentos: forma de pagamento pode ser informada e filtrada', async ({ page }) => {
+    await loginAs(page, 'admin@sawhub.com.br');
+    await page.getByRole('link', { name: 'Financeiro' }).click();
+    await page.getByRole('link', { name: 'Lançamentos' }).click();
+    await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
+
+    const descricao = `Pix teste E2E ${Date.now()}`;
+    const main = page.getByRole('main');
+    await main.getByRole('button', { name: 'Novo lançamento' }).click();
+    await main.getByLabel('Subcategoria').selectOption({ label: 'Produtos Digitais' });
+    await main.getByLabel('Descrição').fill(descricao);
+    await main.getByLabel('Valor (R$)').fill('55.00');
+    await main.getByLabel('Forma de pagamento (opcional)').selectOption({ label: 'Pix' });
+    await main.getByRole('button', { name: 'Salvar lançamento' }).click();
+
+    const linha = main.getByTestId('lancamento-row').filter({ hasText: descricao });
+    await expect(linha.getByText('Pix', { exact: true })).toBeVisible();
+
+    // Filtra por uma forma de pagamento diferente — a linha some.
+    await main.getByLabel('Filtrar por forma de pagamento').selectOption({ label: 'Boleto' });
+    await expect(linha).toHaveCount(0);
+
+    // Volta pro filtro certo — a linha reaparece.
+    await main.getByLabel('Filtrar por forma de pagamento').selectOption({ label: 'Pix' });
+    await expect(linha).toBeVisible();
+  });
+
+  // Pedido do Marcos (22/07/2026, achado na auditoria de clareza — "métricas de venda de ingresso
+  // precisam aparecer também no Financeiro") — mesma riqueza da planilha real "Eventos - Despesas
+  // e Receitas": receita/despesa/resultado por evento Realizado no Dashboard.
+  test('Dashboard mostra resultado por evento (receita - despesa) de um evento Realizado', async ({ page }) => {
+    await loginAs(page, 'admin@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+
+    const tituloEvento = `Evento Financeiro E2E ${Date.now()}`;
+    await page.goto('/admin/conteudos/eventos');
+    const mainEventos = page.getByRole('main');
+    await mainEventos.getByRole('button', { name: 'Novo evento' }).click();
+    await page.getByLabel('Título').fill(tituloEvento);
+    await page.getByLabel('Data e hora').fill('2026-07-15');
+    await page.getByLabel('Hora', { exact: true }).selectOption('19');
+    await page.getByLabel('Minuto', { exact: true }).selectOption('00');
+    await mainEventos.getByRole('button', { name: 'Salvar' }).click();
+
+    const linhaEvento = mainEventos.locator('text=' + tituloEvento).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linhaEvento.getByRole('button', { name: 'Iniciar' }).click();
+    await linhaEvento.getByRole('button', { name: 'Finalizar' }).click();
+    await expect(linhaEvento.getByText('Realizado')).toBeVisible();
+
+    await page.goto('/admin/financeiro/lancamentos');
+    const main = page.getByRole('main');
+
+    const descricaoReceita = `Receita do evento E2E ${Date.now()}`;
+    await main.getByRole('button', { name: 'Novo lançamento' }).click();
+    await main.getByLabel('Subcategoria').selectOption({ label: 'Produtos Digitais' });
+    await main.getByLabel('Descrição').fill(descricaoReceita);
+    await main.getByLabel('Valor (R$)').fill('500.00');
+    await main.getByLabel('Evento (opcional)').selectOption({ label: tituloEvento });
+    await main.getByRole('button', { name: 'Salvar lançamento' }).click();
+    // Aguarda o form fechar (onCriado) antes do próximo clique em "Novo lançamento" — sem isso, o
+    // 2º clique corre risco de alternar showForm pra false enquanto o 1º POST ainda está em voo.
+    await expect(main.getByTestId('lancamento-row').filter({ hasText: descricaoReceita })).toBeVisible();
+
+    const descricaoDespesa = `Despesa do evento E2E ${Date.now()}`;
+    await main.getByRole('button', { name: 'Novo lançamento' }).click();
+    await main.getByLabel('Tipo').selectOption({ label: 'Despesa' });
+    await main.getByLabel('Subcategoria').selectOption({ label: 'Sistemas' });
+    await main.getByLabel('Descrição').fill(descricaoDespesa);
+    await main.getByLabel('Valor (R$)').fill('200.00');
+    await main.getByLabel('Evento (opcional)').selectOption({ label: tituloEvento });
+    await main.getByRole('button', { name: 'Salvar lançamento' }).click();
+    await expect(main.getByTestId('lancamento-row').filter({ hasText: descricaoDespesa })).toBeVisible();
+
+    await page.goto('/admin/financeiro/dashboard');
+    const mainDashboard = page.getByRole('main');
+    await expect(mainDashboard.getByText('Resultado por evento')).toBeVisible();
+    const linhaResultado = mainDashboard.getByTestId('evento-resultado-row').filter({ hasText: tituloEvento });
+    await expect(linhaResultado.getByText('R$ 300,00')).toBeVisible();
+    await expect(linhaResultado.getByText('R$ 500,00')).toBeVisible();
+    await expect(linhaResultado.getByText('R$ 200,00')).toBeVisible();
   });
 });

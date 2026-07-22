@@ -53,7 +53,7 @@ class TeamServiceTest {
     // só carregavam o valor literal que o seeder escrevia na primeira carga).
     @Test
     void listarComputaCarteiraComoMentoradosDistintosDoMentor() {
-        Usuario usuario = new Usuario("lucas@sawhub.com.br", "hash", Perfil.ADMIN);
+        Usuario usuario = new Usuario("gestao_perf@sawhub.com.br", "hash", Perfil.ADMIN);
         Colaborador mentor = new Colaborador(usuario, "Lucas", Area.GESTAO_PERFORMANCE);
         ReflectionTestUtils.setField(mentor, "id", java.util.UUID.randomUUID());
         when(colaboradorRepository.findAll()).thenReturn(List.of(mentor));

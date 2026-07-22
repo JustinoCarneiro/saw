@@ -2,13 +2,14 @@ import { expect, test } from '@playwright/test';
 import { loginAs } from './helpers';
 
 // M23 (change request pós-MVP, reunião 17/07/2026, ver ROADMAP.md § Blueprint M23) — "criar
-// mentorado direto" + dados de contrato + Diagnóstico Inicial. /direto e /dados-contrato exigem
-// Modulo.COMERCIAL (achado do revisor-seguranca: CNPJ/sócios/valor de contrato não são dado de
-// Gestão de Performance) — na prática só quem tem MENTORADOS *e* COMERCIAL enxerga esses botões
-// (hoje só o Fundador/ADMIN, já que Area.COMERCIAL sozinha não abre /admin/mentorados/lista).
+// mentorado direto" + dados de contrato + Diagnóstico Inicial. /direto e /dados-contrato nasceram
+// atrás de Modulo.COMERCIAL (achado do revisor-seguranca: CNPJ/sócios/valor de contrato são dado
+// comercial sensível). Pedido do Marcos (22/07/2026) reverteu essa restrição pra Gestão de
+// Performance: o gate agora aceita COMERCIAL OU MENTORADOS (ver RequiresModulo em
+// MentoradoContratoController), então tanto Fundador quanto Gestão de Performance veem os botões.
 test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico Inicial', () => {
   test('Fundador cria mentorado direto e edita os dados de contrato', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
@@ -83,7 +84,7 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
   // máscara nunca produz um valor com o formato errado, só incompleto) é o jeito real de
   // reproduzir isso pela UI.
   test('CNPJ incompleto mostra a mensagem específica de formato, não o fallback genérico', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
@@ -102,22 +103,49 @@ test.describe('M23 — Mentorado: criar direto, dados de contrato, Diagnóstico 
 
   // Léa ("Sucesso do Gestor") é quem preenche o Diagnóstico Inicial na operação real (ver
   // Fluxograma.pdf citado em docs/reuniao-2026-07-17-atualizacoes.md) — mapeia pra área Gestão de
-  // Performance no sistema. Ela não deveria ver CNPJ/sócios/valor de contrato (achado do
-  // revisor-seguranca), mas precisa conseguir preencher o diagnóstico.
-  test('Gestão de Performance preenche o Diagnóstico Inicial mas não vê dados de contrato', async ({ page }) => {
-    await loginAs(page, 'lucas@sawhub.com.br');
+  // Performance no sistema. Pedido do Marcos (22/07/2026) — "acesso pleno" — deu a ela paridade
+  // com o Fundador nesta área: cria mentorado direto, edita dados de contrato, além do
+  // Diagnóstico Inicial que já preenchia antes.
+  test('Gestão de Performance cria mentorado direto, edita dados de contrato e preenche o Diagnóstico Inicial', async ({ page }) => {
+    await loginAs(page, 'gestao_perf@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
+    const timestamp = Date.now();
+    const nome = `Mentorado Direto GP E2E ${timestamp}`;
+    const email = `direto.gp.${timestamp}@example.com`;
     const main = page.getByRole('main');
-    await expect(main.getByRole('button', { name: 'Criar mentorado direto' })).toHaveCount(0);
+
+    await expect(main.getByRole('button', { name: 'Criar mentorado direto' })).toBeVisible();
+    await expect(main.getByRole('button', { name: 'Importar mentorados (CSV)' })).toBeVisible();
     await expect(main.getByRole('button', { name: 'Criar a partir de um lead' })).toBeVisible();
 
+    await main.getByRole('button', { name: 'Criar mentorado direto' }).click();
+    await page.getByLabel('Nome').fill(nome);
+    await page.getByLabel('E-mail').fill(email);
+    await page.getByLabel('Negócio').fill('Restaurante GP E2E');
+    await page.getByLabel('Tipo de contrato').selectOption({ label: 'Mentoria Contínua' });
+    await page.getByLabel('Valor do contrato (R$)').fill('18000');
+    await page.getByLabel('Data de fechamento').fill('2026-07-22');
+    await page.getByRole('button', { name: 'Criar mentorado', exact: true }).click();
+
+    await expect(page.getByText(`Mentorado criado: ${nome}`)).toBeVisible();
+    await page.getByRole('button', { name: 'Entendi' }).click();
+
+    const linhaCriado = main.locator('text=' + nome).locator('xpath=ancestor::div[contains(@class,"row")]');
+    await linhaCriado.getByRole('button', { name: 'Ver perfil' }).click();
+    await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
+    await expect(page.getByText('Dados de contrato', { exact: true })).toBeVisible();
+
+    await page.getByLabel('Nome fantasia').fill('Restaurante GP E2E Fantasia');
+    await page.getByRole('button', { name: 'Salvar dados de contrato' }).click();
+    await expect(page.getByText('Salvo.')).toBeVisible();
+
+    await page.goto('/admin/mentorados/lista');
     const linha = main.locator('text=Carlos Menezes').locator('xpath=ancestor::div[contains(@class,"row")]');
     await linha.getByRole('button', { name: 'Ver perfil' }).click();
     await expect(page).toHaveURL(/\/admin\/mentorados\/lista\/.+/);
 
-    await expect(page.getByText('Dados de contrato', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Diagnóstico Inicial', { exact: true })).toBeVisible();
 
     await page.getByLabel('Faturamento anual (R$)').fill('600000');

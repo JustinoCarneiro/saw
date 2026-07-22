@@ -1,6 +1,11 @@
 package com.sawhub.hub.dashboardadmin;
 
 import com.sawhub.hub.atividade.AtividadeLogService;
+import com.sawhub.hub.comercial.ComercialDashboardService;
+import com.sawhub.hub.comercial.ConciliacaoService;
+import com.sawhub.hub.comercial.StatusLead;
+import com.sawhub.hub.comercial.dto.ConciliacaoVendaResponse;
+import com.sawhub.hub.comercial.dto.DashboardComercialResponse;
 import com.sawhub.hub.common.VariacaoCalculator;
 import com.sawhub.hub.conteudo.Conteudo;
 import com.sawhub.hub.conteudo.ConteudoRepository;
@@ -50,17 +55,23 @@ public class DashboardAdminService {
     private final ConteudoRepository conteudoRepository;
     private final RelatorioFinanceiroService relatorioFinanceiroService;
     private final AtividadeLogService atividadeLogService;
+    private final ComercialDashboardService comercialDashboardService;
+    private final ConciliacaoService conciliacaoService;
 
     public DashboardAdminService(MentoradoRepository mentoradoRepository, MentoriaRepository mentoriaRepository,
                                   EventoRepository eventoRepository, ConteudoRepository conteudoRepository,
                                   RelatorioFinanceiroService relatorioFinanceiroService,
-                                  AtividadeLogService atividadeLogService) {
+                                  AtividadeLogService atividadeLogService,
+                                  ComercialDashboardService comercialDashboardService,
+                                  ConciliacaoService conciliacaoService) {
         this.mentoradoRepository = mentoradoRepository;
         this.mentoriaRepository = mentoriaRepository;
         this.eventoRepository = eventoRepository;
         this.conteudoRepository = conteudoRepository;
         this.relatorioFinanceiroService = relatorioFinanceiroService;
         this.atividadeLogService = atividadeLogService;
+        this.comercialDashboardService = comercialDashboardService;
+        this.conciliacaoService = conciliacaoService;
     }
 
     public DashboardAdminResponse resumo(int ano, int mes) {
@@ -91,6 +102,17 @@ public class DashboardAdminService {
         double variacaoReceitaPct = VariacaoCalculator.pct(
                 faturamentoAnterior.faturamentoMensal(), faturamentoAtual.faturamentoMensal());
 
+        // Pedido do Marcos (22/07/2026) — "resumo" clicável de Comercial/Conciliação, mesmo padrão
+        // de composição já usado em ComercialDashboardService (não duplica a agregação, só lê).
+        DashboardComercialResponse comercialAtual = comercialDashboardService.dashboard(ano, mes);
+        long leadsEmAberto = comercialAtual.funil().stream()
+                .filter(f -> f.status() != StatusLead.FECHADO && f.status() != StatusLead.PERDIDO)
+                .mapToLong(f -> f.quantidade())
+                .sum();
+        long vendasEmAtraso = conciliacaoService.listar().stream()
+                .filter(ConciliacaoVendaResponse::emAtraso)
+                .count();
+
         return new DashboardAdminResponse(
                 mentoradosAtivos, variacaoMentoradosAtivosPct,
                 mentoriasRealizadas, variacaoMentoriasPct,
@@ -99,7 +121,10 @@ public class DashboardAdminService {
                 crescimentoUltimosMeses(mentorados, periodo),
                 distribuicaoPorTipoContrato(mentorados),
                 atividadesRecentes(mentorados, eventos),
-                mentoriasDeHoje(mentorias));
+                mentoriasDeHoje(mentorias),
+                faturamentoAtual.resultadoDre(), faturamentoAtual.saldoCaixaAtual(),
+                faturamentoAtual.lancamentosPendentes(), faturamentoAtual.lancamentosVencidos(),
+                leadsEmAberto, comercialAtual.taxaConversaoPct(), vendasEmAtraso);
     }
 
     private static long contarCadastradosAte(List<Mentorado> mentorados, LocalDate fimDoMes) {

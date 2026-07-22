@@ -45,18 +45,21 @@ public class LancamentoService {
         LancamentoFinanceiro lancamento = new LancamentoFinanceiro(request.tipo(), categoria, request.descricao(),
                 request.valor(), request.dataCompetencia(), request.status(), evento,
                 request.dataVencimento());
+        lancamento.definirFormaPagamento(request.formaPagamento());
         return lancamentoRepository.save(lancamento);
     }
 
     public List<LancamentoFinanceiro> listar(LocalDate de, LocalDate ate, TipoLancamento tipo, UUID categoriaId) {
-        return listar(de, ate, tipo, categoriaId, null, null);
+        return listar(de, ate, tipo, categoriaId, null, null, null);
     }
 
     /** `GET /admin/financeiro/lancamentos` — filtra por `dataCompetencia` (obrigatória, mesmo
-     * comportamento de sempre); `status`/`eventoId` nulos desligam o respectivo filtro. */
+     * comportamento de sempre); `status`/`eventoId`/`formaPagamento` nulos desligam o respectivo
+     * filtro (`formaPagamento`, 22/07/2026, mesma riqueza da planilha real). */
     public List<LancamentoFinanceiro> listar(LocalDate de, LocalDate ate, TipoLancamento tipo, UUID categoriaId,
-                                              StatusLancamento status, UUID eventoId) {
-        return lancamentoRepository.buscarComFiltroPorCompetencia(tipo, categoriaId, status, eventoId, de, ate);
+                                              StatusLancamento status, UUID eventoId,
+                                              FormaPagamentoLancamento formaPagamento) {
+        return lancamentoRepository.buscarComFiltroPorCompetencia(tipo, categoriaId, status, eventoId, formaPagamento, de, ate);
     }
 
     /** `GET /admin/financeiro/contas` (M26 — recorte por `dataVencimento` sobre a mesma tabela,

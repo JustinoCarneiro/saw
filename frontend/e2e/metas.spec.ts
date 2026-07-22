@@ -86,7 +86,7 @@ test.describe('M09 — E3 Metas Estratégicas', () => {
 // automático — a tela também precisa de criação, não só edição.
 test.describe('H3.4 — Admin cria, edita e avança status de uma meta', () => {
   test('Gestão de Performance cria uma meta pra um mentorado, edita e avança status até Concluir', async ({ page }) => {
-    await loginAs(page, 'lucas@sawhub.com.br');
+    await loginAs(page, 'gestao_perf@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
 
     await page.goto('/admin/mentorados/metas');

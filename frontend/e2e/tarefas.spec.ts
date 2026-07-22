@@ -87,7 +87,7 @@ test.describe('H4.6 — Admin edita e avança status de um encaminhamento existe
   // Um só login pro describe inteiro (não um por teste) — o rate-limit de tentativas de login
   // (achado ao vivo nesta sessão) dispara com poucos logins seguidos no mesmo arquivo de spec.
   test('Gestão de Performance edita título/prazo/prioridade, avança status, e edição sem prazo não força uma data', async ({ page }) => {
-    await loginAs(page, 'lucas@sawhub.com.br');
+    await loginAs(page, 'gestao_perf@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
 
     await page.goto('/admin/mentorados/tarefas');

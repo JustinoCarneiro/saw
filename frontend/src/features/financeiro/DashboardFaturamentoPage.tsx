@@ -2,25 +2,18 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
-import type { ConciliacaoVenda, DashboardFaturamentoResponse, OrigemReceita } from '../../shared/lib/types';
+import type { ConciliacaoVenda, DashboardFaturamentoResponse, TransferenciaBancaria } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
 import { Tooltip } from '../../shared/components/Tooltip';
 import styles from './DashboardFaturamentoPage.module.css';
 
-const ORIGEM_LABEL: Record<OrigemReceita, string> = {
-  ASSINATURA: 'Assinaturas (recorrência)',
-  LOJA: 'Loja SAW',
-  EVENTO: 'Eventos',
-  OUTRA: 'Outras receitas',
-};
-
-const ORIGEM_COLOR: Record<OrigemReceita, string> = {
-  ASSINATURA: 'var(--gold)',
-  LOJA: 'var(--info)',
-  EVENTO: 'var(--success)',
-  OUTRA: 'var(--text-faint)',
-};
+// Pedido do Marcos (22/07/2026) — composição agora é por CategoriaFinanceira (nome, já
+// legível — "Mentoria Contínua", "Produtos Digitais" etc.), não por OrigemReceita (só 4 valores
+// fixos, "categórico" no CSS token). Paleta cíclica por posição (maior valor primeiro): a
+// categoria com mais receita sempre cai no dourado, sem precisar mapear nome -> cor à mão pra
+// cada categoria nova que a planilha real possa trazer.
+const PALETA_COMPOSICAO = ['var(--gold)', 'var(--success)', 'var(--info)', 'var(--violet)', 'var(--danger)'];
 
 // Pedido do Marcos (22/07/2026) — "o Dashboard precisa refletir tudo que está sendo mostrado nas
 // outras abas; acessar uma aba é só ver em mais detalhe aquilo que já está no Dashboard". Os 4
@@ -33,6 +26,7 @@ export function DashboardFaturamentoPage() {
   const [mes, setMes] = useState(now.getMonth() + 1);
   const [dashboard, setDashboard] = useState<DashboardFaturamentoResponse | null>(null);
   const [vendasEmAtraso, setVendasEmAtraso] = useState<number | null>(null);
+  const [transferenciasNoMes, setTransferenciasNoMes] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,6 +46,16 @@ export function DashboardFaturamentoPage() {
       .then((res) => setVendasEmAtraso(res.data.filter((v) => v.emAtraso).length))
       .catch(() => setVendasEmAtraso(null));
   }, []);
+
+  // Transferências entre contas são a outra metade da aba Caixa (ver CaixaPage) — sem isso, o
+  // card "Caixa" do resumo não reflete tudo que está naquela aba (achado do Marcos, 22/07/2026).
+  useEffect(() => {
+    const de = `${ano}-${String(mes).padStart(2, '0')}-01`;
+    const ate = new Date(ano, mes, 0).toISOString().slice(0, 10);
+    apiClient.get<TransferenciaBancaria[]>('/admin/financeiro/transferencias', { params: { de, ate } })
+      .then((res) => setTransferenciasNoMes(res.data.length))
+      .catch(() => setTransferenciasNoMes(null));
+  }, [ano, mes]);
 
   const total = dashboard?.composicao.reduce((acc, c) => acc + c.valor, 0) ?? 0;
 
@@ -74,7 +78,7 @@ export function DashboardFaturamentoPage() {
             </Card>
             <Card style={{ padding: 18 }}>
               <div className={styles.kpiLabel}>
-                <Tooltip text="Receita mensal recorrente — contratos de mentoria em andamento, sem contar receitas pontuais (Loja, eventos).">Receita recorrente (MRR)</Tooltip>
+                <Tooltip text="Receita mensal recorrente. Contratos de mentoria em andamento, sem contar receitas pontuais (Loja, eventos).">Receita recorrente (MRR)</Tooltip>
               </div>
               <div className={styles.kpiValue}>{formatBRL(dashboard.mrr)}</div>
             </Card>
@@ -90,7 +94,7 @@ export function DashboardFaturamentoPage() {
           </div>
 
           <div className={styles.sectionTitle} style={{ marginBottom: 12 }}>
-            <Tooltip text="Atalho pra DRE, Lançamentos, Caixa e Conciliação — clique num card pra ver o detalhe na aba correspondente.">Resumo do Financeiro</Tooltip>
+            <Tooltip text="Atalho pra DRE, Lançamentos, Caixa e Conciliação. Clique num card pra ver o detalhe na aba correspondente.">Resumo do Financeiro</Tooltip>
           </div>
           <div className={styles.resumoGrid}>
             <ResumoCard
@@ -110,7 +114,7 @@ export function DashboardFaturamentoPage() {
             <ResumoCard
               titulo="Caixa"
               destaque={formatBRL(dashboard.saldoCaixaAtual)}
-              legenda="Saldo final do mês, todas as contas"
+              legenda={`Saldo final do mês${transferenciasNoMes != null && transferenciasNoMes > 0 ? ` · ${transferenciasNoMes} transferência(s)` : ''}`}
               onClick={() => navigate('/admin/financeiro/caixa')}
             />
             <ResumoCard
@@ -124,33 +128,62 @@ export function DashboardFaturamentoPage() {
 
           <Card style={{ padding: '20px 22px' }}>
             <div className={styles.sectionTitle}>
-              <Tooltip text="Como a receita realizada do período se divide por origem (assinaturas, Loja, eventos, outras).">Composição da receita</Tooltip>
+              <Tooltip text="Quanto cada categoria de receita (Mentoria Contínua, Mentoria Individual, Eventos, Patrocínio, Produtos Digitais etc.) contribuiu no período. Mesma granularidade da planilha real 'DRE Financeira Saw'.">Composição da receita</Tooltip>
             </div>
             <div className={styles.composicaoList}>
               {dashboard.composicao.length === 0 && (
                 <div className={styles.empty}>Sem receitas realizadas neste período.</div>
               )}
-              {dashboard.composicao.map((c) => {
+              {dashboard.composicao.map((c, i) => {
                 const pct = total === 0 ? 0 : (c.valor / total) * 100;
+                const cor = PALETA_COMPOSICAO[i % PALETA_COMPOSICAO.length];
                 return (
-                  <div key={c.origem} className={styles.composicaoRow}>
+                  <div key={c.categoria} className={styles.composicaoRow}>
                     <div className={styles.composicaoHeader}>
                       <span className={styles.composicaoLabel}>
-                        <span className={styles.dot} style={{ background: ORIGEM_COLOR[c.origem] }} />
-                        {ORIGEM_LABEL[c.origem]}
+                        <span className={styles.dot} style={{ background: cor }} />
+                        {c.categoria}
                       </span>
                       <span className={styles.composicaoValue}>
                         {formatBRL(c.valor)} <span className={styles.composicaoPct}>({pct.toFixed(0)}%)</span>
                       </span>
                     </div>
                     <div className={styles.track}>
-                      <div className={styles.fill} style={{ width: `${pct}%`, background: ORIGEM_COLOR[c.origem] }} />
+                      <div className={styles.fill} style={{ width: `${pct}%`, background: cor }} />
                     </div>
                   </div>
                 );
               })}
             </div>
           </Card>
+
+          {dashboard.resultadoPorEvento.length > 0 && (
+            <Card style={{ padding: '20px 22px', marginTop: 16 }}>
+              <div className={styles.sectionTitle}>
+                <Tooltip text="Receita menos despesa de cada evento Realizado no período. Mesma riqueza da planilha 'Eventos - Despesas e Receitas' do cliente. Comercial mostra quantidade/valor de ingresso vendido; aqui é o resultado financeiro completo do evento (inclui despesas como estrutura, alimentação etc.).">
+                  Resultado por evento
+                </Tooltip>
+              </div>
+              <div className={styles.composicaoList}>
+                {dashboard.resultadoPorEvento.map((ev) => (
+                  <div key={ev.eventoId} className={styles.composicaoRow} data-testid="evento-resultado-row">
+                    <div className={styles.composicaoHeader}>
+                      <span className={styles.composicaoLabel}>{ev.eventoTitulo}</span>
+                      <span
+                        className={styles.composicaoValue}
+                        style={{ color: ev.resultado >= 0 ? 'var(--success)' : 'var(--danger)' }}
+                      >
+                        {formatBRL(ev.resultado)}
+                      </span>
+                    </div>
+                    <div className={styles.muted}>
+                      Receita {formatBRL(ev.receitaTotal)} · Despesa {formatBRL(ev.despesaTotal)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </>
       )}
     </div>

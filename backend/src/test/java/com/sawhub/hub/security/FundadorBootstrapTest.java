@@ -35,8 +35,8 @@ class FundadorBootstrapTest {
 
     private FundadorBootstrap bootstrap() {
         FundadorBootstrap bootstrap = new FundadorBootstrap(usuarioRepository, colaboradorRepository, passwordEncoder);
-        ReflectionTestUtils.setField(bootstrap, "fundadorNome", "Matheus Brayan");
-        ReflectionTestUtils.setField(bootstrap, "fundadorEmail", "matheus@sawhub.com.br");
+        ReflectionTestUtils.setField(bootstrap, "fundadorNome", "Admin SAW HUB");
+        ReflectionTestUtils.setField(bootstrap, "fundadorEmail", "admin@sawhub.com.br");
         ReflectionTestUtils.setField(bootstrap, "fundadorSenha", "senha-vinda-da-env");
         return bootstrap;
     }
@@ -61,13 +61,13 @@ class FundadorBootstrapTest {
 
         ArgumentCaptor<Usuario> usuarioCaptor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(usuarioCaptor.capture());
-        assertThat(usuarioCaptor.getValue().getEmail()).isEqualTo("matheus@sawhub.com.br");
+        assertThat(usuarioCaptor.getValue().getEmail()).isEqualTo("admin@sawhub.com.br");
         assertThat(usuarioCaptor.getValue().getPasswordHash()).isEqualTo("hash-codificado");
         assertThat(usuarioCaptor.getValue().getPerfil()).isEqualTo(Perfil.ADMIN);
 
         ArgumentCaptor<Colaborador> colaboradorCaptor = ArgumentCaptor.forClass(Colaborador.class);
         verify(colaboradorRepository).save(colaboradorCaptor.capture());
-        assertThat(colaboradorCaptor.getValue().getNome()).isEqualTo("Matheus Brayan");
+        assertThat(colaboradorCaptor.getValue().getNome()).isEqualTo("Admin SAW HUB");
         assertThat(colaboradorCaptor.getValue().getArea()).isEqualTo(Area.ADMIN);
     }
 }

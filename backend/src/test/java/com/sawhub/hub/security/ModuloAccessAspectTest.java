@@ -27,14 +27,14 @@ class ModuloAccessAspectTest {
         SecurityContextHolder.clearContext();
     }
 
-    private static RequiresModulo requires(Modulo modulo) {
+    private static RequiresModulo requires(Modulo... modulos) {
         return new RequiresModulo() {
             public Class<? extends java.lang.annotation.Annotation> annotationType() {
                 return RequiresModulo.class;
             }
 
-            public Modulo value() {
-                return modulo;
+            public Modulo[] value() {
+                return modulos;
             }
         };
     }
@@ -97,5 +97,23 @@ class ModuloAccessAspectTest {
         for (Modulo modulo : Modulo.values()) {
             assertThatCode(() -> aspect.checarModulo(requires(modulo))).doesNotThrowAnyException();
         }
+    }
+
+    // Achado do Marcos (22/07/2026, MentoradoContratoController) — @RequiresModulo com múltiplos
+    // valores é OR: basta a área ter UM dos módulos liberado, não os dois.
+    @Test
+    void multiplosModulos_passaSeAreaTiverPeloMenosUmDeles() {
+        autenticarComo(Area.GESTAO_PERFORMANCE);
+
+        assertThatCode(() -> aspect.checarModulo(requires(Modulo.COMERCIAL, Modulo.MENTORADOS)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void multiplosModulos_barraSeAreaNaoTiverNenhumDeles() {
+        autenticarComo(Area.MARKETING);
+
+        assertThatThrownBy(() -> aspect.checarModulo(requires(Modulo.COMERCIAL, Modulo.MENTORADOS)))
+                .isInstanceOf(AccessDeniedException.class);
     }
 }

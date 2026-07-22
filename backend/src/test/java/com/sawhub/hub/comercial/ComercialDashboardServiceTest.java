@@ -12,7 +12,6 @@ import com.sawhub.hub.evento.StatusEvento;
 import com.sawhub.hub.evento.TipoEvento;
 import com.sawhub.hub.financeiro.OrigemReceita;
 import com.sawhub.hub.financeiro.RelatorioFinanceiroService;
-import com.sawhub.hub.financeiro.dto.ComposicaoReceita;
 import com.sawhub.hub.financeiro.dto.DashboardFaturamentoResponse;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -41,12 +40,12 @@ class ComercialDashboardServiceTest {
         return new ComercialDashboardService(leadRepository, relatorioFinanceiroService, eventoRepository, vendaIngressoRepository);
     }
 
-    private static DashboardFaturamentoResponse faturamento(BigDecimal mrr, BigDecimal vendasLoja) {
-        List<ComposicaoReceita> composicao = vendasLoja == null
-                ? List.of(new ComposicaoReceita(OrigemReceita.ASSINATURA, mrr))
-                : List.of(new ComposicaoReceita(OrigemReceita.ASSINATURA, mrr), new ComposicaoReceita(OrigemReceita.LOJA, vendasLoja));
-        return new DashboardFaturamentoResponse(mrr.add(vendasLoja == null ? BigDecimal.ZERO : vendasLoja), mrr, 0.0, composicao,
-                BigDecimal.ZERO, BigDecimal.ZERO, 0L, 0L);
+    // vendasLoja (22/07/2026) deixou de vir embutido em composicao() — RelatorioFinanceiroService
+    // agora expõe receitaPorOrigem(ano, mes, origem) à parte (ver comentário no service), então os
+    // testes que dependem de vendasLoja estubam esse método diretamente em vez de montar aqui.
+    private static DashboardFaturamentoResponse faturamento(BigDecimal mrr) {
+        return new DashboardFaturamentoResponse(mrr, mrr, 0.0, List.of(),
+                BigDecimal.ZERO, BigDecimal.ZERO, 0L, 0L, List.of());
     }
 
     @Test
@@ -60,8 +59,8 @@ class ComercialDashboardServiceTest {
         when(leadRepository.countByStatus(StatusLead.PERDIDO)).thenReturn(2L);
         when(leadRepository.countByStatusAndDataFechamentoBetween(eq(StatusLead.FECHADO), any(), any())).thenReturn(4L);
         when(leadRepository.countByStatusAndDataFechamentoBetween(eq(StatusLead.PERDIDO), any(), any())).thenReturn(2L);
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(new BigDecimal("21400.00"), new BigDecimal("5100.00")));
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(new BigDecimal("19700.00"), null));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(new BigDecimal("21400.00")));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(new BigDecimal("19700.00")));
 
         DashboardComercialResponse dashboard = service().dashboard(2026, 7);
 
@@ -81,8 +80,8 @@ class ComercialDashboardServiceTest {
         when(leadRepository.countByStatusAndDataFechamentoBetween(eq(StatusLead.PERDIDO), any(), any())).thenReturn(2L);
         when(leadRepository.countByStatusAndDataFechamentoBetweenExcluindoProduto(
                 eq(StatusLead.FECHADO), any(), any(), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(4L);
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(new BigDecimal("21400.00"), null));
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(new BigDecimal("21400.00"), null));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(new BigDecimal("21400.00")));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(new BigDecimal("21400.00")));
 
         DashboardComercialResponse dashboard = service().dashboard(2026, 7);
 
@@ -100,8 +99,8 @@ class ComercialDashboardServiceTest {
         when(leadRepository.countByStatusAndDataFechamentoBetween(eq(StatusLead.PERDIDO), any(), any())).thenReturn(0L);
         when(leadRepository.countByStatusAndDataFechamentoBetweenExcluindoProduto(
                 eq(StatusLead.FECHADO), any(), any(), eq(ProdutoVenda.INGRESSO_EVENTO))).thenReturn(3L);
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(BigDecimal.ZERO, null));
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(BigDecimal.ZERO, null));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(BigDecimal.ZERO));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(BigDecimal.ZERO));
 
         DashboardComercialResponse dashboard = service().dashboard(2026, 7);
 
@@ -114,8 +113,8 @@ class ComercialDashboardServiceTest {
         stubFunilVazio();
         when(leadRepository.countByStatusAndDataFechamentoBetween(eq(StatusLead.FECHADO), any(), any())).thenReturn(0L);
         when(leadRepository.countByStatusAndDataFechamentoBetween(eq(StatusLead.PERDIDO), any(), any())).thenReturn(0L);
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(BigDecimal.ZERO, null));
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(BigDecimal.ZERO, null));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(BigDecimal.ZERO));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(BigDecimal.ZERO));
 
         DashboardComercialResponse dashboard = service().dashboard(2026, 7);
 
@@ -126,8 +125,9 @@ class ComercialDashboardServiceTest {
     void dashboardReaproveitaMrrEVendasLojaDoFinanceiro() {
         stubFunilVazio();
         stubConversaoVazia();
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(new BigDecimal("21400.00"), new BigDecimal("5100.00")));
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(new BigDecimal("19700.00"), null));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(new BigDecimal("21400.00")));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(new BigDecimal("19700.00")));
+        when(relatorioFinanceiroService.receitaPorOrigem(2026, 7, OrigemReceita.LOJA)).thenReturn(new BigDecimal("5100.00"));
 
         DashboardComercialResponse dashboard = service().dashboard(2026, 7);
 
@@ -140,8 +140,9 @@ class ComercialDashboardServiceTest {
     void dashboardVendasLojaZeroQuandoFinanceiroNaoTemOrigemLoja() {
         stubFunilVazio();
         stubConversaoVazia();
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(new BigDecimal("21400.00"), null));
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(new BigDecimal("21400.00"), null));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(new BigDecimal("21400.00")));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(new BigDecimal("21400.00")));
+        when(relatorioFinanceiroService.receitaPorOrigem(2026, 7, OrigemReceita.LOJA)).thenReturn(BigDecimal.ZERO);
 
         DashboardComercialResponse dashboard = service().dashboard(2026, 7);
 
@@ -154,8 +155,8 @@ class ComercialDashboardServiceTest {
     void dashboardMontaVendaIngressosPorEventoRealizadoNoPeriodoDeduplicandoValorPorLead() {
         stubFunilVazio();
         stubConversaoVazia();
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(BigDecimal.ZERO, null));
-        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(BigDecimal.ZERO, null));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(BigDecimal.ZERO));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(BigDecimal.ZERO));
 
         Evento evento = new Evento("Encontro Nacional SAW 2026", TipoEvento.AO_VIVO, null,
                 Instant.parse("2026-07-10T19:00:00Z"), null, null, 200);
@@ -186,6 +187,42 @@ class ComercialDashboardServiceTest {
         assertThat(resumo.quantidadeVendida()).isEqualTo(2);
         assertThat(resumo.quantidadeTotal()).isEqualTo(200);
         assertThat(resumo.valorLiquido()).isEqualByComparingTo("600.00");
+    }
+
+    // Pedido do Marcos (22/07/2026, achado na auditoria de clareza) — segunda metade de "dashboard
+    // mais visual" que faltava: venda por fora (produto + valor), agrupada por ProdutoVenda,
+    // excluindo INGRESSO_EVENTO (que já tem sua própria seção, vendaIngressos).
+    @Test
+    void dashboardAgregaVendaPorForaPorProdutoExcluindoIngresso() {
+        stubFunilVazio();
+        stubConversaoVazia();
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 7)).thenReturn(faturamento(BigDecimal.ZERO));
+        when(relatorioFinanceiroService.dashboardFaturamento(2026, 6)).thenReturn(faturamento(BigDecimal.ZERO));
+
+        Lead consultoria1 = leadFechado(ProdutoVenda.CONSULTORIA, "9000.00");
+        Lead consultoria2 = leadFechado(ProdutoVenda.CONSULTORIA, "9000.00");
+        Lead formacao = leadFechado(ProdutoVenda.FORMACAO_PROFISSIONAL, "1000.00");
+        when(leadRepository.buscarFechadosNoPeriodoComProduto(
+                eq(StatusLead.FECHADO), any(), any(), eq(ProdutoVenda.INGRESSO_EVENTO)))
+                .thenReturn(List.of(consultoria1, consultoria2, formacao));
+
+        DashboardComercialResponse dashboard = service().dashboard(2026, 7);
+
+        assertThat(dashboard.vendaPorFora()).hasSize(2);
+        // Ordenado do maior valor pro menor: Consultoria (18000) antes de Formação (1000).
+        assertThat(dashboard.vendaPorFora().get(0).produto()).isEqualTo(ProdutoVenda.CONSULTORIA);
+        assertThat(dashboard.vendaPorFora().get(0).quantidade()).isEqualTo(2);
+        assertThat(dashboard.vendaPorFora().get(0).valorTotal()).isEqualByComparingTo("18000.00");
+        assertThat(dashboard.vendaPorFora().get(1).produto()).isEqualTo(ProdutoVenda.FORMACAO_PROFISSIONAL);
+        assertThat(dashboard.vendaPorFora().get(1).valorTotal()).isEqualByComparingTo("1000.00");
+    }
+
+    private static Lead leadFechado(ProdutoVenda produto, String valorTotal) {
+        Lead lead = new Lead("Cliente Teste", "cliente" + java.util.UUID.randomUUID() + "@example.com", null, null);
+        lead.moverParaEmContato(new com.sawhub.hub.team.Colaborador(null, "Paula", com.sawhub.hub.team.Area.COMERCIAL));
+        lead.moverParaProposta();
+        lead.fecharVenda(produto, OrigemVenda.DIRETA, new BigDecimal(valorTotal), new BigDecimal(valorTotal), FormaPagamento.PIX);
+        return lead;
     }
 
     private void stubFunilVazio() {

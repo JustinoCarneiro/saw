@@ -66,7 +66,7 @@ export function DrePage() {
               }}
             >
               <div className={styles.kpiLabel} style={{ color: lucro ? 'var(--success)' : 'var(--danger)' }}>
-                <Tooltip text="Receita Líquida menos Custos menos Despesas Operacionais — o resultado final do período.">
+                <Tooltip text="Receita Líquida menos Custos menos Despesas Operacionais. O resultado final do período.">
                   {lucro ? 'Lucro' : 'Prejuízo'}
                 </Tooltip>
               </div>
@@ -118,14 +118,14 @@ export function DrePage() {
             <Card style={{ padding: '20px 22px' }}>
               <CategoriaBreakdown
                 titulo="Receita por categoria"
-                tooltip="Como a receita Realizada do período se divide entre as categorias financeiras cadastradas."
+                tooltip="Como a receita Realizada do período se divide por subcategoria — o produto/serviço vendido (Mentoria Contínua, Consultoria, Eventos, Loja SAW…)."
                 itens={dre.receitaPorCategoria}
               />
             </Card>
             <Card style={{ padding: '20px 22px' }}>
               <CategoriaBreakdown
                 titulo="Despesa por categoria"
-                tooltip="Como Custos + Despesas Operacionais do período se dividem entre as categorias financeiras cadastradas."
+                tooltip="Diferente do gráfico de Receita ao lado: aqui agrupa pela Categoria (o departamento/linha do gasto — Estrutura, Pessoas, Marketing…), não pela subcategoria usada em Lançamentos. A classificação de cada subcategoria nova em Categoria/Custos-ou-Despesa-Operacional ainda não foi confirmada linha a linha com o cliente — pode mudar."
                 itens={dre.despesaPorCategoria}
               />
             </Card>

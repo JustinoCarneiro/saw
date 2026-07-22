@@ -95,7 +95,7 @@ class DesempenhoTimeServiceTest {
         when(colaboradorRepository.findAll()).thenReturn(List.of(vendedor));
         when(mentoriaRepository.buscarPorMentor(vendedor)).thenReturn(List.of());
 
-        MetaComercial meta = new MetaComercial(vendedor, 2026, 7, 6);
+        MetaComercial meta = new MetaComercial(vendedor, 2026, 7, 6, null);
         when(metaComercialRepository.buscarComVendedorPorPeriodo(2026, 7)).thenReturn(List.of(meta));
         when(leadRepository.countByVendedorIdAndStatusAndDataFechamentoBetween(
                 eq(vendedorId), eq(StatusLead.FECHADO), any(Instant.class), any(Instant.class))).thenReturn(4L);

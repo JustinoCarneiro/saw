@@ -7,7 +7,7 @@ import { loginAs } from './helpers';
 // ROADMAP.md).
 test.describe('Time — Import/Export CSV (M23)', () => {
   test('exportar CSV dispara o download do arquivo', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Time' }).click();
     await expect(page).toHaveURL(/\/admin\/time$/);
 
@@ -20,7 +20,7 @@ test.describe('Time — Import/Export CSV (M23)', () => {
   });
 
   test('importar CSV válido cria o colaborador e ele aparece na listagem', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Time' }).click();
     await expect(page).toHaveURL(/\/admin\/time$/);
 
@@ -43,7 +43,7 @@ test.describe('Time — Import/Export CSV (M23)', () => {
   });
 
   test('importar CSV com senha curta não cria nada e mostra o erro por linha', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Time' }).click();
     await expect(page).toHaveURL(/\/admin\/time$/);
 

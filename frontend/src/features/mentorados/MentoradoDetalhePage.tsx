@@ -79,7 +79,9 @@ export function MentoradoDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const podeVerContrato = user?.modulosPermitidos.includes('COMERCIAL') ?? false;
+  // 22/07/2026 — mesma regra de acesso de MentoradosListaPage: COMERCIAL ou MENTORADOS.
+  const podeVerContrato =
+    (user?.modulosPermitidos.includes('COMERCIAL') || user?.modulosPermitidos.includes('MENTORADOS')) ?? false;
 
   const [mentorado, setMentorado] = useState<MentoradoAdmin | null>(null);
   const [metricas, setMetricas] = useState<MentoradoConsolidado | null>(null);
@@ -204,13 +206,13 @@ function MetricasCard({ metricas }: { metricas: MentoradoConsolidado }) {
     <div className={styles.metricsGrid}>
       <Card className={styles.metricCard}>
         <div className={styles.metricLabel}>
-          <Tooltip text="Calculado a partir do Progresso ao lado — Em dia, Atenção ou Atrasado conforme o % de encaminhamentos concluídos.">Status</Tooltip>
+          <Tooltip text="Calculado a partir do Progresso ao lado. Em dia, Atenção ou Atrasado conforme o % de encaminhamentos concluídos.">Status</Tooltip>
         </div>
         <StatusPill status={metricas.status} />
       </Card>
       <Card className={styles.metricCard}>
         <div className={styles.metricLabel}>
-          <Tooltip text="% de encaminhamentos concluídos, ponderado pelo peso de cada um (peso 2 vale o dobro de peso 1) — não é uma média simples da contagem.">Progresso</Tooltip>
+          <Tooltip text="% de encaminhamentos concluídos, ponderado pelo peso de cada um (peso 2 vale o dobro de peso 1). Não é uma média simples da contagem.">Progresso</Tooltip>
         </div>
         <div className={styles.metricValue}>{metricas.progressoPct}%</div>
       </Card>
@@ -222,19 +224,19 @@ function MetricasCard({ metricas }: { metricas: MentoradoConsolidado }) {
       </Card>
       <Card className={styles.metricCard}>
         <div className={styles.metricLabel}>
-          <Tooltip text="Das 4 ferramentas obrigatórias (DRE, manual de cultura, ficha técnica, manual de processos), quantas estão marcadas como 'Sim' — editável na seção Ferramentas obrigatórias abaixo.">Ferramentas obrigatórias</Tooltip>
+          <Tooltip text="Das 4 ferramentas obrigatórias (DRE, manual de cultura, ficha técnica, manual de processos), quantas estão marcadas como 'Sim'. Editável na seção Ferramentas obrigatórias abaixo.">Ferramentas obrigatórias</Tooltip>
         </div>
         <div className={styles.metricValue}>{metricas.ferramentasPct}%</div>
       </Card>
       <Card className={styles.metricCard}>
         <div className={styles.metricLabel}>
-          <Tooltip text="% de presença confirmada nas mentorias em grupo já realizadas. Só mentoria em grupo conta — mostra '—' se o mentorado nunca participou de uma.">Frequência em mentoria</Tooltip>
+          <Tooltip text="% de presença confirmada nas mentorias em grupo já realizadas. Só mentoria em grupo conta. Mostra '—' se o mentorado nunca participou de uma.">Frequência em mentoria</Tooltip>
         </div>
         <div className={styles.metricValue}>{metricas.frequenciaMentoriaPct != null ? `${metricas.frequenciaMentoriaPct}%` : '—'}</div>
       </Card>
       <Card className={styles.metricCard}>
         <div className={styles.metricLabel}>
-          <Tooltip text="Valor informado no cadastro do mentorado — hoje não existe nenhuma tela pra atualizar depois de criado. Também define a ordem do ranking do Painel Consolidado.">Crescimento de faturamento</Tooltip>
+          <Tooltip text="Valor informado no cadastro do mentorado. Hoje não existe nenhuma tela pra atualizar depois de criado. Também define a ordem do ranking do Painel Consolidado.">Crescimento de faturamento</Tooltip>
         </div>
         <div className={styles.metricValue} style={{ color: metricas.crescimentoFaturamentoPct >= 0 ? 'var(--success)' : 'var(--danger)' }}>
           {formatPct(metricas.crescimentoFaturamentoPct)}
@@ -242,7 +244,7 @@ function MetricasCard({ metricas }: { metricas: MentoradoConsolidado }) {
       </Card>
       <Card className={styles.metricCard}>
         <div className={styles.metricLabel}>
-          <Tooltip text="Alto/Médio/Baixo — preenchido manualmente pelo mentor ou time de sucesso na seção Acompanhamento, a partir de uma análise pós-check-in. Não é calculado automaticamente.">Nível de engajamento</Tooltip>
+          <Tooltip text="Alto/Médio/Baixo, preenchido manualmente pelo mentor ou time de sucesso na seção Acompanhamento, a partir de uma análise pós-check-in. Não é calculado automaticamente.">Nível de engajamento</Tooltip>
         </div>
         {metricas.nivelEngajamento ? (
           <Pill bg={NIVEL_ENGAJAMENTO_TOKEN[metricas.nivelEngajamento].bg} color={NIVEL_ENGAJAMENTO_TOKEN[metricas.nivelEngajamento].color}>
@@ -254,7 +256,7 @@ function MetricasCard({ metricas }: { metricas: MentoradoConsolidado }) {
       </Card>
       <Card className={styles.metricCard}>
         <div className={styles.metricLabel}>
-          <Tooltip text="Não/Atenção/Alto — chance do mentorado cancelar ou não renovar. Também preenchido manualmente na seção Acompanhamento, não é calculado.">Risco de churn</Tooltip>
+          <Tooltip text="Não/Atenção/Alto: chance do mentorado cancelar ou não renovar. Também preenchido manualmente na seção Acompanhamento, não é calculado.">Risco de churn</Tooltip>
         </div>
         {metricas.riscoChurn ? (
           <Pill bg={RISCO_CHURN_TOKEN[metricas.riscoChurn].bg} color={RISCO_CHURN_TOKEN[metricas.riscoChurn].color}>
@@ -301,7 +303,7 @@ function PerfilSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmin; onSa
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}><Tooltip text="Nome, negócio, telefone, bio e foto — editável pelo Admin sem depender do mentorado logar.">Perfil</Tooltip></div>
+      <div className={styles.sectionTitle}><Tooltip text="Nome, negócio, telefone, bio e foto. Editável pelo Admin sem depender do mentorado logar.">Perfil</Tooltip></div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <label className={styles.formField} style={{ flex: 2 }}>
@@ -380,7 +382,7 @@ function DadosContratoSection({ mentorado, onSalvo }: { mentorado: MentoradoAdmi
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}><Tooltip text="CNPJ, sócios, valor e tipo de contrato — só visível pra quem tem acesso ao módulo Comercial.">Dados de contrato</Tooltip></div>
+      <div className={styles.sectionTitle}><Tooltip text="CNPJ, sócios, valor e tipo de contrato. Só visível pra quem tem acesso ao módulo Comercial.">Dados de contrato</Tooltip></div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <label className={styles.formField} style={{ flex: 2 }}>
@@ -680,7 +682,7 @@ function FerramentasObrigatoriasSection({ mentorado, onSalvo }: { mentorado: Men
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}><Tooltip text="As 4 ferramentas nomeadas do ranking (DRE, manual de cultura, ficha técnica, manual de processos) — Sim/Não/Em construção.">Ferramentas obrigatórias</Tooltip></div>
+      <div className={styles.sectionTitle}><Tooltip text="As 4 ferramentas nomeadas do ranking (DRE, manual de cultura, ficha técnica, manual de processos). Sim/Não/Em construção.">Ferramentas obrigatórias</Tooltip></div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <label className={styles.formField}>
@@ -759,7 +761,7 @@ function AcompanhamentoSection({ mentorado, onSalvo }: { mentorado: MentoradoAdm
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}><Tooltip text="Nível de engajamento e risco de churn — preenchimento manual do mentor/time de sucesso, não é calculado.">Acompanhamento</Tooltip></div>
+      <div className={styles.sectionTitle}><Tooltip text="Nível de engajamento e risco de churn. Preenchimento manual do mentor/time de sucesso, não é calculado.">Acompanhamento</Tooltip></div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <label className={styles.formField}>
@@ -934,7 +936,7 @@ function EventosSection({ mentorado }: { mentorado: MentoradoAdmin }) {
 
   return (
     <Card style={{ padding: 20, marginBottom: 16 }}>
-      <div className={styles.sectionTitle}><Tooltip text="Inscrições em eventos — mentorados de Mentoria Contínua têm cota de 3 eventos grátis por ano de contrato.">Eventos</Tooltip></div>
+      <div className={styles.sectionTitle}><Tooltip text="Inscrições em eventos. Mentorados de Mentoria Contínua têm cota de 3 eventos grátis por ano de contrato.">Eventos</Tooltip></div>
       {cota?.aplicavel && (
         <p className={styles.muted}>
           {cota.usadas}/{cota.limite} eventos grátis usados neste ciclo de contrato (Mentoria Contínua)

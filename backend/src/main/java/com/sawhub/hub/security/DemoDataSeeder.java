@@ -147,8 +147,12 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (colaboradorRepository.count() > 1) {
             return; // já rodou (sobra só o Fundador do FundadorBootstrap na 1ª execução)
         }
-        criarColaborador("Lucas Alves", "lucas@sawhub.com.br", Area.GESTAO_PERFORMANCE);
-        criarColaborador("Paula Mendes", "paula@sawhub.com.br", Area.COMERCIAL);
+        // Achado do Marcos (22/07/2026, conferido direto em produção) — "gestao_perf@"/"comercial@"
+        // são contas por PAPEL (não nome de pessoa) em produção, igual ao Fundador
+        // (admin@sawhub.com.br, ver application.yml); "Ricardo Costa"/"Juliana Lima" já batem com
+        // produção como estão (nome de pessoa mesmo, não trocar).
+        criarColaborador("Gestão de Performance", "gestao_perf@sawhub.com.br", Area.GESTAO_PERFORMANCE);
+        criarColaborador("Comercial", "comercial@sawhub.com.br", Area.COMERCIAL);
         criarColaborador("Ricardo Costa", "ricardo@sawhub.com.br", Area.GESTAO_PERFORMANCE);
         criarColaborador("Juliana Lima", "juliana@sawhub.com.br", Area.MARKETING);
     }
@@ -302,7 +306,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (leadRepository.count() > 0) {
             return;
         }
-        Colaborador paula = colaboradorRepository.findAll().stream()
+        Colaborador comercial = colaboradorRepository.findAll().stream()
                 .filter(c -> c.getArea() == Area.COMERCIAL)
                 .findFirst()
                 .orElse(null);
@@ -310,18 +314,20 @@ public class DemoDataSeeder implements ApplicationRunner {
         // Funil com leads em todos os estágios (H13.2) — fechados/perdidos ficam com
         // dataFechamento = agora (Lead.fecharVenda/perder não aceita data injetada, ver
         // ROADMAP.md M05), o que cai dentro do mês corrente por construção, exatamente como o
-        // dashboard espera.
-        seedLeadFechado("Beatriz Ramos", "beatriz@padariaramos.com.br", paula,
-                ProdutoVenda.MENTORIA_CONTINUA, new BigDecimal("18000"));
-        seedLeadFechado("Diego Martins", "diego@churrascariamartins.com.br", paula,
-                ProdutoVenda.MENTORIA_INDIVIDUAL, new BigDecimal("24000"));
-        seedLead("Sandra Nunes", "sandra@cafesandra.com.br", paula, StatusLead.PERDIDO, "Optou por concorrente");
-        seedLead("Fábio Teixeira", "fabio@pizzariateixeira.com.br", paula, StatusLead.PROPOSTA, null);
-        seedLead("Renata Alves", "renata@barelvas.com.br", paula, StatusLead.EM_CONTATO, null);
-        seedLead("Marcelo Duarte", "marcelo@duartegrill.com.br", null, StatusLead.SOLICITACAO, null);
+        // dashboard espera. Produtos e valores refletem a mesma faixa de preço real de produção
+        // (Mentoria Contínua ~R$26k, Formação Profissional ~R$597, Ficha Técnica ~R$97) — nome e
+        // e-mail do cliente são fictícios de propósito, não são os leads reais.
+        seedLeadFechado("Cliente Demo 1", "cliente1@exemplo.com.br", comercial,
+                ProdutoVenda.MENTORIA_CONTINUA, new BigDecimal("26000"));
+        seedLeadFechado("Cliente Demo 2", "cliente2@exemplo.com.br", comercial,
+                ProdutoVenda.FORMACAO_PROFISSIONAL, new BigDecimal("597"));
+        seedLead("Cliente Demo 3", "cliente3@exemplo.com.br", comercial, StatusLead.PERDIDO, "Optou por concorrente");
+        seedLead("Cliente Demo 4", "cliente4@exemplo.com.br", comercial, StatusLead.PROPOSTA, null);
+        seedLead("Cliente Demo 5", "cliente5@exemplo.com.br", comercial, StatusLead.EM_CONTATO, null);
+        seedLead("Cliente Demo 6", "cliente6@exemplo.com.br", null, StatusLead.SOLICITACAO, null);
 
-        if (paula != null) {
-            metaComercialRepository.save(new MetaComercial(paula, 2026, 7, 5));
+        if (comercial != null) {
+            metaComercialRepository.save(new MetaComercial(comercial, 2026, 7, 5, new BigDecimal("10.00")));
         }
     }
 
@@ -353,7 +359,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (mentoriaRepository.count() > 0) {
             return;
         }
-        Colaborador lucas = buscarColaboradorPorNome("Lucas Alves");
+        Colaborador gestaoPerf = buscarColaboradorPorNome("Gestão de Performance");
         Colaborador ricardo = buscarColaboradorPorNome("Ricardo Costa");
         Mentorado joao = buscarMentoradoPorNome("João Silva");
         Mentorado ana = buscarMentoradoPorNome("Ana Costa");
@@ -361,14 +367,14 @@ public class DemoDataSeeder implements ApplicationRunner {
         Mentorado rafael = buscarMentoradoPorNome("Rafael Gomes");
         Mentorado fernanda = buscarMentoradoPorNome("Fernanda Lima");
         Mentorado marina = buscarMentoradoPorNome("Marina Souza");
-        if (lucas == null || ricardo == null || joao == null) {
+        if (gestaoPerf == null || ricardo == null || joao == null) {
             return; // seedColaboradores/seedMentorados não rodaram (ex.: banco já tinha dado de outra fonte)
         }
 
         // 1) Mentoria individual já REALIZADA, com ata PUBLICADA (IA "rodou" — dado simulado,
         // não chamou a API de verdade) — demonstra o fluxo completo pronto pra apresentação.
-        Mentoria m1 = new Mentoria(TipoMentoria.INDIVIDUAL, lucas, Set.of(joao),
-                Instant.parse("2026-07-02T14:00:00Z"), 60, "https://meet.google.com/joao-lucas", null);
+        Mentoria m1 = new Mentoria(TipoMentoria.INDIVIDUAL, gestaoPerf, Set.of(joao),
+                Instant.parse("2026-07-02T14:00:00Z"), 60, "https://meet.google.com/joao-gestao-perf", null);
         m1.confirmar();
         m1.realizar();
         // M12 (H5.2) — "materiais recomendados": a ficha técnica é literalmente o assunto da ata
@@ -411,8 +417,8 @@ public class DemoDataSeeder implements ApplicationRunner {
         // 2026-07-15T15:00 — que "andou pra trás" conforme o tempo real passou, até coincidir
         // com o próprio dia do teste e virar "dentro da janela de 10min" quando devia estar
         // "vários dias no futuro", quebrando mentorias.spec.ts de forma intermitente).
-        Mentoria m3 = new Mentoria(TipoMentoria.INDIVIDUAL, lucas, Set.of(rafael),
-                Instant.now().plus(Duration.ofDays(10)), 60, "https://meet.google.com/rafael-lucas", null);
+        Mentoria m3 = new Mentoria(TipoMentoria.INDIVIDUAL, gestaoPerf, Set.of(rafael),
+                Instant.now().plus(Duration.ofDays(10)), 60, "https://meet.google.com/rafael-gestao-perf", null);
         m3.confirmar();
         mentoriaRepository.save(m3);
 

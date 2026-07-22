@@ -5,7 +5,7 @@ import { loginAs } from './helpers';
 // linha inválida rejeita o arquivo inteiro, nada é persistido.
 test.describe('Financeiro — Import/Export CSV (M21)', () => {
   test('Lançamentos: exportar CSV dispara o download do arquivo', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Lançamentos' }).click();
     await expect(page).toHaveURL(/\/admin\/financeiro\/lancamentos$/);
@@ -19,7 +19,7 @@ test.describe('Financeiro — Import/Export CSV (M21)', () => {
   });
 
   test('Lançamentos: importar CSV válido cria as linhas e mostra a confirmação', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Lançamentos' }).click();
 
@@ -41,7 +41,7 @@ test.describe('Financeiro — Import/Export CSV (M21)', () => {
   });
 
   test('Lançamentos: importar CSV com uma linha inválida não cria nada e mostra o erro por linha', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Lançamentos' }).click();
 
@@ -68,7 +68,7 @@ test.describe('Financeiro — Import/Export CSV (M21)', () => {
   // Lançamentos, mesmo CSV). Este teste preserva o cenário que só "Contas" cobria: importar uma
   // linha PREVISTO com dataVencimento preenchida.
   test('Lançamentos: importar CSV com status Previsto e dataVencimento cria a linha', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await page.getByRole('link', { name: 'Financeiro' }).click();
     await page.getByRole('link', { name: 'Lançamentos' }).click();
 

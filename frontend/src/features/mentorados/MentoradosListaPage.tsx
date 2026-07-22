@@ -22,8 +22,10 @@ import styles from './MentoradosListaPage.module.css';
 
 const COLUMNS = '1.4fr 1.6fr 1.2fr 1fr 1fr 1.6fr';
 
-// M23 (change request pós-MVP, 17/07/2026) — /direto e /dados-contrato exigem Modulo.COMERCIAL
-// (achado do revisor-seguranca: CNPJ/sócios/valor de contrato não são dado de Gestão de Performance).
+// M23 criou /direto e /dados-contrato atrás de Modulo.COMERCIAL (achado do revisor-seguranca:
+// CNPJ/sócios/valor de contrato são dado comercial sensível). Pedido do Marcos (22/07/2026)
+// reverteu isso: Gestão de Performance também precisa de acesso pleno aqui — o backend aceita
+// COMERCIAL OU MENTORADOS agora (ver RequiresModulo em MentoradoContratoController).
 const TIPO_CONTRATO_LABEL: Record<TipoContrato, string> = {
   MENTORIA_CONTINUA: 'Mentoria Contínua',
   MENTORIA_INDIVIDUAL: 'Mentoria Individual',
@@ -38,9 +40,10 @@ const STATUS_LABEL: Record<StatusMentorado, { label: string; bg: string; color: 
 export function MentoradosListaPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  // M23 — /direto e /dados-contrato exigem Modulo.COMERCIAL (achado do revisor-seguranca); a
-  // área Gestão de Performance (que enxerga esta tela via Modulo.MENTORADOS) não vê esses botões.
-  const podeVerContrato = user?.modulosPermitidos.includes('COMERCIAL') ?? false;
+  // 22/07/2026 — quem enxerga esta tela (Modulo.MENTORADOS) já pode ver/criar contrato; COMERCIAL
+  // continua valendo também, pra não tirar acesso de quem já tinha.
+  const podeVerContrato =
+    (user?.modulosPermitidos.includes('COMERCIAL') || user?.modulosPermitidos.includes('MENTORADOS')) ?? false;
 
   const [status, setStatus] = useState<StatusMentorado | ''>('');
   const [busca, setBusca] = useState('');

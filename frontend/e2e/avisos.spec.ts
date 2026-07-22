@@ -28,7 +28,7 @@ test.describe('M17 — E16 Avisos & Notificações', () => {
   });
 
   test('Admin publica um aviso novo e ele aparece pro mentorado', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
 
     await page.goto('/admin/conteudos/avisos');
@@ -43,7 +43,7 @@ test.describe('M17 — E16 Avisos & Notificações', () => {
   });
 
   test('Admin edita um aviso existente e depois exclui', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
 
     await page.goto('/admin/conteudos/avisos');
@@ -76,7 +76,7 @@ test.describe('M17 — E16 Avisos & Notificações', () => {
   });
 
   test('setup: Admin publica o aviso usado nos testes de leitura/isolamento abaixo', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin/);
 
     await page.goto('/admin/conteudos/avisos');
@@ -138,7 +138,7 @@ test.describe('M17 — E16 Avisos & Notificações', () => {
   });
 
   test('Admin: RBAC — área fora de Conteúdos não acessa a aba de Avisos via URL direta', async ({ page }) => {
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
     await page.goto('/admin/conteudos/avisos');

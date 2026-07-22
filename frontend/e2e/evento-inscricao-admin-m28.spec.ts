@@ -17,7 +17,7 @@ async function selecionarEventoPorTitulo(page: import('@playwright/test').Page, 
 // leva criou o único jeito hoje de inscrever alguém: pela página dedicada do mentorado (Fase C).
 test.describe('M28 — Inscrição em evento pelo admin + cota de 3 grátis/ano (Mentoria Contínua)', () => {
   test('Admin inscreve e cancela um mentorado num evento', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
 
@@ -60,7 +60,7 @@ test.describe('M28 — Inscrição em evento pelo admin + cota de 3 grátis/ano 
   });
 
   test('Cota de 3 eventos grátis/ano de contrato bloqueia o 4º evento pra Mentoria Contínua', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
     // Cria 4 eventos PRÓPRIOS (não depende de quantos eventos programados já existem no seed/

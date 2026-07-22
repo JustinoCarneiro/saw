@@ -23,7 +23,7 @@ test.describe('Comercial (E13)', () => {
     await page.getByRole('button', { name: 'Enviar solicitação' }).click();
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
 
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await page.getByRole('link', { name: 'Comercial' }).click();
     await expect(page).toHaveURL(/\/admin\/comercial\/dashboard$/);
 
@@ -72,7 +72,7 @@ test.describe('Comercial (E13)', () => {
     const nome = `Lead Manual E2E ${Date.now()}`;
     const email = `lead.manual.${Date.now()}@example.com`;
 
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
 
@@ -96,7 +96,7 @@ test.describe('Comercial (E13)', () => {
     await page.getByRole('button', { name: 'Enviar solicitação' }).click();
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
 
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
 
@@ -115,17 +115,53 @@ test.describe('Comercial (E13)', () => {
   });
 
   test('Ranking mostra meta x realizado do time comercial', async ({ page }) => {
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\//);
+    await page.goto('/admin/comercial/ranking');
+
+    // Escopado pela linha do ranking (testId), não por getByText('Comercial') solto — esse nome
+    // colide com o título da seção "Comercial" no menu e com o nome/área do próprio usuário
+    // logado no topbar (mesmo texto em 3 lugares da tela, strict-mode violation).
+    const main = page.getByRole('main');
+    const linha = main.getByTestId('ranking-row').filter({ hasText: 'Comercial' });
+    await expect(linha).toBeVisible();
+    await page.screenshot({ path: 'e2e/screenshots/comercial-ranking.png' });
+  });
+
+  // Pedido do Marcos (22/07/2026) — "metas e ranking, quem define e onde?": até esta leva,
+  // MetaComercial não tinha CRUD nenhum (só o registro seedado por DemoDataSeeder pro Comercial em
+  // 2026-07) — qualquer outro vendedor/período ficava invisível no Ranking sem seed manual no
+  // banco. Prova o CRUD ponta a ponta: form "+ Definir meta" -> valor certo aparece no ranking.
+  // Valor único por execução (não um "4" fixo): a suíte não reseta o banco entre execuções, então
+  // reruns encontram a meta de Agosto/2026 já definida por uma execução anterior — um valor fixo
+  // não provaria que ESTA chamada de PUT realmente atualizou nada (mesma classe de flake já
+  // documentada no LeadRepositoryTest do M05).
+  test('Define meta comercial de um vendedor e o valor certo aparece no ranking', async ({ page }) => {
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/ranking');
 
     const main = page.getByRole('main');
-    await expect(main.getByText('Paula Mendes')).toBeVisible();
-    await page.screenshot({ path: 'e2e/screenshots/comercial-ranking.png' });
+    await main.getByLabel('Mês').selectOption({ label: 'Agosto' });
+    await main.getByLabel('Ano').selectOption('2026');
+
+    const metaValor = String(10 + (Date.now() % 80));
+    await main.getByRole('button', { name: 'Definir meta' }).click();
+    await main.getByLabel('Vendedor').selectOption({ label: 'Comercial' });
+    await main.getByLabel('Meta de fechamentos (vendas)').fill(metaValor);
+    await main.getByRole('button', { name: 'Salvar meta' }).click();
+    await expect(main.getByRole('button', { name: 'Salvar meta' })).toHaveCount(0);
+
+    // onDefinida dispara 2 GETs (metas + ranking) sem aguardar — o fechamento do form só garante
+    // que o PUT terminou, não que o re-fetch já chegou. Timeout maior aqui evita flake sob carga
+    // (rodando junto de outros specs) sem mascarar uma falha de verdade.
+    const linha = main.getByTestId('ranking-row').filter({ hasText: 'Comercial' });
+    await expect(linha).toBeVisible({ timeout: 10000 });
+    await expect(linha.getByText(metaValor, { exact: true })).toBeVisible();
   });
 
   test('RBAC: área fora do Comercial não vê o módulo nem acessa via URL direta', async ({ page }) => {
-    await loginAs(page, 'lucas@sawhub.com.br');
+    await loginAs(page, 'gestao_perf@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await expect(page.getByRole('link', { name: 'Comercial' })).toHaveCount(0);
 
@@ -137,7 +173,7 @@ test.describe('Comercial (E13)', () => {
   // reunião 17/07/2026) — "Live: Tendências do setor" é o evento REALIZADO seedado por
   // DemoDataSeeder (único evento cujo status permite o import histórico).
   test('Importa histórico de vendas de ingresso de um evento já realizado', async ({ page }) => {
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\/comercial\/dashboard$/);
 
     const main = page.getByRole('main');

@@ -3,7 +3,7 @@ import { loginAs } from './helpers';
 
 test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
   test('Fundador vê o dashboard com KPIs, crescimento, distribuição, atividades e mentorias de hoje', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     // DASHBOARD é o primeiro módulo da ordem de redirecionamento pra quem tem acesso a ele
     // (só Fundador) — login já cai direto em /admin/dashboard, sem precisar navegar.
     await expect(page).toHaveURL(/\/admin\/dashboard/);
@@ -50,12 +50,12 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     // Cria uma mentoria PRÓPRIA em vez de reusar/cancelar uma do seed: a única mentoria Agendada
     // seedada (Fernanda/Marina) é usada por mentorias.spec.ts pra testar a agenda do mentorado —
     // cancelá-la quebraria aquele teste (mentoria cancelada some da agenda).
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/mentorias');
 
     await page.getByRole('button', { name: 'Nova mentoria' }).click();
-    await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
+    await page.getByLabel('Mentor').selectOption({ label: 'Gestão de Performance' });
     await page.getByPlaceholder('Buscar mentorado...').fill('Ana Costa');
     await page.getByLabel('Ana Costa').check();
     // Auditoria de UX (22/07/2026) — DataHoraInput trocou o datetime-local nativo (formato AM/PM
@@ -101,8 +101,27 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     await expect(atividades.getByText(/Mentoria cancelada:.*Ana Costa/).first()).toBeVisible();
   });
 
+  // Pedido do Marcos (22/07/2026) — "o CEO abre só o Dashboard na maioria das vezes": resumo
+  // clicável de Comercial/Financeiro/Caixa/Conciliação, cada card navega pra aba de detalhe.
+  test('Resumo por área mostra métricas de Comercial/Financeiro/Caixa/Conciliação com navegação clicável', async ({ page }) => {
+    await loginAs(page, 'admin@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\/dashboard/);
+
+    const main = page.getByRole('main');
+    await expect(main.getByText('Resumo por área')).toBeVisible();
+    await expect(main.getByText('Comercial').first()).toBeVisible();
+    await expect(main.getByText('Financeiro (DRE)')).toBeVisible();
+    await expect(main.getByText('Caixa').first()).toBeVisible();
+    await expect(main.getByText('Conciliação')).toBeVisible();
+    // Valor em R$ do card de Caixa confirma que carregou dado real, não placeholder vazio.
+    await expect(main.getByText('Saldo final do mês')).toBeVisible();
+
+    await main.getByText('Financeiro (DRE)').click();
+    await expect(page).toHaveURL(/\/admin\/financeiro\/dashboard$/);
+  });
+
   test('isolamento por RBAC: área Comercial não vê "Dashboard" na sidebar nem acessa via URL direta', async ({ page }) => {
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     // Comercial não tem Modulo.DASHBOARD — cai direto no primeiro módulo que TEM (Comercial).
     await expect(page).not.toHaveURL(/\/admin\/dashboard/);

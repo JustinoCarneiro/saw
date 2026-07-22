@@ -13,7 +13,7 @@ test.describe('Comercial — formulário único de venda (M25)', () => {
     await page.getByRole('button', { name: 'Enviar solicitação' }).click();
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
 
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
     const main = page.getByRole('main');
@@ -38,7 +38,7 @@ test.describe('Comercial — formulário único de venda (M25)', () => {
     await page.getByRole('button', { name: 'Enviar solicitação' }).click();
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
 
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
     const main = page.getByRole('main');
@@ -83,7 +83,7 @@ test.describe('Comercial — formulário único de venda (M25)', () => {
     await expect(linha.getByText('Mentoria contínua · R$ 26.000,00')).toBeVisible();
 
     await page.context().clearCookies();
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.getByRole('link', { name: 'Financeiro' }).click();
     // Change request 20/07/2026 — "Contas a pagar/receber" fundida em "Lançamentos" (mesma tabela

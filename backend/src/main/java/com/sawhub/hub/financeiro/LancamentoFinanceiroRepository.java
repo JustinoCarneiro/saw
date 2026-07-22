@@ -30,17 +30,21 @@ public interface LancamentoFinanceiroRepository extends JpaRepository<Lancamento
     /** M26 — filtro de `GET /admin/financeiro/lancamentos` (por `dataCompetencia`, sentinela pro
      * período "desligado" — mesmo raciocínio de {@link #buscarComFiltroPorVencimento}, Postgres
      * não infere tipo de `LocalDate` nulo numa query com tantas colunas `bytea` de pgcrypto ao
-     * redor). `status`/`categoriaId`/`eventoId` nulos desligam o respectivo filtro. */
+     * redor). `status`/`categoriaId`/`eventoId`/`formaPagamento` nulos desligam o respectivo
+     * filtro (este último, 22/07/2026, mesma riqueza da coluna "Forma de Pagamento" da planilha
+     * real). */
     @Query("SELECT l FROM LancamentoFinanceiro l JOIN FETCH l.categoria LEFT JOIN FETCH l.evento "
             + "WHERE (:tipo IS NULL OR l.tipo = :tipo) "
             + "AND (:categoriaId IS NULL OR l.categoria.id = :categoriaId) "
             + "AND (:status IS NULL OR l.status = :status) "
             + "AND (:eventoId IS NULL OR l.evento.id = :eventoId) "
+            + "AND (:formaPagamento IS NULL OR l.formaPagamento = :formaPagamento) "
             + "AND l.dataCompetencia >= :inicio AND l.dataCompetencia < :fim "
             + "ORDER BY l.dataCompetencia DESC")
     List<LancamentoFinanceiro> buscarComFiltroPorCompetencia(@Param("tipo") TipoLancamento tipo,
             @Param("categoriaId") UUID categoriaId, @Param("status") StatusLancamento status,
-            @Param("eventoId") UUID eventoId, @Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
+            @Param("eventoId") UUID eventoId, @Param("formaPagamento") FormaPagamentoLancamento formaPagamento,
+            @Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
 
     /** M26 (absorvido de {@code ContaPagarReceberRepository.buscarComFiltro}) — filtro de
      * `GET /admin/financeiro/contas`, agora um recorte por `dataVencimento` sobre a mesma tabela
@@ -70,4 +74,11 @@ public interface LancamentoFinanceiroRepository extends JpaRepository<Lancamento
     // precisam de atenção agora, sem escopo de período (um vencido de 3 meses atrás continua
     // relevante hoje, diferente de faturamentoMensal/DRE que são por ano/mês selecionado).
     long countByStatusIn(List<StatusLancamento> status);
+
+    // Pedido do Marcos (22/07/2026) — "resultado por evento" no Financeiro (mesma riqueza da
+    // planilha real "Eventos - Despesas e Receitas": P&L por evento, independente do mês em que
+    // cada lançamento foi de fato registrado — uma despesa de evento pode ser paga semanas depois
+    // do evento acontecer). Só lê `tipo`/`valor` (escalares próprios, sem tocar `categoria`/
+    // `evento` LAZY), então dispensa JOIN FETCH.
+    List<LancamentoFinanceiro> findByEventoIdAndStatus(UUID eventoId, StatusLancamento status);
 }

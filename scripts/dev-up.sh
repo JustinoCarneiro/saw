@@ -148,7 +148,7 @@ echo "  Frontend:  http://localhost:$FRONTEND_PORT/login"
 echo "  Backend:   http://localhost:$BACKEND_PORT/api/v1"
 echo "  pgAdmin:   http://localhost:5050"
 echo
-echo "  Login de teste (Fundador): matheus@sawhub.com.br / trocar-no-primeiro-login"
+echo "  Login de teste (Fundador): admin@sawhub.com.br / trocar-no-primeiro-login"
 echo
 echo "  Logs:  $LOG_DIR/{backend,frontend}.log"
 echo "  Parar: ./scripts/dev-down.sh"

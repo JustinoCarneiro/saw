@@ -93,6 +93,9 @@ export type TipoLancamento = 'RECEITA' | 'DESPESA';
 export type StatusLancamento = 'PREVISTO' | 'PARCIAL' | 'REALIZADO' | 'VENCIDO';
 export type GrupoDre = 'RECEITA_BRUTA' | 'DEDUCOES' | 'CUSTOS' | 'DESPESA_OPERACIONAL';
 export type OrigemReceita = 'ASSINATURA' | 'LOJA' | 'EVENTO' | 'OUTRA';
+// Pedido do Marcos (22/07/2026) — mesma riqueza da coluna "Forma de Pagamento" da planilha real.
+// Nome deliberadamente diferente de `FormaPagamento` (Comercial) pra não confundir os dois filtros.
+export type FormaPagamentoLancamento = 'PIX' | 'PIX_RECORRENTE' | 'CARTAO' | 'BOLETO' | 'HOTMART';
 
 // E14 — subcategorias fixo/variável (raio-x da planilha real "DRE Financeira Saw"). `grupo` é
 // texto livre (departamento/linha, ex. "Estrutura"/"Pessoas"); `natureza` é consistente por
@@ -126,6 +129,7 @@ export interface Lancamento {
   dataVencimento: string | null;
   dataPagamento: string | null;
   valorPago: number | null;
+  formaPagamento: FormaPagamentoLancamento | null;
 }
 
 // Change request 17/07/2026 ("evento no financeiro") — seletor de evento em Nova conta/filtro.
@@ -178,24 +182,35 @@ export interface DreResponse {
   despesaPorCategoria: CategoriaValor[];
 }
 
-export interface ComposicaoReceita {
-  origem: OrigemReceita;
-  valor: number;
-}
-
 // Pedido do Marcos (22/07/2026) — resumo de 1 linha de cada aba do Financeiro: resultadoDre
 // (DRE), saldoCaixaAtual (Caixa), lancamentosPendentes/lancamentosVencidos (Lançamentos, sem
 // escopo de período). vendasEmAtraso (Conciliação) não vem daqui — o Dashboard busca
 // /admin/financeiro/conciliacao à parte e conta emAtraso no frontend.
+// Pedido do Marcos (22/07/2026, achado na auditoria de clareza — "métricas de venda de ingresso
+// precisam aparecer também no Financeiro") — mesma riqueza da planilha real "Eventos - Despesas e
+// Receitas": receita/despesa/resultado por evento REALIZADO no período.
+export interface EventoResultadoResumo {
+  eventoId: string;
+  eventoTitulo: string;
+  receitaTotal: number;
+  despesaTotal: number;
+  resultado: number;
+}
+
 export interface DashboardFaturamentoResponse {
   faturamentoMensal: number;
   mrr: number;
   churnPct: number;
-  composicao: ComposicaoReceita[];
+  // Pedido do Marcos (22/07/2026) — por CategoriaFinanceira (nome), não mais por OrigemReceita:
+  // essa origem só cobre ASSINATURA/LOJA/EVENTO/OUTRA e deixava categorias reais da planilha
+  // (Mentoria Individual, Consultoria, Patrocínio, Produtos Digitais) fora da composição mesmo
+  // com venda de verdade.
+  composicao: CategoriaValor[];
   resultadoDre: number;
   saldoCaixaAtual: number;
   lancamentosPendentes: number;
   lancamentosVencidos: number;
+  resultadoPorEvento: EventoResultadoResumo[];
 }
 
 // "Caixa do mês: Inicial, saldo por banco, Final" + "Transferências Entre Contas" (change request
@@ -335,6 +350,15 @@ export interface VendaIngressoResumo {
   valorLiquido: number;
 }
 
+// Pedido do Marcos (22/07/2026, achado na auditoria de clareza) — segunda metade de "dashboard
+// mais visual: venda de ingresso por evento + venda 'por fora' (produto + valor)" que faltava
+// (reunião 17/07/2026). Exclui INGRESSO_EVENTO (já coberto por VendaIngressoResumo).
+export interface VendaPorProdutoResumo {
+  produto: ProdutoVenda;
+  quantidade: number;
+  valorTotal: number;
+}
+
 export interface DashboardComercialResponse {
   novosMentoradosNoMes: number;
   taxaConversaoPct: number;
@@ -343,6 +367,7 @@ export interface DashboardComercialResponse {
   variacaoMrrPct: number;
   funil: FunilItem[];
   vendaIngressos: VendaIngressoResumo[];
+  vendaPorFora: VendaPorProdutoResumo[];
 }
 
 export interface RankingComercialItem {
@@ -350,6 +375,15 @@ export interface RankingComercialItem {
   metaFechamentos: number;
   realizado: number;
   pctAtingido: number;
+}
+
+// Pedido do Marcos (22/07/2026, achado na auditoria de clareza — "metas e ranking, quem define e
+// onde?") — até esta leva não existia endpoint nenhum pra definir meta, só o seed de demonstração.
+export interface MetaComercial {
+  vendedorId: string;
+  vendedorNome: string;
+  metaFechamentos: number;
+  percentualComissao?: number;
 }
 
 // M06 · E11 (Gestão Admin) + E5 (Mentorias & Atas) + diferencial de IA
@@ -873,4 +907,14 @@ export interface DashboardAdminResponse {
   distribuicaoTipoContrato: DistribuicaoTipoContratoItem[];
   atividadesRecentes: AtividadeRecente[];
   mentoriasHoje: MentoriaHojeItem[];
+  // Pedido do Marcos (22/07/2026) — "o CEO abre só o Dashboard na maioria das vezes": resumo de
+  // 1 linha de cada área com navegação clicável pra tela de detalhe, mesmo padrão do "Resumo do
+  // Financeiro" em DashboardFaturamentoResponse.
+  resultadoDre: number;
+  saldoCaixaAtual: number;
+  lancamentosPendentes: number;
+  lancamentosVencidos: number;
+  leadsEmAberto: number;
+  taxaConversaoPct: number;
+  vendasEmAtraso: number;
 }

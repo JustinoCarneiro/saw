@@ -84,6 +84,16 @@ public class LancamentoFinanceiro extends BaseEntity {
     @Column(name = "pagamento_recorrente", nullable = false)
     private boolean pagamentoRecorrente;
 
+    // Pedido do Marcos (22/07/2026, achado na auditoria de clareza — "riqueza de dados da
+    // planilha real") — a planilha "DRE Financeira Saw" tem "Forma de Pagamento" em toda linha de
+    // Despesas/Receitas; o sistema não capturava isso em lançamento nenhum. Nullable — dado
+    // opcional, nem toda origem de lançamento sabe a forma de pagamento (ex.: um lançamento
+    // manual retroativo pode não ter essa informação à mão). Setter em vez de mais um parâmetro
+    // no construtor canônico (já em 9 args) — ver definirFormaPagamento().
+    @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pagamento")
+    private FormaPagamentoLancamento formaPagamento;
+
     protected LancamentoFinanceiro() {
     }
 
@@ -132,6 +142,10 @@ public class LancamentoFinanceiro extends BaseEntity {
         this.dataCompetencia = dataPagamento;
         this.valorPago = valor;
         this.status = StatusLancamento.REALIZADO;
+    }
+
+    public void definirFormaPagamento(FormaPagamentoLancamento formaPagamento) {
+        this.formaPagamento = formaPagamento;
     }
 
     public void marcarVencida() {
@@ -207,5 +221,9 @@ public class LancamentoFinanceiro extends BaseEntity {
 
     public boolean isPagamentoRecorrente() {
         return pagamentoRecorrente;
+    }
+
+    public FormaPagamentoLancamento getFormaPagamento() {
+        return formaPagamento;
     }
 }

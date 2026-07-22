@@ -6,7 +6,7 @@ import { loginAs } from './helpers';
 // rascunho (publicado=false) e é tudo-ou-nada (ver Blueprint, ROADMAP.md).
 test.describe('Produtos (Loja) — Import/Export CSV (M23)', () => {
   test('exportar CSV dispara o download do arquivo', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/produtos');
 
@@ -19,7 +19,7 @@ test.describe('Produtos (Loja) — Import/Export CSV (M23)', () => {
   });
 
   test('importar CSV válido cria o produto como rascunho e ele aparece na listagem', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/produtos');
 
@@ -41,7 +41,7 @@ test.describe('Produtos (Loja) — Import/Export CSV (M23)', () => {
   });
 
   test('importar CSV com categoria inválida não cria nada e mostra o erro por linha', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/produtos');
 

@@ -16,10 +16,21 @@ public record DashboardFaturamentoResponse(
         BigDecimal faturamentoMensal,
         BigDecimal mrr,
         double churnPct,
-        List<ComposicaoReceita> composicao,
+        // Pedido do Marcos (22/07/2026, achado ao revisar a composição) — por CategoriaFinanceira
+        // (nome), não mais por OrigemReceita: origem_receita só cobre ASSINATURA/LOJA/EVENTO/OUTRA
+        // (uq_categoria_financeira_origem_receita permite só 1 categoria por origem, ver V22) e
+        // deixava "Mentoria Individual"/"Consultoria"/"Patrocínio"/"Produtos Digitais" — categorias
+        // reais da planilha, já resolvidas certinho pelo LeadService — invisíveis aqui mesmo
+        // quando tinham venda de verdade. "Loja SAW" (módulo pausado) só aparece quando tiver
+        // lançamento de fato, não é mais um balde fixo sempre mostrado.
+        List<CategoriaValor> composicao,
         BigDecimal resultadoDre,
         BigDecimal saldoCaixaAtual,
         long lancamentosPendentes,
-        long lancamentosVencidos
+        long lancamentosVencidos,
+        // Pedido do Marcos (22/07/2026) — "métricas de venda de ingresso precisam aparecer
+        // também no Financeiro": Comercial já mostra quantidade/valor vendido por evento, mas o
+        // Financeiro não mostrava nenhum resultado (receita - despesa) por evento até agora.
+        List<EventoResultadoResumo> resultadoPorEvento
 ) {
 }

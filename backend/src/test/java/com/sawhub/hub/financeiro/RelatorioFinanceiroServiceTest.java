@@ -5,8 +5,11 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.evento.EventoRepository;
+import com.sawhub.hub.evento.StatusEvento;
 import com.sawhub.hub.financeiro.dto.CaixaMensalResponse;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -23,9 +26,11 @@ class RelatorioFinanceiroServiceTest {
     private LancamentoFinanceiroRepository lancamentoRepository;
     @Mock
     private CaixaMensalService caixaMensalService;
+    @Mock
+    private EventoRepository eventoRepository;
 
     private RelatorioFinanceiroService service() {
-        return new RelatorioFinanceiroService(lancamentoRepository, caixaMensalService);
+        return new RelatorioFinanceiroService(lancamentoRepository, caixaMensalService, eventoRepository);
     }
 
     // Pedido do Marcos (22/07/2026) — dashboardFaturamento() passou a reaproveitar
@@ -35,6 +40,10 @@ class RelatorioFinanceiroServiceTest {
         when(caixaMensalService.caixaDoMes(anyInt(), anyInt()))
                 .thenReturn(new CaixaMensalResponse(2026, 7, List.of(), BigDecimal.ZERO, BigDecimal.ZERO));
     }
+
+    // Nota: dashboardFaturamento() também chama eventoRepository.buscarPorStatusEDataHoraBetween
+    // (pro "resultado por evento") — testes que não são sobre isso não precisam stubar: Mockito
+    // devolve List vazia por padrão pra @Mock não-stubado (ReturnsEmptyValues), sem NPE.
 
     private static CategoriaFinanceira categoria(String nome, TipoLancamento tipo, GrupoDre grupo, OrigemReceita origem) {
         return new CategoriaFinanceira(nome, tipo, grupo, origem);
@@ -165,9 +174,52 @@ class RelatorioFinanceiroServiceTest {
         assertThat(dashboard.mrr()).isEqualByComparingTo("1000");
         assertThat(dashboard.composicao()).hasSize(3);
         assertThat(dashboard.composicao()).anySatisfy(c -> {
-            assertThat(c.origem()).isEqualTo(OrigemReceita.ASSINATURA);
+            assertThat(c.categoria()).isEqualTo("Assinaturas");
             assertThat(c.valor()).isEqualByComparingTo("1000");
         });
+        // Maior valor primeiro (widget do Dashboard, ver comentário em dashboardFaturamento()).
+        assertThat(dashboard.composicao()).extracting("categoria")
+                .containsExactly("Assinaturas", "Loja", "Eventos");
+    }
+
+    // Pedido do Marcos (22/07/2026) — achado ao revisar a composição: categorias reais da
+    // planilha sem OrigemReceita (Mentoria Individual, Consultoria, Produtos Digitais, Patrocínio
+    // — uq_categoria_financeira_origem_receita só permite 1 categoria por origem, ver V22) ficavam
+    // fora da composição inteira mesmo tendo venda de verdade. Agora entram por nome de categoria.
+    @Test
+    void dashboardFaturamentoComposicaoInclueCategoriaSemOrigemReceita() {
+        stubCaixaVazio();
+        CategoriaFinanceira mentoriaIndividual = categoria("Mentoria Individual", TipoLancamento.RECEITA,
+                GrupoDre.RECEITA_BRUTA, null);
+        CategoriaFinanceira produtosDigitais = categoria("Produtos Digitais", TipoLancamento.RECEITA,
+                GrupoDre.RECEITA_BRUTA, null);
+
+        LocalDate julho = LocalDate.of(2026, 7, 15);
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 7, 1)), eq(LocalDate.of(2026, 7, 31))))
+                .thenReturn(List.of(
+                        lancamento(mentoriaIndividual, "300", julho),
+                        lancamento(produtosDigitais, "900", julho)));
+
+        var dashboard = service().dashboardFaturamento(2026, 7);
+
+        assertThat(dashboard.composicao()).hasSize(2);
+        // Maior valor primeiro: Produtos Digitais (900) antes de Mentoria Individual (300).
+        assertThat(dashboard.composicao()).extracting("categoria")
+                .containsExactly("Produtos Digitais", "Mentoria Individual");
+    }
+
+    @Test
+    void receitaPorOrigemSomaSoALinhaDaOrigemPedida() {
+        CategoriaFinanceira assinaturas = categoria("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
+        CategoriaFinanceira loja = categoria("Loja", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.LOJA);
+        LocalDate julho = LocalDate.of(2026, 7, 15);
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 7, 1)), eq(LocalDate.of(2026, 7, 31))))
+                .thenReturn(List.of(lancamento(assinaturas, "1000", julho), lancamento(loja, "500", julho)));
+
+        assertThat(service().receitaPorOrigem(2026, 7, OrigemReceita.LOJA)).isEqualByComparingTo("500");
+        assertThat(service().receitaPorOrigem(2026, 7, OrigemReceita.EVENTO)).isEqualByComparingTo("0");
     }
 
     @Test
@@ -318,6 +370,45 @@ class RelatorioFinanceiroServiceTest {
         assertThat(dashboard.saldoCaixaAtual()).isEqualByComparingTo("7500");
         assertThat(dashboard.lancamentosPendentes()).isEqualTo(4L);
         assertThat(dashboard.lancamentosVencidos()).isEqualTo(2L);
+        assertThat(dashboard.resultadoPorEvento()).isEmpty();
+    }
+
+    // Pedido do Marcos (22/07/2026, achado na auditoria de clareza — "métricas de venda de
+    // ingresso precisam aparecer também no Financeiro") — mesma riqueza da planilha real "Eventos
+    // - Despesas e Receitas": receita/despesa/resultado por evento REALIZADO no período.
+    @Test
+    void dashboardFaturamentoAgregaResultadoPorEvento() {
+        stubCaixaVazio();
+        CategoriaFinanceira eventos = categoria("Eventos", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.EVENTO);
+        CategoriaFinanceira estrutura = categoria("Estrutura Evento", TipoLancamento.DESPESA, GrupoDre.DESPESA_OPERACIONAL, null);
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(eq(StatusLancamento.REALIZADO), any(), any()))
+                .thenReturn(List.of());
+        when(lancamentoRepository.countByStatusIn(org.mockito.ArgumentMatchers.anyList())).thenReturn(0L);
+
+        com.sawhub.hub.evento.Evento evento = new com.sawhub.hub.evento.Evento("Receita do Sucesso",
+                com.sawhub.hub.evento.TipoEvento.PRESENCIAL, null, Instant.parse("2026-07-10T19:00:00Z"),
+                "Recife", null, 200);
+        java.util.UUID eventoId = java.util.UUID.randomUUID();
+        org.springframework.test.util.ReflectionTestUtils.setField(evento, "id", eventoId);
+        when(eventoRepository.buscarPorStatusEDataHoraBetween(eq(StatusEvento.REALIZADO),
+                org.mockito.ArgumentMatchers.any(Instant.class), org.mockito.ArgumentMatchers.any(Instant.class)))
+                .thenReturn(List.of(evento));
+
+        LancamentoFinanceiro receita1 = lancamento(eventos, "600", LocalDate.of(2026, 7, 10));
+        LancamentoFinanceiro receita2 = lancamento(eventos, "400", LocalDate.of(2026, 7, 10));
+        LancamentoFinanceiro despesa = lancamento(estrutura, "300", LocalDate.of(2026, 6, 20)); // paga antes do evento
+        when(lancamentoRepository.findByEventoIdAndStatus(eventoId, StatusLancamento.REALIZADO))
+                .thenReturn(List.of(receita1, receita2, despesa));
+
+        var dashboard = service().dashboardFaturamento(2026, 7);
+
+        assertThat(dashboard.resultadoPorEvento()).hasSize(1);
+        var resumo = dashboard.resultadoPorEvento().get(0);
+        assertThat(resumo.eventoId()).isEqualTo(eventoId);
+        assertThat(resumo.eventoTitulo()).isEqualTo("Receita do Sucesso");
+        assertThat(resumo.receitaTotal()).isEqualByComparingTo("1000");
+        assertThat(resumo.despesaTotal()).isEqualByComparingTo("300");
+        assertThat(resumo.resultado()).isEqualByComparingTo("700");
     }
 
     private static LocalDate any() {

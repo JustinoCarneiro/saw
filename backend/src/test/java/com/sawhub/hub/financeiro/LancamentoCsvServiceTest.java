@@ -95,6 +95,23 @@ class LancamentoCsvServiceTest {
         assertThat(csv).contains("'=SOMA(A1:A2)");
     }
 
+    @Test
+    void exportarComFormaPagamentoPreenchidaMostraAColuna() {
+        CategoriaFinanceira categoria = categoriaAssinatura();
+        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
+                "Assinatura João Silva", new BigDecimal("397.50"), LocalDate.of(2026, 7, 10),
+                StatusLancamento.REALIZADO);
+        lancamento.definirFormaPagamento(FormaPagamentoLancamento.PIX);
+        LocalDate de = LocalDate.of(2026, 7, 1);
+        LocalDate ate = LocalDate.of(2026, 7, 31);
+        when(lancamentoService.listar(de, ate, null, null)).thenReturn(List.of(lancamento));
+
+        String csv = service().exportarPorCompetencia(de, ate, null, null);
+
+        assertThat(csv).contains("tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;formaPagamento");
+        assertThat(csv).contains("RECEITA;Assinaturas;Assinatura João Silva;397,50;10/07/2026;;REALIZADO;PIX");
+    }
+
     // --- exportar por vencimento (GET /contas/export — M26, absorvido de ContaCsvServiceTest) ---
 
     @Test
@@ -136,6 +153,39 @@ class LancamentoCsvServiceTest {
         assertThat(captor.getValue().get(0).getDescricao()).isEqualTo("Mensalidade João");
         assertThat(captor.getValue().get(0).getDataVencimento()).isNull();
         assertThat(captor.getValue().get(1).getDataVencimento()).isEqualTo(LocalDate.of(2026, 7, 15));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void importarComColunaFormaPagamentoPropagaOValorParaOLancamento() {
+        CategoriaFinanceira categoria = categoriaAssinatura();
+        when(categoriaRepository.findByNomeIgnoreCase("Assinaturas")).thenReturn(List.of(categoria));
+
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status;formaPagamento\n"
+                + "RECEITA;Assinaturas;Mensalidade João;397,50;10/07/2026;;REALIZADO;PIX\n"
+                + "RECEITA;Assinaturas;Mensalidade Ana;250,00;11/07/2026;;REALIZADO;\n";
+
+        ImportResultResponse resultado = service().importar(csv(conteudo));
+
+        assertThat(resultado.importados()).isEqualTo(2);
+        ArgumentCaptor<List<LancamentoFinanceiro>> captor = ArgumentCaptor.forClass(List.class);
+        verify(lancamentoRepository).saveAll(captor.capture());
+        assertThat(captor.getValue().get(0).getFormaPagamento()).isEqualTo(FormaPagamentoLancamento.PIX);
+        assertThat(captor.getValue().get(1).getFormaPagamento()).isNull();
+    }
+
+    @Test
+    void importarSemColunaFormaPagamentoContinuaFuncionando() {
+        CategoriaFinanceira categoria = categoriaAssinatura();
+        when(categoriaRepository.findByNomeIgnoreCase("Assinaturas")).thenReturn(List.of(categoria));
+
+        String conteudo = "tipo;categoria;descricao;valor;dataCompetencia;dataVencimento;status\n"
+                + "RECEITA;Assinaturas;Mensalidade João;397,50;10/07/2026;;REALIZADO\n";
+
+        ImportResultResponse resultado = service().importar(csv(conteudo));
+
+        assertThat(resultado.importados()).isEqualTo(1);
+        assertThat(resultado.erros()).isEmpty();
     }
 
     @Test

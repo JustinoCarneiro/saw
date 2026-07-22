@@ -55,7 +55,7 @@ test.describe('M08 — E2 Dashboard do Mentorado', () => {
   });
 
   test('isolamento por tenant: Admin não acessa /api/v1/mentorado/dashboard', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     // page.request (não o fixture request avulso) reusa os cookies da sessão logada do Admin —
     // um request fixture isolado não teria sessão nenhuma e o 401 resultante não provaria nada

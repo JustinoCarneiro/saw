@@ -1,6 +1,7 @@
 package com.sawhub.hub.security;
 
 import com.sawhub.hub.team.AreaModuloMatrix;
+import java.util.Arrays;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.springframework.security.access.AccessDeniedException;
@@ -25,7 +26,9 @@ public class ModuloAccessAspect {
         if (!(authentication != null && authentication.getPrincipal() instanceof AppUserPrincipal principal)) {
             throw new AccessDeniedException("Não autenticado.");
         }
-        if (principal.getArea() == null || !AreaModuloMatrix.isAllowed(principal.getArea(), requiresModulo.value())) {
+        boolean temAlgumModulo = principal.getArea() != null
+                && Arrays.stream(requiresModulo.value()).anyMatch(modulo -> AreaModuloMatrix.isAllowed(principal.getArea(), modulo));
+        if (!temAlgumModulo) {
             throw new AccessDeniedException("Sua área não tem acesso a este módulo.");
         }
     }

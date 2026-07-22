@@ -277,8 +277,8 @@ class DemoDataSeederTest {
         when(leadRepository.count()).thenReturn(0L);
         when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(metaComercialRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        Colaborador paula = new Colaborador(null, "Paula Mendes", Area.COMERCIAL);
-        when(colaboradorRepository.findAll()).thenReturn(List.of(paula));
+        Colaborador comercial = new Colaborador(null, "Comercial", Area.COMERCIAL);
+        when(colaboradorRepository.findAll()).thenReturn(List.of(comercial));
 
         seeder().run(null);
 
@@ -293,7 +293,8 @@ class DemoDataSeederTest {
 
         ArgumentCaptor<MetaComercial> metaCaptor = ArgumentCaptor.forClass(MetaComercial.class);
         verify(metaComercialRepository, times(1)).save(metaCaptor.capture());
-        assertThat(metaCaptor.getValue().getVendedor()).isSameAs(paula);
+        assertThat(metaCaptor.getValue().getVendedor()).isSameAs(comercial);
+        assertThat(metaCaptor.getValue().getPercentualComissao()).isEqualByComparingTo("10.00");
     }
 
     @Test
@@ -322,9 +323,9 @@ class DemoDataSeederTest {
         // produtoRepository.save() devolva o argumento, senão o Produto fica null.
         when(produtoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Colaborador lucas = colaborador("Lucas Alves", Area.GESTAO_PERFORMANCE);
+        Colaborador gestaoPerf = colaborador("Gestão de Performance", Area.GESTAO_PERFORMANCE);
         Colaborador ricardo = colaborador("Ricardo Costa", Area.GESTAO_PERFORMANCE);
-        when(colaboradorRepository.findAll()).thenReturn(List.of(lucas, ricardo));
+        when(colaboradorRepository.findAll()).thenReturn(List.of(gestaoPerf, ricardo));
 
         List<Mentorado> mentorados = List.of(mentorado("João Silva"), mentorado("Ana Costa"), mentorado("Carlos Menezes"),
                 mentorado("Rafael Gomes"), mentorado("Fernanda Lima"), mentorado("Marina Souza"));

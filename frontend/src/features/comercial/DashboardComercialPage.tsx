@@ -4,9 +4,11 @@ import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
 import { Tooltip } from '../../shared/components/Tooltip';
+import { LOJA_ADMIN_PAUSADA } from '../../shared/lib/featureFlags';
 import type { DashboardComercialResponse, EventoVendaResumo, ImportResultResponse, StatusLead } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
+import { PRODUTO_VENDA_LABEL } from '../../shared/lib/labels';
 import styles from './DashboardComercialPage.module.css';
 
 const STATUS_LABEL: Record<StatusLead, string> = {
@@ -69,7 +71,7 @@ export function DashboardComercialPage() {
             </Card>
             <Card style={{ padding: 18 }}>
               <div className={styles.kpiLabel}>
-                <Tooltip text="Receita mensal recorrente — contratos de mentoria em andamento, sem contar receitas pontuais (Loja, eventos).">Receita recorrente (MRR)</Tooltip>
+                <Tooltip text="Receita mensal recorrente. Contratos de mentoria em andamento, sem contar receitas pontuais (Loja, eventos).">Receita recorrente (MRR)</Tooltip>
               </div>
               <div className={styles.kpiValue}>{formatBRL(dashboard.mrr)}</div>
               <div className={styles.kpiHint} style={{ color: dashboard.variacaoMrrPct >= 0 ? 'var(--success)' : 'var(--danger)' }}>
@@ -78,9 +80,14 @@ export function DashboardComercialPage() {
             </Card>
             <Card style={{ padding: 18 }}>
               <div className={styles.kpiLabel}>
-                <Tooltip text="Total de pedidos Pagos da Loja SAW no período.">Vendas da loja</Tooltip>
+                <Tooltip text={LOJA_ADMIN_PAUSADA
+                  ? 'Total de pedidos Pagos da Loja SAW no período. A Loja está temporariamente pausada (decisão do cliente). Este número fica zerado até ela reabrir.'
+                  : 'Total de pedidos Pagos da Loja SAW no período.'}>
+                  Vendas da loja
+                </Tooltip>
               </div>
               <div className={styles.kpiValue}>{formatBRL(dashboard.vendasLoja)}</div>
+              {LOJA_ADMIN_PAUSADA && <div className={styles.kpiHint}>Loja pausada</div>}
             </Card>
           </div>
 
@@ -121,6 +128,26 @@ export function DashboardComercialPage() {
                       <span className={styles.funilLabel}>{v.eventoTitulo}</span>
                       <span className={styles.funilValue}>
                         {v.quantidadeVendida}{v.quantidadeTotal != null ? ` / ${v.quantidadeTotal}` : ''} — {formatBRL(v.valorLiquido)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {dashboard.vendaPorFora.length > 0 && (
+            <Card style={{ padding: '20px 22px', marginTop: 16 }}>
+              <div className={styles.sectionTitle}>
+                <Tooltip text="Vendas fechadas no período, por produto. Exclui ingresso de evento, que já tem a seção própria acima.">Venda por fora</Tooltip>
+              </div>
+              <div className={styles.funilList}>
+                {dashboard.vendaPorFora.map((v) => (
+                  <div key={v.produto} className={styles.funilRow}>
+                    <div className={styles.funilHeader}>
+                      <span className={styles.funilLabel}>{PRODUTO_VENDA_LABEL[v.produto]}</span>
+                      <span className={styles.funilValue}>
+                        {v.quantidade} venda(s) — {formatBRL(v.valorTotal)}
                       </span>
                     </div>
                   </div>
@@ -181,7 +208,7 @@ function ImportarHistoricoIngressos() {
     <Card style={{ padding: '20px 22px', marginTop: 16 }}>
       <div className={styles.sectionHeader}>
         <div className={styles.sectionTitle} style={{ marginBottom: 0 }}>
-          <Tooltip text="Backfill de eventos já realizados antes do sistema existir — não afeta vendas de eventos futuros, que são registradas pelo fluxo normal de inscrição.">Importar histórico de vendas de ingresso</Tooltip>
+          <Tooltip text="Backfill de eventos já realizados antes do sistema existir. Não afeta vendas de eventos futuros, que são registradas pelo fluxo normal de inscrição.">Importar histórico de vendas de ingresso</Tooltip>
         </div>
         <div className={styles.importRow}>
           <select
@@ -214,8 +241,14 @@ function ImportarHistoricoIngressos() {
         </div>
       </div>
       <div className={styles.muted}>
-        Colunas esperadas: nomeAluno, quantidadeIngressos, valorLiquidoIngresso, tipoIngresso, email
-        (origemVenda, nomeEmpresa, telefone são opcionais) — mesmo layout da planilha "Vendas Eventos".
+        Renomeie as colunas do CSV exportado da planilha "Vendas Eventos" pra estes nomes antes de
+        importar: nomeAluno, quantidadeIngressos, valorLiquidoIngresso, tipoIngresso, email
+        (origemVenda, nomeEmpresa, telefone são opcionais).
+      </div>
+      <div className={styles.muted} style={{ marginTop: 4 }}>
+        Este import só registra os ingressos (pra relatório de Eventos/Credenciamento) — <strong>não
+        lança receita no Financeiro</strong>. Se ainda não importou o financeiro desses meses, faça
+        isso separadamente em Lançamentos.
       </div>
 
       {erro && <div className={styles.erros}>{erro}</div>}

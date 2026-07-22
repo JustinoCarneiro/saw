@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
@@ -169,6 +170,7 @@ export function DashboardAdminPage() {
 }
 
 function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminResponse }) {
+  const navigate = useNavigate();
   const totalDistribuicao = dashboard.distribuicaoTipoContrato.reduce((soma, d) => soma + d.quantidade, 0);
 
   return (
@@ -212,6 +214,38 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
         </Card>
       </div>
 
+      <div className={styles.sectionTitle} style={{ marginBottom: 12 }}>
+        <Tooltip text="Atalho pra Comercial, Financeiro, Caixa e Conciliação — clique num card pra ver o detalhe na aba correspondente.">Resumo por área</Tooltip>
+      </div>
+      <div className={styles.resumoGrid}>
+        <ResumoCard
+          titulo="Comercial"
+          destaque={`${dashboard.leadsEmAberto}`}
+          legenda={`${dashboard.taxaConversaoPct.toFixed(1)}% de conversão no mês`}
+          onClick={() => navigate('/admin/comercial/dashboard')}
+        />
+        <ResumoCard
+          titulo="Financeiro (DRE)"
+          destaque={formatBRL(dashboard.resultadoDre)}
+          corDestaque={dashboard.resultadoDre >= 0 ? 'var(--success)' : 'var(--danger)'}
+          legenda={dashboard.resultadoDre >= 0 ? 'Resultado do mês (lucro)' : 'Resultado do mês (prejuízo)'}
+          onClick={() => navigate('/admin/financeiro/dashboard')}
+        />
+        <ResumoCard
+          titulo="Caixa"
+          destaque={formatBRL(dashboard.saldoCaixaAtual)}
+          legenda="Saldo final do mês"
+          onClick={() => navigate('/admin/financeiro/caixa')}
+        />
+        <ResumoCard
+          titulo="Conciliação"
+          destaque={`${dashboard.vendasEmAtraso}`}
+          corDestaque={dashboard.vendasEmAtraso > 0 ? 'var(--danger)' : 'var(--success)'}
+          legenda={dashboard.vendasEmAtraso > 0 ? 'venda(s) com parcela em atraso' : 'nenhuma venda em atraso'}
+          onClick={() => navigate('/admin/financeiro/conciliacao')}
+        />
+      </div>
+
       <div className={styles.row}>
         <Card style={{ padding: '20px 22px' }} testId="grafico-crescimento-mentorados">
           <div className={styles.chartHeader}>
@@ -227,7 +261,7 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
 
         <Card style={{ padding: '20px 22px' }} testId="grafico-distribuicao-tipo-contrato">
           <div className={styles.sectionTitle}>
-            <Tooltip text="% de mentorados ativos por Tipo de Contrato (Mentoria Contínua/Individual/Consultoria) — não conta vendas de outros produtos do catálogo comercial.">Distribuição por Tipo de Contrato</Tooltip>
+            <Tooltip text="% de mentorados ativos por Tipo de Contrato (Mentoria Contínua/Individual/Consultoria). Não conta vendas de outros produtos do catálogo comercial.">Distribuição por Tipo de Contrato</Tooltip>
           </div>
           <div className={styles.donutRow}>
             <DonutChart
@@ -298,6 +332,33 @@ function DashboardAdminConteudo({ dashboard }: { dashboard: DashboardAdminRespon
           </div>
         </Card>
       </div>
+    </div>
+  );
+}
+
+// Card clicável do "Resumo por área" — leva pra aba correspondente (mesmo padrão já usado no
+// "Resumo do Financeiro" em DashboardFaturamentoPage: acessar a aba é só ver em mais detalhe o
+// que já está resumido aqui).
+function ResumoCard({ titulo, destaque, corDestaque, legenda, onClick }: {
+  titulo: string;
+  destaque: string;
+  corDestaque?: string;
+  legenda: string;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      className={styles.resumoCard}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+    >
+      <Card style={{ padding: 16 }}>
+        <div className={styles.resumoTitulo}>{titulo}</div>
+        <div className={styles.resumoDestaque} style={corDestaque ? { color: corDestaque } : undefined}>{destaque}</div>
+        <div className={styles.resumoLegenda}>{legenda}</div>
+      </Card>
     </div>
   );
 }

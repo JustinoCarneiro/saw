@@ -44,7 +44,7 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     await page.getByRole('button', { name: 'Enviar solicitação' }).click();
     await expect(page.getByText('Solicitação enviada.')).toBeVisible();
 
-    await loginAs(page, 'paula@sawhub.com.br');
+    await loginAs(page, 'comercial@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/comercial/leads');
     const main = page.getByRole('main');
@@ -65,7 +65,7 @@ test.describe('M15 — E9 Perfil & Gamificação', () => {
     // LoginPage redireciona pra /admin se já houver sessão ativa — precisa limpar cookies antes
     // de cada novo login, senão o formulário nunca aparece (mesmo cuidado do mentorados.spec.ts).
     await page.context().clearCookies();
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
     await page.goto('/admin/mentorados/lista');
     await main.getByRole('button', { name: 'Criar a partir de um lead' }).click();

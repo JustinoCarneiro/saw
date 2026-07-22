@@ -13,8 +13,8 @@ class MeResponseTest {
 
     @Test
     void modulosPermitidosBateComAreaModuloMatrix() {
-        var principal = new AppUserPrincipal(UUID.randomUUID(), "lucas@sawhub.com.br", "hash",
-                "Lucas Alves", Perfil.ADMIN, Area.GESTAO_PERFORMANCE, List.of("ROLE_ADMIN"));
+        var principal = new AppUserPrincipal(UUID.randomUUID(), "gestao_perf@sawhub.com.br", "hash",
+                "Gestão de Performance", Perfil.ADMIN, Area.GESTAO_PERFORMANCE, List.of("ROLE_ADMIN"));
 
         var response = MeResponse.from(principal);
 
@@ -36,8 +36,8 @@ class MeResponseTest {
 
     @Test
     void naoExpoeSenhaOuHashDeQualquerForma() {
-        var principal = new AppUserPrincipal(UUID.randomUUID(), "matheus@sawhub.com.br", "hash-secreto",
-                "Matheus Brayan", Perfil.ADMIN, Area.ADMIN, List.of("ROLE_ADMIN"));
+        var principal = new AppUserPrincipal(UUID.randomUUID(), "admin@sawhub.com.br", "hash-secreto",
+                "Admin SAW HUB", Perfil.ADMIN, Area.ADMIN, List.of("ROLE_ADMIN"));
 
         var response = MeResponse.from(principal);
 

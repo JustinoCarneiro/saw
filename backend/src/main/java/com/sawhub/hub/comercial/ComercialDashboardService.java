@@ -3,6 +3,7 @@ package com.sawhub.hub.comercial;
 import com.sawhub.hub.comercial.dto.DashboardComercialResponse;
 import com.sawhub.hub.comercial.dto.FunilItem;
 import com.sawhub.hub.comercial.dto.VendaIngressoResumo;
+import com.sawhub.hub.comercial.dto.VendaPorProdutoResumo;
 import com.sawhub.hub.common.VariacaoCalculator;
 import com.sawhub.hub.evento.Evento;
 import com.sawhub.hub.evento.EventoRepository;
@@ -16,11 +17,13 @@ import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 /** H13.1 — dashboard comercial. MRR e vendas da loja não são dado próprio: lêem direto do
@@ -71,7 +74,7 @@ public class ComercialDashboardService {
         DashboardFaturamentoResponse doMesAnterior = relatorioFinanceiroService.dashboardFaturamento(
                 anterior.getYear(), anterior.getMonthValue());
 
-        BigDecimal vendasLoja = vendasPorOrigem(atual, OrigemReceita.LOJA);
+        BigDecimal vendasLoja = relatorioFinanceiroService.receitaPorOrigem(ano, mes, OrigemReceita.LOJA);
         double variacaoMrrPct = VariacaoCalculator.pct(doMesAnterior.mrr(), atual.mrr());
 
         List<VendaIngressoResumo> vendaIngressos = eventoRepository
@@ -79,8 +82,28 @@ public class ComercialDashboardService {
                 .map(this::resumoVendaIngresso)
                 .toList();
 
+        List<VendaPorProdutoResumo> vendaPorFora = resumoVendaPorFora(inicio, fim);
+
         return new DashboardComercialResponse(novosMentoradosNoMes, taxaConversaoPct, atual.mrr(), vendasLoja,
-                variacaoMrrPct, funil, vendaIngressos);
+                variacaoMrrPct, funil, vendaIngressos, vendaPorFora);
+    }
+
+    // Pedido do Marcos (22/07/2026) — segunda metade de "dashboard mais visual" que faltava:
+    // venda de ingresso já tinha seção própria (resumoVendaIngresso), "venda por fora" (produto +
+    // valor) não existia. Agrupa por ProdutoVenda os leads fechados no período (exclui
+    // INGRESSO_EVENTO, coberto acima); ordena do maior valor pro menor.
+    private List<VendaPorProdutoResumo> resumoVendaPorFora(Instant inicio, Instant fim) {
+        Map<ProdutoVenda, List<Lead>> porProduto = leadRepository
+                .buscarFechadosNoPeriodoComProduto(StatusLead.FECHADO, inicio, fim, ProdutoVenda.INGRESSO_EVENTO)
+                .stream()
+                .collect(Collectors.groupingBy(Lead::getProdutoVenda));
+
+        return porProduto.entrySet().stream()
+                .map(e -> new VendaPorProdutoResumo(e.getKey(), e.getValue().size(),
+                        e.getValue().stream().map(Lead::getValorTotalVenda).filter(Objects::nonNull)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)))
+                .sorted(Comparator.comparing(VendaPorProdutoResumo::valorTotal).reversed())
+                .toList();
     }
 
     // Uma linha por ingresso (VendaIngresso), mas o valor de venda vive no Lead (o total da venda,
@@ -97,14 +120,6 @@ public class ComercialDashboardService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return new VendaIngressoResumo(evento.getId(), evento.getTitulo(), vendas.size(), evento.getVagas(), valorLiquido);
-    }
-
-    private static BigDecimal vendasPorOrigem(DashboardFaturamentoResponse faturamento, OrigemReceita origem) {
-        return faturamento.composicao().stream()
-                .filter(c -> c.origem() == origem)
-                .map(c -> c.valor())
-                .findFirst()
-                .orElse(BigDecimal.ZERO);
     }
 
 }

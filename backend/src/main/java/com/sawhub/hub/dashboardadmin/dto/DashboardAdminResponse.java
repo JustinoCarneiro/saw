@@ -22,7 +22,18 @@ public record DashboardAdminResponse(
         List<CrescimentoMesItem> crescimentoMentorados,
         List<DistribuicaoTipoContratoItem> distribuicaoTipoContrato,
         List<AtividadeRecente> atividadesRecentes,
-        List<MentoriaHojeItem> mentoriasHoje
+        List<MentoriaHojeItem> mentoriasHoje,
+        // Pedido do Marcos (22/07/2026) — "o CEO abre só o Dashboard na maioria das vezes":
+        // resumo de 1 linha de cada área (Comercial/Financeiro/Caixa/Conciliação) com navegação
+        // clicável pra tela de detalhe, mesmo padrão já usado no Dashboard do Financeiro
+        // (DashboardFaturamentoResponse "Resumo do Financeiro").
+        BigDecimal resultadoDre,
+        BigDecimal saldoCaixaAtual,
+        long lancamentosPendentes,
+        long lancamentosVencidos,
+        long leadsEmAberto,
+        double taxaConversaoPct,
+        long vendasEmAtraso
 ) {
     public record CrescimentoMesItem(String mes, long total) {
     }

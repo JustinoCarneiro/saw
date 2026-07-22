@@ -13,7 +13,7 @@ test.describe('Login', () => {
 
   test('shows an error for invalid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('E-mail').fill('matheus@sawhub.com.br');
+    await page.getByLabel('E-mail').fill('admin@sawhub.com.br');
     await page.getByLabel('Senha', { exact: true }).fill('senha-errada');
     await page.getByRole('button', { name: 'Entrar' }).click();
     await expect(page.getByText('E-mail ou senha inválidos.')).toBeVisible();
@@ -22,7 +22,7 @@ test.describe('Login', () => {
   });
 
   test('logs in as Fundador and the sidebar shows every module', async ({ page }) => {
-    await loginAs(page, 'matheus@sawhub.com.br');
+    await loginAs(page, 'admin@sawhub.com.br');
     await expect(page).toHaveURL(/\/admin\//);
 
     // Fundador tem acesso irrestrito (E15) — os 6 itens de navegação devem aparecer na sidebar.

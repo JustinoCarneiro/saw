@@ -2,6 +2,7 @@ package com.sawhub.hub.comercial;
 
 import com.sawhub.hub.common.BaseEntity;
 import com.sawhub.hub.team.Colaborador;
+import java.math.BigDecimal;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -28,14 +29,26 @@ public class MetaComercial extends BaseEntity {
     @Column(name = "meta_fechamentos", nullable = false)
     private Integer metaFechamentos;
 
+    @Column(name = "percentual_comissao")
+    private BigDecimal percentualComissao;
+
     protected MetaComercial() {
     }
 
-    public MetaComercial(Colaborador vendedor, Integer ano, Integer mes, Integer metaFechamentos) {
+    public MetaComercial(Colaborador vendedor, Integer ano, Integer mes, Integer metaFechamentos, BigDecimal percentualComissao) {
         this.vendedor = vendedor;
         this.ano = ano;
         this.mes = mes;
         this.metaFechamentos = metaFechamentos;
+        this.percentualComissao = percentualComissao;
+    }
+
+    /** Pedido do Marcos (22/07/2026) — até aqui não existia nenhum jeito de criar/editar meta
+     * pela UI (só o seed de demonstração), então o Ranking só mostrava quem por acaso tinha uma
+     * linha seedada. Upsert por (vendedor, ano, mes) — ver MetaComercialService.definir(). */
+    public void atualizar(Integer metaFechamentos, BigDecimal percentualComissao) {
+        this.metaFechamentos = metaFechamentos;
+        this.percentualComissao = percentualComissao;
     }
 
     public Colaborador getVendedor() {
@@ -52,5 +65,9 @@ public class MetaComercial extends BaseEntity {
 
     public Integer getMetaFechamentos() {
         return metaFechamentos;
+    }
+
+    public BigDecimal getPercentualComissao() {
+        return percentualComissao;
     }
 }

@@ -5,7 +5,7 @@ import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
 import { Tooltip } from '../../shared/components/Tooltip';
 import type { CaixaMensalResponse, ContaBancaria, TransferenciaBancaria } from '../../shared/lib/types';
-import { formatBRL } from '../../shared/lib/format';
+import { formatBRL, MESES_PT } from '../../shared/lib/format';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import styles from './CaixaPage.module.css';
 
@@ -101,6 +101,15 @@ export function CaixaPage() {
 
       {caixa && (
         <>
+          {(() => {
+            const contasSemPosicao = contas.filter((c) => !caixa.contas.some((p) => p.contaBancariaId === c.id));
+            if (contasSemPosicao.length === 0) return null;
+            return (
+              <div className={styles.avisoIncompleto}>
+                Ainda falta registrar a posição de {contasSemPosicao.length === 1 ? 'esta conta' : 'estas contas'} em {MESES_PT[mes - 1]}/{ano}: {contasSemPosicao.map((c) => c.nome).join(', ')} — os totais abaixo não incluem {contasSemPosicao.length === 1 ? 'essa conta' : 'essas contas'}.
+              </div>
+            );
+          })()}
           <div className={styles.kpis}>
             <Card style={{ padding: 18 }}>
               <div className={styles.kpiLabel}>
@@ -138,7 +147,7 @@ export function CaixaPage() {
             )}
             <div className={styles.contasList}>
               {caixa.contas.map((c) => (
-                <div key={c.contaBancariaId} className={styles.contaRow}>
+                <div key={c.contaBancariaId} className={styles.contaRow} data-testid="conta-caixa-row">
                   <span className={styles.strong}>{c.contaBancariaNome}</span>
                   <span className={styles.muted}>
                     Inicial: <span className={styles.valor}>{formatBRL(c.saldoInicial)}</span>
@@ -156,7 +165,7 @@ export function CaixaPage() {
       <Card style={{ padding: '20px 22px', marginTop: 16 }}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitle} style={{ marginBottom: 0 }}>
-            <Tooltip text="Movimentações internas entre contas bancárias da SAW — não é receita nem despesa, só remanejamento de saldo.">Transferências entre contas</Tooltip>
+            <Tooltip text="Movimentações internas entre contas bancárias da SAW. Não é receita nem despesa, só remanejamento de saldo.">Transferências entre contas</Tooltip>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <input type="date" className={styles.textInput} value={de} onChange={(e) => setDe(e.target.value)} />
@@ -179,7 +188,7 @@ export function CaixaPage() {
           {transferencias === null && !error && <div className={styles.loading}>Carregando…</div>}
           {transferencias?.length === 0 && <div className={styles.loading}>Nenhuma transferência neste período.</div>}
           {transferencias?.map((t) => (
-            <DataGridRow key={t.id} columns={TRANSFERENCIA_COLUMNS}>
+            <DataGridRow key={t.id} columns={TRANSFERENCIA_COLUMNS} testId="transferencia-row">
               <div className={styles.strong}>{t.contaOrigemNome}</div>
               <div className={styles.strong}>{t.contaDestinoNome}</div>
               <div className={styles.muted}>→</div>

@@ -1,5 +1,6 @@
 package com.sawhub.hub.comercial;
 
+import com.sawhub.hub.comercial.dto.LeadResponse;
 import com.sawhub.hub.comercial.dto.RankingItem;
 import com.sawhub.hub.comercial.dto.VendedorResumo;
 import java.math.BigDecimal;
@@ -9,6 +10,7 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /** H13.3 — meta x realizado e ranking do time comercial no período. */
@@ -44,5 +46,15 @@ public class RankingComercialService {
                 })
                 .sorted(Comparator.comparingLong(RankingItem::realizado).reversed())
                 .toList();
+    }
+
+    public List<LeadResponse> detalharVendas(UUID vendedorId, int ano, int mes) {
+        YearMonth periodo = YearMonth.of(ano, mes);
+        Instant inicio = periodo.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant fim = periodo.plusMonths(1).atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+
+        return leadRepository.buscarFechadosDoVendedorNoPeriodoExcluindoProduto(
+                vendedorId, StatusLead.FECHADO, inicio, fim, ProdutoVenda.INGRESSO_EVENTO)
+                .stream().map(LeadResponse::from).toList();
     }
 }

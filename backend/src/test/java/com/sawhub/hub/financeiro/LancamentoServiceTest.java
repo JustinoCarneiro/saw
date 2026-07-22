@@ -127,12 +127,12 @@ class LancamentoServiceTest {
         UUID categoriaId = UUID.randomUUID();
         LocalDate de = LocalDate.of(2026, 7, 1);
         LocalDate ate = LocalDate.of(2026, 7, 31);
-        when(lancamentoRepository.buscarComFiltroPorCompetencia(TipoLancamento.RECEITA, categoriaId, null, null, de, ate))
+        when(lancamentoRepository.buscarComFiltroPorCompetencia(TipoLancamento.RECEITA, categoriaId, null, null, null, de, ate))
                 .thenReturn(List.of());
 
         service().listar(de, ate, TipoLancamento.RECEITA, categoriaId);
 
-        verify(lancamentoRepository).buscarComFiltroPorCompetencia(TipoLancamento.RECEITA, categoriaId, null, null, de, ate);
+        verify(lancamentoRepository).buscarComFiltroPorCompetencia(TipoLancamento.RECEITA, categoriaId, null, null, null, de, ate);
     }
 
     // M26 — status/eventoId novos no filtro de /lancamentos (absorvidos de Contas).
@@ -141,12 +141,26 @@ class LancamentoServiceTest {
         UUID eventoId = UUID.randomUUID();
         LocalDate de = LocalDate.of(2026, 7, 1);
         LocalDate ate = LocalDate.of(2026, 7, 31);
-        when(lancamentoRepository.buscarComFiltroPorCompetencia(null, null, StatusLancamento.PARCIAL, eventoId, de, ate))
+        when(lancamentoRepository.buscarComFiltroPorCompetencia(null, null, StatusLancamento.PARCIAL, eventoId, null, de, ate))
                 .thenReturn(List.of());
 
-        service().listar(de, ate, null, null, StatusLancamento.PARCIAL, eventoId);
+        service().listar(de, ate, null, null, StatusLancamento.PARCIAL, eventoId, null);
 
-        verify(lancamentoRepository).buscarComFiltroPorCompetencia(null, null, StatusLancamento.PARCIAL, eventoId, de, ate);
+        verify(lancamentoRepository).buscarComFiltroPorCompetencia(null, null, StatusLancamento.PARCIAL, eventoId, null, de, ate);
+    }
+
+    // Pedido do Marcos (22/07/2026) — formaPagamento novo no filtro de /lancamentos, mesma
+    // riqueza da coluna "Forma de Pagamento" da planilha real.
+    @Test
+    void listarPorCompetenciaComFormaPagamentoPropagaOFiltro() {
+        LocalDate de = LocalDate.of(2026, 7, 1);
+        LocalDate ate = LocalDate.of(2026, 7, 31);
+        when(lancamentoRepository.buscarComFiltroPorCompetencia(null, null, null, null, FormaPagamentoLancamento.PIX, de, ate))
+                .thenReturn(List.of());
+
+        service().listar(de, ate, null, null, null, null, FormaPagamentoLancamento.PIX);
+
+        verify(lancamentoRepository).buscarComFiltroPorCompetencia(null, null, null, null, FormaPagamentoLancamento.PIX, de, ate);
     }
 
     // M26 (absorvido de ContaPagarReceberServiceTest — "filtro mensal", change request 17/07/2026).

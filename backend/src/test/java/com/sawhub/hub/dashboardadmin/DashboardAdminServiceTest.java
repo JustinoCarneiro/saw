@@ -5,6 +5,12 @@ import static org.mockito.Mockito.when;
 
 import com.sawhub.hub.atividade.AtividadeLog;
 import com.sawhub.hub.atividade.AtividadeLogService;
+import com.sawhub.hub.comercial.ComercialDashboardService;
+import com.sawhub.hub.comercial.ConciliacaoService;
+import com.sawhub.hub.comercial.StatusLead;
+import com.sawhub.hub.comercial.dto.ConciliacaoVendaResponse;
+import com.sawhub.hub.comercial.dto.DashboardComercialResponse;
+import com.sawhub.hub.comercial.dto.FunilItem;
 import com.sawhub.hub.conteudo.ConteudoRepository;
 import com.sawhub.hub.dashboardadmin.dto.DashboardAdminResponse;
 import com.sawhub.hub.evento.Evento;
@@ -54,10 +60,15 @@ class DashboardAdminServiceTest {
     private RelatorioFinanceiroService relatorioFinanceiroService;
     @Mock
     private AtividadeLogService atividadeLogService;
+    @Mock
+    private ComercialDashboardService comercialDashboardService;
+    @Mock
+    private ConciliacaoService conciliacaoService;
 
     private DashboardAdminService service() {
         return new DashboardAdminService(mentoradoRepository, mentoriaRepository, eventoRepository,
-                conteudoRepository, relatorioFinanceiroService, atividadeLogService);
+                conteudoRepository, relatorioFinanceiroService, atividadeLogService,
+                comercialDashboardService, conciliacaoService);
     }
 
     private static Mentorado mentoradoEm(String nome, Instant criadoEm, boolean ativo) {
@@ -81,9 +92,13 @@ class DashboardAdminServiceTest {
         when(conteudoRepository.buscarComFiltro(null, true)).thenReturn(List.of());
         when(atividadeLogService.listarRecentes()).thenReturn(List.of());
         var faturamento = new DashboardFaturamentoResponse(BigDecimal.ZERO, BigDecimal.ZERO, 0.0, List.of(),
-                BigDecimal.ZERO, BigDecimal.ZERO, 0L, 0L);
+                BigDecimal.ZERO, BigDecimal.ZERO, 0L, 0L, List.of());
         when(relatorioFinanceiroService.dashboardFaturamento(atual.getYear(), atual.getMonthValue())).thenReturn(faturamento);
         when(relatorioFinanceiroService.dashboardFaturamento(anterior.getYear(), anterior.getMonthValue())).thenReturn(faturamento);
+        var comercial = new DashboardComercialResponse(0L, 0.0, BigDecimal.ZERO, BigDecimal.ZERO, 0.0,
+                List.of(), List.of(), List.of());
+        when(comercialDashboardService.dashboard(atual.getYear(), atual.getMonthValue())).thenReturn(comercial);
+        when(conciliacaoService.listar()).thenReturn(List.of());
     }
 
     @Test
@@ -239,5 +254,47 @@ class DashboardAdminServiceTest {
 
         assertThat(resposta.atividadesRecentes().get(0).tipo()).isEqualTo("MENTORIA_CANCELADA");
         assertThat(resposta.atividadesRecentes().get(0).descricao()).isEqualTo("Mentoria cancelada: Carlos Menezes");
+    }
+
+    // Pedido do Marcos (22/07/2026) — "o CEO abre só o Dashboard na maioria das vezes": resumo
+    // clicável de Comercial/Financeiro/Caixa/Conciliação precisa refletir o que as próprias
+    // telas mostram, não duplicar a agregação (só ler DashboardComercialResponse/
+    // DashboardFaturamentoResponse/ConciliacaoService, mesmo padrão de composição já usado em
+    // ComercialDashboardService pra ler o Financeiro).
+    @Test
+    void resumoTrazMetricasDeComercialFinanceiroECaixaClicaveisNoDashboard() {
+        YearMonth atual = YearMonth.of(2026, 7);
+        YearMonth anterior = atual.minusMonths(1);
+        mockarVazio(atual, anterior);
+
+        var faturamento = new DashboardFaturamentoResponse(BigDecimal.ZERO, BigDecimal.ZERO, 0.0, List.of(),
+                new BigDecimal("5000.00"), new BigDecimal("12000.00"), 3L, 2L, List.of());
+        when(relatorioFinanceiroService.dashboardFaturamento(atual.getYear(), atual.getMonthValue())).thenReturn(faturamento);
+
+        var funil = List.of(
+                new FunilItem(StatusLead.SOLICITACAO, 4L),
+                new FunilItem(StatusLead.PROPOSTA, 2L),
+                new FunilItem(StatusLead.FECHADO, 5L),
+                new FunilItem(StatusLead.PERDIDO, 3L));
+        var comercial = new DashboardComercialResponse(5L, 45.5, BigDecimal.ZERO, BigDecimal.ZERO, 0.0,
+                funil, List.of(), List.of());
+        when(comercialDashboardService.dashboard(atual.getYear(), atual.getMonthValue())).thenReturn(comercial);
+
+        var vendaEmDia = new ConciliacaoVendaResponse(java.util.UUID.randomUUID(), "Cliente A",
+                BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, 100.0, false, null, null);
+        var vendaAtrasada = new ConciliacaoVendaResponse(java.util.UUID.randomUUID(), "Cliente B",
+                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, 0.0, true, 10, 1);
+        when(conciliacaoService.listar()).thenReturn(List.of(vendaEmDia, vendaAtrasada));
+
+        DashboardAdminResponse resposta = service().resumo(atual.getYear(), atual.getMonthValue());
+
+        assertThat(resposta.resultadoDre()).isEqualByComparingTo("5000.00");
+        assertThat(resposta.saldoCaixaAtual()).isEqualByComparingTo("12000.00");
+        assertThat(resposta.lancamentosPendentes()).isEqualTo(3);
+        assertThat(resposta.lancamentosVencidos()).isEqualTo(2);
+        // Leads em aberto: soma tudo exceto FECHADO/PERDIDO (4 + 2 = 6).
+        assertThat(resposta.leadsEmAberto()).isEqualTo(6);
+        assertThat(resposta.taxaConversaoPct()).isEqualTo(45.5);
+        assertThat(resposta.vendasEmAtraso()).isEqualTo(1);
     }
 }
