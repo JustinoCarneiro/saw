@@ -201,11 +201,15 @@ class DemoDataSeederTest {
 
     // M26 — "Mentoria Contínua" (ASSINATURA) e "Eventos" (EVENTO) agora vêm pré-cadastradas pela
     // migration V40 em qualquer ambiente (não só seedadas aqui) — seedFinanceiro() as busca em
-    // vez de criar, por isso só 5 categorias (não mais 7) são salvas por este seeder. As "contas
-    // em aberto" (antes ContaPagarReceber, agora LancamentoFinanceiro com dataVencimento) também
-    // passam a contar no total de lancamentoFinanceiroRepository.save().
+    // vez de criar. Achado do Marcos (22/07/2026): "Loja SAW"/"Impostos sobre vendas"/
+    // "Infraestrutura"/"Marketing"/"Equipe & Folha" eram categorias inventadas aqui, sem bater com
+    // o raio-x real da planilha "DRE Financeira Saw" — trocadas por busca das subcategorias reais
+    // já confirmadas na V52 ("Impostos"/"Sistemas"/"Tráfego Pago"/"Diretor"), nenhuma criada mais.
+    // "Loja SAW" não tinha equivalente real na lista de Receita (resumo) da V50 — removida, sem
+    // substituto. As "contas em aberto" (antes ContaPagarReceber, agora LancamentoFinanceiro com
+    // dataVencimento) também contam no total de lancamentoFinanceiroRepository.save().
     @Test
-    void seedaCincoCategoriasELancamentosDosDoisMesesEDuasContasEmAberto() {
+    void naoCriaCategoriaNovaEBuscaSubcategoriasReaisParaOsLancamentosDosDoisMesesEDuasContasEmAberto() {
         when(colaboradorRepository.count()).thenReturn(2L);
         when(mentoradoRepository.count()).thenReturn(1L);
         when(lancamentoFinanceiroRepository.count()).thenReturn(0L);
@@ -219,18 +223,39 @@ class DemoDataSeederTest {
                 .thenReturn(Optional.of(categoriaAssinatura));
         when(categoriaFinanceiraRepository.findByOrigemReceita(OrigemReceita.EVENTO))
                 .thenReturn(Optional.of(categoriaEvento));
-        when(categoriaFinanceiraRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        // Patrocínio (V50)/Produtos Digitais (V40)/subcategorias reais de despesa (V52) —
+        // pré-cadastradas por migration em qualquer ambiente, resolvidas por nome (não têm
+        // OrigemReceita própria — ver comentário no DashboardFaturamentoResponse).
+        mockarCategoriaPorNome("Patrocínio", com.sawhub.hub.financeiro.TipoLancamento.RECEITA,
+                com.sawhub.hub.financeiro.GrupoDre.RECEITA_BRUTA);
+        mockarCategoriaPorNome("Produtos Digitais", com.sawhub.hub.financeiro.TipoLancamento.RECEITA,
+                com.sawhub.hub.financeiro.GrupoDre.RECEITA_BRUTA);
+        mockarCategoriaPorNome("Impostos", com.sawhub.hub.financeiro.TipoLancamento.DESPESA,
+                com.sawhub.hub.financeiro.GrupoDre.DESPESA_OPERACIONAL);
+        mockarCategoriaPorNome("Sistemas", com.sawhub.hub.financeiro.TipoLancamento.DESPESA,
+                com.sawhub.hub.financeiro.GrupoDre.DESPESA_OPERACIONAL);
+        mockarCategoriaPorNome("Tráfego Pago", com.sawhub.hub.financeiro.TipoLancamento.DESPESA,
+                com.sawhub.hub.financeiro.GrupoDre.DESPESA_OPERACIONAL);
+        mockarCategoriaPorNome("Diretor", com.sawhub.hub.financeiro.TipoLancamento.DESPESA,
+                com.sawhub.hub.financeiro.GrupoDre.DESPESA_OPERACIONAL);
         when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         seeder().run(null);
 
-        // Loja/Impostos/Infra/Marketing/Equipe — Mentoria Contínua e Eventos vêm da V40, não daqui.
-        verify(categoriaFinanceiraRepository, times(5)).save(any(CategoriaFinanceira.class));
-        // 13 dos dois meses (junho sem evento = 6, julho com evento = 7) + 2 contas em aberto = 15.
+        // Nenhuma categoria nova — seedFinanceiro() só busca subcategorias reais já existentes.
+        verify(categoriaFinanceiraRepository, never()).save(any(CategoriaFinanceira.class));
+        // 11 dos dois meses (junho sem evento = 5, julho com evento = 6, "Loja SAW" removida de
+        // ambos) + 2 contas em aberto + Patrocínio + Produtos Digitais = 15.
         ArgumentCaptor<LancamentoFinanceiro> lancamentoCaptor = ArgumentCaptor.forClass(LancamentoFinanceiro.class);
         verify(lancamentoFinanceiroRepository, times(15)).save(lancamentoCaptor.capture());
         assertThat(lancamentoCaptor.getAllValues()).anySatisfy(l ->
                 assertThat(l.getStatus().name()).isEqualTo("VENCIDO"));
+    }
+
+    private void mockarCategoriaPorNome(String nome, com.sawhub.hub.financeiro.TipoLancamento tipo,
+                                         com.sawhub.hub.financeiro.GrupoDre grupoDre) {
+        when(categoriaFinanceiraRepository.findByNomeIgnoreCase(nome))
+                .thenReturn(List.of(new CategoriaFinanceira(nome, tipo, grupoDre, null)));
     }
 
     @Test

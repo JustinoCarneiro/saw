@@ -26,7 +26,6 @@ import com.sawhub.hub.loja.Produto;
 import com.sawhub.hub.loja.ProdutoRepository;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
-import com.sawhub.hub.financeiro.GrupoDre;
 import com.sawhub.hub.financeiro.LancamentoFinanceiro;
 import com.sawhub.hub.financeiro.LancamentoFinanceiroRepository;
 import com.sawhub.hub.financeiro.OrigemReceita;
@@ -225,32 +224,50 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .orElseThrow(() -> new IllegalStateException("Categoria ASSINATURA (V40) não encontrada."));
         CategoriaFinanceira eventos = categoriaFinanceiraRepository.findByOrigemReceita(OrigemReceita.EVENTO)
                 .orElseThrow(() -> new IllegalStateException("Categoria EVENTO (V40) não encontrada."));
-        CategoriaFinanceira loja = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Loja SAW", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.LOJA));
-        // `grupo` (22/07/2026, ver V52) precisa nascer preenchido aqui, não só via UPDATE de
-        // migration — DemoDataSeeder roda DEPOIS de todas as migrations, num ambiente novo (E2E,
-        // produção com seed inicial) essas linhas ainda não existem quando V52 roda, então o
-        // UPDATE lá é um no-op; só funcionou no dev local porque o seed já tinha rodado antes.
-        CategoriaFinanceira impostos = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Impostos sobre vendas", TipoLancamento.DESPESA, GrupoDre.DEDUCOES, null, "Financeiro/Jurídico", null));
-        CategoriaFinanceira infra = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Infraestrutura", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null, "Estrutura", null));
-        CategoriaFinanceira marketing = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Marketing", TipoLancamento.DESPESA, GrupoDre.DESPESA_OPERACIONAL, null, "Marketing", null));
-        CategoriaFinanceira equipe = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Equipe & Folha", TipoLancamento.DESPESA, GrupoDre.DESPESA_OPERACIONAL, null, "Pessoas", null));
+        // Achado do Marcos (22/07/2026, revisão ao vivo dos dados de demo): "Loja SAW" (receita) e
+        // "Impostos sobre vendas"/"Infraestrutura"/"Marketing"/"Equipe & Folha" (despesa) eram
+        // categorias inventadas aqui no seeder — não batem com o raio-x real da planilha "DRE
+        // Financeira Saw" (ver comentário da V50: a lista real de Receita (resumo) é Total, Fixas,
+        // Variáveis, Eventos, Mentoria Contínua, Mentoria Individual, Patrocínio, Produtos Digitais
+        // — "Loja SAW" não está nela). Trocado por buscar as 48 subcategorias reais de despesa já
+        // confirmadas via raio-x (V52) em vez de criar categoria nova — mesmo padrão já usado
+        // abaixo pra Patrocínio/Produtos Digitais. A escolha de QUAL das subcategorias reais
+        // representa cada linha da demo (ex.: "Sistemas" pra servidor/ferramentas) é só uma
+        // aproximação razoável, não confirmada linha a linha pelo cliente — mesma ressalva já
+        // registrada no comentário da V52 pro mapeamento subcategoria->grupo.
+        CategoriaFinanceira impostos = buscarCategoriaFinanceiraPorNome("Impostos");
+        CategoriaFinanceira sistemas = buscarCategoriaFinanceiraPorNome("Sistemas");
+        CategoriaFinanceira trafegoPago = buscarCategoriaFinanceiraPorNome("Tráfego Pago");
+        CategoriaFinanceira diretor = buscarCategoriaFinanceiraPorNome("Diretor");
 
         // Junho e julho/2026 — dois meses fechados pra comparativo mês a mês do DRE (H14.2) e
         // MRR/churn do dashboard (H14.3). Assinaturas somam os planos dos 6 mentorados seedados.
-        seedMesFinanceiro(LocalDate.of(2026, 6, 5), assinaturas, loja, eventos, impostos, infra, marketing, equipe,
-                "1580.00", "420.00", "0.00", "95.00", "620.00", "300.00", "3800.00");
-        seedMesFinanceiro(LocalDate.of(2026, 7, 5), assinaturas, loja, eventos, impostos, infra, marketing, equipe,
-                "1782.00", "510.00", "200.00", "108.00", "620.00", "350.00", "3800.00");
+        seedMesFinanceiro(LocalDate.of(2026, 6, 5), assinaturas, eventos, impostos, sistemas, trafegoPago, diretor,
+                "1580.00", "0.00", "95.00", "620.00", "300.00", "3800.00");
+        seedMesFinanceiro(LocalDate.of(2026, 7, 5), assinaturas, eventos, impostos, sistemas, trafegoPago, diretor,
+                "1782.00", "200.00", "108.00", "620.00", "350.00", "3800.00");
+
+        // Pedido do Marcos (22/07/2026) — "Patrocínio"/"Produtos Digitais" (categorias reais da
+        // planilha, V50/V40) tinham venda de verdade possível desde sempre via LeadService, mas a
+        // Composição da receita do Dashboard só agrupava por OrigemReceita e não mostrava nenhuma
+        // das duas. Uma linha de cada em julho/2026 prova a composição rica na demo, não só nos
+        // testes unitários.
+        CategoriaFinanceira patrocinio = categoriaFinanceiraRepository.findByNomeIgnoreCase("Patrocínio").stream()
+                .findFirst().orElseThrow(() -> new IllegalStateException("Categoria Patrocínio (V50) não encontrada."));
+        CategoriaFinanceira produtosDigitais = categoriaFinanceiraRepository.findByNomeIgnoreCase("Produtos Digitais")
+                .stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("Categoria Produtos Digitais (V40) não encontrada."));
+        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, patrocinio,
+                "Patrocínio Encontro Nacional SAW 2026", new BigDecimal("2500.00"), LocalDate.of(2026, 7, 8),
+                StatusLancamento.REALIZADO));
+        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, produtosDigitais,
+                "Venda avulsa — Pacote de Planilhas Gerenciais", new BigDecimal("450.00"), LocalDate.of(2026, 7, 12),
+                StatusLancamento.REALIZADO));
 
         // Lançamentos em aberto (M26 — antes vivia em ContaPagarReceber) — mistura de previsto e
         // vencido, pra tela de Contas ter o que mostrar. dataCompetencia nasce igual à
         // dataVencimento (melhor palpite disponível antes de liquidar — ver LancamentoFinanceiro).
-        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, infra,
+        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, sistemas,
                 "Servidor Hostinger — agosto", new BigDecimal("180.00"), LocalDate.of(2026, 8, 10),
                 StatusLancamento.PREVISTO, null, LocalDate.of(2026, 8, 10)));
         LancamentoFinanceiro vencida = new LancamentoFinanceiro(TipoLancamento.RECEITA, assinaturas,
@@ -260,27 +277,25 @@ public class DemoDataSeeder implements ApplicationRunner {
         lancamentoFinanceiroRepository.save(vencida);
     }
 
-    private void seedMesFinanceiro(LocalDate data, CategoriaFinanceira assinaturas, CategoriaFinanceira loja,
-                                    CategoriaFinanceira eventos, CategoriaFinanceira impostos, CategoriaFinanceira infra,
-                                    CategoriaFinanceira marketing, CategoriaFinanceira equipe,
-                                    String valorAssinaturas, String valorLoja, String valorEventos, String valorImpostos,
-                                    String valorInfra, String valorMarketing, String valorEquipe) {
+    private void seedMesFinanceiro(LocalDate data, CategoriaFinanceira assinaturas,
+                                    CategoriaFinanceira eventos, CategoriaFinanceira impostos, CategoriaFinanceira sistemas,
+                                    CategoriaFinanceira trafegoPago, CategoriaFinanceira diretor,
+                                    String valorAssinaturas, String valorEventos, String valorImpostos,
+                                    String valorSistemas, String valorTrafegoPago, String valorDiretor) {
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, assinaturas,
                 "Assinaturas do mês", new BigDecimal(valorAssinaturas), data, StatusLancamento.REALIZADO));
-        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, loja,
-                "Vendas Loja SAW", new BigDecimal(valorLoja), data, StatusLancamento.REALIZADO));
         if (new BigDecimal(valorEventos).compareTo(BigDecimal.ZERO) > 0) {
             lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, eventos,
                     "Inscrições em eventos", new BigDecimal(valorEventos), data, StatusLancamento.REALIZADO));
         }
         lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, impostos,
                 "Impostos sobre vendas", new BigDecimal(valorImpostos), data, StatusLancamento.REALIZADO));
-        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, infra,
-                "Servidor e ferramentas", new BigDecimal(valorInfra), data, StatusLancamento.REALIZADO));
-        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, marketing,
-                "Campanhas e anúncios", new BigDecimal(valorMarketing), data, StatusLancamento.REALIZADO));
-        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, equipe,
-                "Folha de pagamento", new BigDecimal(valorEquipe), data, StatusLancamento.REALIZADO));
+        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, sistemas,
+                "Servidor e ferramentas", new BigDecimal(valorSistemas), data, StatusLancamento.REALIZADO));
+        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, trafegoPago,
+                "Campanhas e anúncios", new BigDecimal(valorTrafegoPago), data, StatusLancamento.REALIZADO));
+        lancamentoFinanceiroRepository.save(new LancamentoFinanceiro(TipoLancamento.DESPESA, diretor,
+                "Folha de pagamento", new BigDecimal(valorDiretor), data, StatusLancamento.REALIZADO));
     }
 
     private void seedComercial() {
@@ -420,6 +435,14 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .filter(m -> m.getNome().equals(nome))
                 .findFirst()
                 .orElse(null);
+    }
+
+    // 22/07/2026 — busca em vez de criar: seedFinanceiro() usa só subcategorias reais confirmadas
+    // via raio-x (V52), nunca inventa categoria nova (ver comentário em seedFinanceiro()).
+    private CategoriaFinanceira buscarCategoriaFinanceiraPorNome(String nome) {
+        return categoriaFinanceiraRepository.findByNomeIgnoreCase(nome).stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Categoria " + nome + " (V52) não encontrada."));
     }
 
     private void seedAvisos() {
