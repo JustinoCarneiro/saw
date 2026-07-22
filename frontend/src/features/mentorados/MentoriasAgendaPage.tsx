@@ -5,6 +5,7 @@ import { AvisoAreaMentoradoPausada } from '../../shared/components/AvisoAreaMent
 import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
+import { DataHoraInput } from '../../shared/components/DataHoraInput';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import type { Ata, MentoradoAdmin, Mentoria, MentorResumo, StatusMentoria, TipoMentoria } from '../../shared/lib/types';
@@ -309,7 +310,13 @@ function NovaMentoriaForm({ onCriada, onCancelar }: { onCriada: () => void; onCa
         <div className={styles.formRow}>
           <label className={styles.formField}>
             Data e hora
-            <input className={styles.textInput} type="datetime-local" value={data} onChange={(e) => setData(e.target.value)} required />
+            <DataHoraInput
+              value={data}
+              onChange={setData}
+              required
+              inputClassName={styles.textInput}
+              selectClassName={styles.select}
+            />
           </label>
           <label className={styles.formField}>
             Duração (min)

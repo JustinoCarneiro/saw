@@ -58,7 +58,13 @@ test.describe('M16 — E10 Painel Administrativo & Métricas', () => {
     await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
     await page.getByPlaceholder('Buscar mentorado...').fill('Ana Costa');
     await page.getByLabel('Ana Costa').check();
-    await page.getByLabel('Data e hora').fill('2026-09-01T10:00');
+    // Auditoria de UX (22/07/2026) — DataHoraInput trocou o datetime-local nativo (formato AM/PM
+    // dependente do navegador, fora do nosso controle) por date + dois <select> de hora/minuto,
+    // sempre 24h. "Hora" precisa de exact:true — sem isso colide com o texto "Data e hora" do
+    // próprio label (que engloba os três controles).
+    await page.getByLabel('Data e hora').fill('2026-09-01');
+    await page.getByLabel('Hora', { exact: true }).selectOption('10');
+    await page.getByLabel('Minuto', { exact: true }).selectOption('00');
     // M28 ("reorganizar lista de mentorias") — a lista central passou a mostrar só Grupo por
     // padrão; a mentoria recém-criada é Individual (tipo default do form), precisa do filtro.
     // Espera o POST de criação E o GET que ele dispara em seguida (onCriada→carregar(), ainda

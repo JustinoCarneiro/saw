@@ -4,6 +4,7 @@ import { Card } from '../../shared/components/Card';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { CsvImportExport } from '../../shared/components/CsvImportExport';
 import { DataGrid, DataGridRow } from '../../shared/components/DataGrid';
+import { DataHoraInput } from '../../shared/components/DataHoraInput';
 import { Pill } from '../../shared/components/Pill';
 import { getApiErrorMessage } from '../../shared/lib/apiError';
 import { AREA_MENTORADO_PAUSADA } from '../../shared/lib/featureFlags';
@@ -218,7 +219,13 @@ function EventoForm({ evento, onSalvo, onCancelar }: { evento?: Evento; onSalvo:
           </label>
           <label className={styles.formField}>
             Data e hora
-            <input className={styles.textInput} type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} required />
+            <DataHoraInput
+              value={dataHora}
+              onChange={setDataHora}
+              required
+              inputClassName={styles.textInput}
+              selectClassName={styles.select}
+            />
           </label>
           <label className={styles.formField}>
             Vagas (opcional)

@@ -72,7 +72,9 @@ test.describe('M28 — Inscrição em evento pelo admin + cota de 3 grátis/ano 
     for (const titulo of titulos) {
       await mainConteudos.getByRole('button', { name: 'Novo evento' }).click();
       await page.getByLabel('Título').fill(titulo);
-      await page.getByLabel('Data e hora').fill('2026-10-15T19:00');
+      await page.getByLabel('Data e hora').fill('2026-10-15');
+      await page.getByLabel('Hora', { exact: true }).selectOption('19');
+      await page.getByLabel('Minuto', { exact: true }).selectOption('00');
       await mainConteudos.getByRole('button', { name: 'Salvar' }).click();
       await expect(mainConteudos.getByText(titulo)).toBeVisible();
     }

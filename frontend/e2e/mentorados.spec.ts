@@ -65,7 +65,12 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await main.getByRole('button', { name: 'Nova mentoria' }).click();
     await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
     await page.getByLabel(nome).check();
-    await page.getByLabel('Data e hora').fill('2026-08-15T14:00');
+    // Auditoria de UX (22/07/2026) — DataHoraInput trocou o datetime-local nativo (formato AM/PM
+    // dependente do navegador) por date + dois <select> de hora/minuto, sempre 24h. "Hora"
+    // precisa de exact:true — sem isso colide com o texto "Data e hora" do próprio label.
+    await page.getByLabel('Data e hora').fill('2026-08-15');
+    await page.getByLabel('Hora', { exact: true }).selectOption('14');
+    await page.getByLabel('Minuto', { exact: true }).selectOption('00');
     await page.getByLabel('Duração (min)').fill('45');
     // M28 ("reorganizar lista de mentorias") — a lista central passou a mostrar só Grupo por
     // padrão; esta é uma mentoria Individual (tipo default do form), então precisa do filtro pra
@@ -162,7 +167,9 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await main.getByRole('button', { name: 'Nova mentoria' }).click();
     await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
     await page.getByLabel(nome).check();
-    await page.getByLabel('Data e hora').fill('2026-08-16T10:00');
+    await page.getByLabel('Data e hora').fill('2026-08-16');
+    await page.getByLabel('Hora', { exact: true }).selectOption('10');
+    await page.getByLabel('Minuto', { exact: true }).selectOption('00');
     await page.getByLabel('Duração (min)').fill('45');
     // M28 — mesma razão do teste anterior: mentoria Individual não aparece mais por padrão nesta
     // lista central (Grupo é o padrão desde a reorganização). Espera o POST de criação E o GET
@@ -266,7 +273,9 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     await main.getByRole('button', { name: 'Nova mentoria' }).click();
     await page.getByLabel('Mentor').selectOption({ label: 'Lucas Alves' });
     await page.getByLabel(nome).check();
-    await page.getByLabel('Data e hora').fill('2026-08-17T10:00');
+    await page.getByLabel('Data e hora').fill('2026-08-17');
+    await page.getByLabel('Hora', { exact: true }).selectOption('10');
+    await page.getByLabel('Minuto', { exact: true }).selectOption('00');
     await page.getByLabel('Duração (min)').fill('45');
     const postCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias') && res.request().method() === 'POST' && res.ok());
     const getAposCriacao = page.waitForResponse((res) => res.url().includes('/admin/mentorias?') && res.request().method() === 'GET' && res.ok());
@@ -442,7 +451,9 @@ test.describe('M06 — Mentorados, Mentorias, Ata e diferencial de IA', () => {
     const main = page.getByRole('main');
     await main.getByRole('button', { name: 'Novo evento' }).click();
     await page.getByLabel('Título').fill(titulo);
-    await page.getByLabel('Data e hora').fill('2026-10-01T19:00');
+    await page.getByLabel('Data e hora').fill('2026-10-01');
+    await page.getByLabel('Hora', { exact: true }).selectOption('19');
+    await page.getByLabel('Minuto', { exact: true }).selectOption('00');
     await main.getByRole('button', { name: 'Salvar' }).click();
 
     const linha = main.locator('text=' + titulo).locator('xpath=ancestor::div[contains(@class,"row")]');
