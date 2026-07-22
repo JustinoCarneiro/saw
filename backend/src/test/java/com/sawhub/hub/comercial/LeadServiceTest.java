@@ -23,6 +23,7 @@ import com.sawhub.hub.evento.TipoEvento;
 import com.sawhub.hub.financeiro.CategoriaFinanceira;
 import com.sawhub.hub.financeiro.CategoriaFinanceiraRepository;
 import com.sawhub.hub.financeiro.GrupoDre;
+import com.sawhub.hub.financeiro.LancamentoFinanceiro;
 import com.sawhub.hub.financeiro.LancamentoFinanceiroRepository;
 import com.sawhub.hub.financeiro.TipoLancamento;
 import com.sawhub.hub.team.Area;
@@ -486,6 +487,75 @@ class LeadServiceTest {
         Lead fechado = service().fecharVenda(leadId, request);
 
         assertThat(fechado.getStatus()).isEqualTo(StatusLead.FECHADO);
+    }
+
+    // Gap 7 (taxaPlataformaRetida no DRE, confirmado 19/07/2026) — Receita Bruta lançada passa a
+    // ser o valor cheio da venda (pago no ato + taxa), com a taxa virando um 2º lançamento de
+    // DESPESA (DEDUCOES) separado, pra Receita Líquida do DRE bater com o que a SAW recebeu.
+    @Test
+    void fecharVendaComTaxaPlataformaRetidaGeraReceitaBrutaEDeducaoSeparada() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubQualquerCategoriaEncontrada();
+        when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new FecharVendaRequest(ProdutoVenda.PRODUTO_DIGITAL, OrigemVenda.HOTMART,
+                new BigDecimal("1000.00"), new BigDecimal("890.00"), FormaPagamento.HOTMART, null, null, null,
+                new BigDecimal("110.00"));
+        service().fecharVenda(leadId, request);
+
+        ArgumentCaptor<LancamentoFinanceiro> captor = ArgumentCaptor.forClass(LancamentoFinanceiro.class);
+        verify(lancamentoFinanceiroRepository, times(2)).save(captor.capture());
+        LancamentoFinanceiro receita = captor.getAllValues().get(0);
+        LancamentoFinanceiro deducao = captor.getAllValues().get(1);
+        assertThat(receita.getTipo()).isEqualTo(TipoLancamento.RECEITA);
+        // Receita Bruta = 890 (pago no ato) + 110 (taxa retida) = 1000, não só o líquido de 890.
+        assertThat(receita.getValor()).isEqualByComparingTo("1000.00");
+        assertThat(deducao.getTipo()).isEqualTo(TipoLancamento.DESPESA);
+        assertThat(deducao.getValor()).isEqualByComparingTo("110.00");
+    }
+
+    // Sem taxa de plataforma, o comportamento de sempre continua: só 1 lançamento, valor igual ao
+    // pago no ato (não regride o caminho comum, não-Hotmart).
+    @Test
+    void fecharVendaSemTaxaPlataformaNaoGeraLancamentoDeDeducao() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubQualquerCategoriaEncontrada();
+        when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new FecharVendaRequest(ProdutoVenda.CONSULTORIA, OrigemVenda.DIRETA,
+                new BigDecimal("9000.00"), new BigDecimal("9000.00"), FormaPagamento.PIX, null, null, null);
+        service().fecharVenda(leadId, request);
+
+        ArgumentCaptor<LancamentoFinanceiro> captor = ArgumentCaptor.forClass(LancamentoFinanceiro.class);
+        verify(lancamentoFinanceiroRepository, times(1)).save(captor.capture());
+        assertThat(captor.getValue().getValor()).isEqualByComparingTo("9000.00");
+    }
+
+    // Gap 6 (Pix Recorrente, confirmado 19/07/2026) — o lançamento de receita nasce marcado como
+    // pagamentoRecorrente=true, sinal que RelatorioFinanceiroService.dashboardFaturamento soma no
+    // MRR independente da categoria do produto vendido.
+    @Test
+    void fecharVendaComPixRecorrenteMarcaLancamentoComoRecorrente() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = leadEmProposta();
+        when(leadRepository.buscarPorIdComVendedor(leadId)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubQualquerCategoriaEncontrada();
+        when(lancamentoFinanceiroRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new FecharVendaRequest(ProdutoVenda.CONSULTORIA, OrigemVenda.DIRETA,
+                new BigDecimal("9000.00"), new BigDecimal("9000.00"), FormaPagamento.PIX_RECORRENTE, null, null, null);
+        service().fecharVenda(leadId, request);
+
+        ArgumentCaptor<LancamentoFinanceiro> captor = ArgumentCaptor.forClass(LancamentoFinanceiro.class);
+        verify(lancamentoFinanceiroRepository).save(captor.capture());
+        assertThat(captor.getValue().isPagamentoRecorrente()).isTrue();
     }
 
     // M26 — mapeamento ProdutoVenda→CategoriaFinanceira: se a categoria esperada não estiver

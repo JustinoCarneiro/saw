@@ -1,0 +1,187 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.loading {
+  padding: 20px 22px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.muted {
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.kpiValue {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 8px 0 2px;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.outlineButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 600 12.5px var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.newButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  background: var(--gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: 10px;
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.newButton:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.cancelButton {
+  height: 40px;
+  padding: 0 18px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+}
+
+.select {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.select:focus {
+  outline: none;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formRow {
+  display: flex;
+  gap: 14px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-soft);
+  flex: 1;
+}
+
+.textInput {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: 400 13px var(--font-ui);
+}
+
+.textInput:focus {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.valor {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.contasList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.contaRow:last-child {
+  border-bottom: none;
+}

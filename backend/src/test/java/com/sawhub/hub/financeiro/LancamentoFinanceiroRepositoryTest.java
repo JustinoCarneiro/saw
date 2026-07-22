@@ -84,18 +84,24 @@ class LancamentoFinanceiroRepositoryTest {
                 "Ingressos teste " + UUID.randomUUID(), TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null));
         Evento evento = eventoRepository.save(new Evento("Workshop teste", TipoEvento.PRESENCIAL, null,
                 Instant.now(), "Recife", null, 100));
-        lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
+        LancamentoFinanceiro salvo = lancamentoRepository.save(new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
                 "Ingresso Workshop teste", new BigDecimal("300.00"), LocalDate.of(2026, 8, 20),
                 StatusLancamento.REALIZADO, evento));
         entityManager.flush();
         entityManager.clear();
 
+        // Escopado pelo próprio id, não anySatisfy solto — o intervalo (1º-31/ago) não é exclusivo
+        // deste teste: banco de dev real (@AutoConfigureTestDatabase Replace.NONE) pode ter outros
+        // lançamentos na mesma janela (achado ao vivo: anySatisfy caiu num lançamento pré-existente
+        // sem evento e a lambda tomou NPE antes de chegar no nosso). Mesmo padrão já usado logo
+        // abaixo em buscarComFiltroPorVencimentoSemFiltroNenhumInicializaCategoriaMesmoForaDaTransacaoOriginal.
         var lancamentos = lancamentoRepository.findByDataCompetenciaBetweenOrderByDataCompetenciaDesc(
                 LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
         entityManager.clear();
 
-        assertThat(lancamentos)
-                .anySatisfy(l -> assertThat(l.getEvento().getTitulo()).isEqualTo("Workshop teste"));
+        LancamentoFinanceiro recarregado = lancamentos.stream()
+                .filter(l -> l.getId().equals(salvo.getId())).findFirst().orElseThrow();
+        assertThat(recarregado.getEvento().getTitulo()).isEqualTo("Workshop teste");
     }
 
     // M26 (absorvido de ContaPagarReceberRepositoryTest.buscarComFiltroSemFiltroNenhum...).

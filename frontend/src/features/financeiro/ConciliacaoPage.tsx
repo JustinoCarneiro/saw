@@ -7,6 +7,30 @@ import styles from './ConciliacaoPage.module.css';
 
 const COLUMNS = '1.6fr 1fr 1fr 1fr 1.4fr';
 
+// Pedido do Marcos (22/07/2026) — alerta de atraso. Componente local (não o Tooltip
+// compartilhado) porque este é um ÍCONE DE ALERTA (triângulo, cor de perigo), não o ⓘ de
+// "explicar termo" que o Tooltip compartilhado sempre renderiza.
+function AlertaAtraso({ diasAtraso, parcelasEmAtraso }: { diasAtraso: number; parcelasEmAtraso: number }) {
+  const [visivel, setVisivel] = useState(false);
+  const texto = `${parcelasEmAtraso} parcela${parcelasEmAtraso > 1 ? 's' : ''} em atraso — a mais antiga venceu há ${diasAtraso} dia${diasAtraso > 1 ? 's' : ''}.`;
+
+  return (
+    <span
+      className={styles.alertaTrigger}
+      tabIndex={0}
+      onMouseEnter={() => setVisivel(true)}
+      onMouseLeave={() => setVisivel(false)}
+      onFocus={() => setVisivel(true)}
+      onBlur={() => setVisivel(false)}
+    >
+      <span className={styles.alertaIcone} aria-hidden="true">⚠</span>
+      {visivel && (
+        <span className={styles.alertaBubble} role="tooltip">{texto}</span>
+      )}
+    </span>
+  );
+}
+
 function corDaBarra(pct: number): string {
   if (pct >= 100) return 'var(--success)';
   if (pct >= 50) return 'var(--warning)';
@@ -41,7 +65,12 @@ export function ConciliacaoPage() {
         {vendas?.length === 0 && <div className={styles.loading}>Nenhuma venda fechada encontrada.</div>}
         {vendas?.map((v) => (
           <DataGridRow key={v.leadId} columns={COLUMNS}>
-            <div className={styles.strong}>{v.nome}</div>
+            <div className={styles.strong}>
+              {v.nome}
+              {v.emAtraso && v.diasAtraso != null && v.parcelasEmAtraso != null && (
+                <AlertaAtraso diasAtraso={v.diasAtraso} parcelasEmAtraso={v.parcelasEmAtraso} />
+              )}
+            </div>
             <div className={styles.valor}>{formatBRL(v.valorTotalVenda)}</div>
             <div className={styles.valor}>{formatBRL(v.valorRecebido)}</div>
             <div className={v.valorPendente > 0 ? styles.valor : styles.muted}>{formatBRL(v.valorPendente)}</div>

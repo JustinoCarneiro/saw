@@ -45,7 +45,8 @@ class ComercialDashboardServiceTest {
         List<ComposicaoReceita> composicao = vendasLoja == null
                 ? List.of(new ComposicaoReceita(OrigemReceita.ASSINATURA, mrr))
                 : List.of(new ComposicaoReceita(OrigemReceita.ASSINATURA, mrr), new ComposicaoReceita(OrigemReceita.LOJA, vendasLoja));
-        return new DashboardFaturamentoResponse(mrr.add(vendasLoja == null ? BigDecimal.ZERO : vendasLoja), mrr, 0.0, composicao);
+        return new DashboardFaturamentoResponse(mrr.add(vendasLoja == null ? BigDecimal.ZERO : vendasLoja), mrr, 0.0, composicao,
+                BigDecimal.ZERO, BigDecimal.ZERO, 0L, 0L);
     }
 
     @Test

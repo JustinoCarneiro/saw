@@ -149,6 +149,16 @@ export interface ConciliacaoVenda {
   valorRecebido: number;
   valorPendente: number;
   percentualRecebido: number;
+  // Pedido do Marcos (22/07/2026) — alerta de atraso: diasAtraso/parcelasEmAtraso vêm null
+  // quando emAtraso é false.
+  emAtraso: boolean;
+  diasAtraso: number | null;
+  parcelasEmAtraso: number | null;
+}
+
+export interface CategoriaValor {
+  categoria: string;
+  valor: number;
 }
 
 export interface DreResponse {
@@ -162,6 +172,10 @@ export interface DreResponse {
   despesasVariaveis: number;
   resultado: number;
   comparativoMesAnterior: ComparativoMes;
+  // "mais gráficos e detalhe" (change request pós-MVP, reunião 17/07/2026) — quebra por categoria
+  // real, mesma granularidade da planilha "DRE Financeira Saw".
+  receitaPorCategoria: CategoriaValor[];
+  despesaPorCategoria: CategoriaValor[];
 }
 
 export interface ComposicaoReceita {
@@ -169,11 +183,55 @@ export interface ComposicaoReceita {
   valor: number;
 }
 
+// Pedido do Marcos (22/07/2026) — resumo de 1 linha de cada aba do Financeiro: resultadoDre
+// (DRE), saldoCaixaAtual (Caixa), lancamentosPendentes/lancamentosVencidos (Lançamentos, sem
+// escopo de período). vendasEmAtraso (Conciliação) não vem daqui — o Dashboard busca
+// /admin/financeiro/conciliacao à parte e conta emAtraso no frontend.
 export interface DashboardFaturamentoResponse {
   faturamentoMensal: number;
   mrr: number;
   churnPct: number;
   composicao: ComposicaoReceita[];
+  resultadoDre: number;
+  saldoCaixaAtual: number;
+  lancamentosPendentes: number;
+  lancamentosVencidos: number;
+}
+
+// "Caixa do mês: Inicial, saldo por banco, Final" + "Transferências Entre Contas" (change request
+// pós-MVP, E14, reunião 17/07/2026).
+export interface ContaBancaria {
+  id: string;
+  nome: string;
+  ativa: boolean;
+}
+
+export interface PosicaoCaixaMensal {
+  contaBancariaId: string;
+  contaBancariaNome: string;
+  ano: number;
+  mes: number;
+  saldoInicial: number;
+  saldoFinal: number;
+}
+
+export interface CaixaMensalResponse {
+  ano: number;
+  mes: number;
+  contas: PosicaoCaixaMensal[];
+  totalInicial: number;
+  totalFinal: number;
+}
+
+export interface TransferenciaBancaria {
+  id: string;
+  contaOrigemId: string;
+  contaOrigemNome: string;
+  contaDestinoId: string;
+  contaDestinoNome: string;
+  valor: number;
+  data: string;
+  descricao: string | null;
 }
 
 // M21 — import CSV é tudo-ou-nada: erros vazio = todas as linhas foram persistidas.

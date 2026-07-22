@@ -1,9 +1,11 @@
 package com.sawhub.hub.financeiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.sawhub.hub.financeiro.dto.CaixaMensalResponse;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -19,9 +21,19 @@ class RelatorioFinanceiroServiceTest {
 
     @Mock
     private LancamentoFinanceiroRepository lancamentoRepository;
+    @Mock
+    private CaixaMensalService caixaMensalService;
 
     private RelatorioFinanceiroService service() {
-        return new RelatorioFinanceiroService(lancamentoRepository);
+        return new RelatorioFinanceiroService(lancamentoRepository, caixaMensalService);
+    }
+
+    // Pedido do Marcos (22/07/2026) — dashboardFaturamento() passou a reaproveitar
+    // CaixaMensalService.caixaDoMes(); testes que não são sobre Caixa em si só precisam de um
+    // retorno não-nulo pra não estourar NPE em totalFinal().
+    private void stubCaixaVazio() {
+        when(caixaMensalService.caixaDoMes(anyInt(), anyInt()))
+                .thenReturn(new CaixaMensalResponse(2026, 7, List.of(), BigDecimal.ZERO, BigDecimal.ZERO));
     }
 
     private static CategoriaFinanceira categoria(String nome, TipoLancamento tipo, GrupoDre grupo, OrigemReceita origem) {
@@ -35,6 +47,11 @@ class RelatorioFinanceiroServiceTest {
     private static LancamentoFinanceiro lancamento(CategoriaFinanceira categoria, String valor, LocalDate dataCompetencia) {
         return new LancamentoFinanceiro(categoria.getTipo(), categoria, "desc", new BigDecimal(valor),
                 dataCompetencia, StatusLancamento.REALIZADO, null);
+    }
+
+    private static LancamentoFinanceiro lancamentoRecorrente(CategoriaFinanceira categoria, String valor, LocalDate dataCompetencia) {
+        return new LancamentoFinanceiro(categoria.getTipo(), categoria, "desc", new BigDecimal(valor),
+                dataCompetencia, StatusLancamento.REALIZADO, null, null, true);
     }
 
     @Test
@@ -126,6 +143,7 @@ class RelatorioFinanceiroServiceTest {
 
     @Test
     void dashboardFaturamentoAgregaComposicaoEMrrSoDeAssinatura() {
+        stubCaixaVazio();
         CategoriaFinanceira assinaturas = categoria("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
         CategoriaFinanceira loja = categoria("Loja", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.LOJA);
         CategoriaFinanceira eventos = categoria("Eventos", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.EVENTO);
@@ -154,6 +172,7 @@ class RelatorioFinanceiroServiceTest {
 
     @Test
     void dashboardFaturamentoCalculaChurnQuandoMrrCai() {
+        stubCaixaVazio();
         CategoriaFinanceira assinaturas = categoria("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
 
         when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
@@ -167,6 +186,138 @@ class RelatorioFinanceiroServiceTest {
 
         // (1000 - 900) / 1000 * 100 = 10%
         assertThat(dashboard.churnPct()).isCloseTo(10.0, org.assertj.core.data.Offset.offset(0.01));
+    }
+
+    // Gap 6 (Pix Recorrente, confirmado 19/07/2026) — receita fora de OrigemReceita.ASSINATURA
+    // (ex.: Consultoria, categoria sem origemReceita) mas paga via Pix Recorrente também soma no
+    // MRR: "recorrente" é sinal da forma de pagamento, não só da categoria do produto.
+    @Test
+    void dashboardFaturamentoMrrSomaPagamentoRecorrenteMesmoForaDeAssinatura() {
+        stubCaixaVazio();
+        CategoriaFinanceira assinaturas = categoria("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
+        CategoriaFinanceira consultoria = categoria("Consultoria", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, null);
+
+        LocalDate julho = LocalDate.of(2026, 7, 15);
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 7, 1)), eq(LocalDate.of(2026, 7, 31))))
+                .thenReturn(List.of(
+                        lancamento(assinaturas, "1000", julho),
+                        lancamentoRecorrente(consultoria, "500", julho),
+                        lancamento(consultoria, "300", julho))); // não recorrente — não deve somar no MRR
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 6, 1)), eq(LocalDate.of(2026, 6, 30))))
+                .thenReturn(List.of());
+
+        var dashboard = service().dashboardFaturamento(2026, 7);
+
+        // MRR = 1000 (assinatura) + 500 (consultoria paga via Pix Recorrente) = 1500; os 300 da
+        // consultoria não-recorrente ficam de fora.
+        assertThat(dashboard.mrr()).isEqualByComparingTo("1500");
+        assertThat(dashboard.faturamentoMensal()).isEqualByComparingTo("1800");
+    }
+
+    // "mais gráficos e detalhe que estão nas planilhas do financeiro" (reunião 17/07/2026) —
+    // breakdown por categoria real, mesma granularidade da planilha "DRE Financeira Saw".
+    @Test
+    void dreExpoeReceitaEDespesaPorCategoria() {
+        CategoriaFinanceira mentoriaContinua = categoria("Mentoria Contínua", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
+        CategoriaFinanceira eventos = categoria("Eventos", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.EVENTO);
+        CategoriaFinanceira infra = categoria("Infraestrutura", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null);
+
+        LocalDate julho = LocalDate.of(2026, 7, 15);
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 7, 1)), eq(LocalDate.of(2026, 7, 31))))
+                .thenReturn(List.of(
+                        lancamento(mentoriaContinua, "1000", julho),
+                        lancamento(mentoriaContinua, "500", julho),
+                        lancamento(eventos, "200", julho),
+                        lancamento(infra, "150", julho)));
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 6, 1)), eq(LocalDate.of(2026, 6, 30))))
+                .thenReturn(List.of());
+
+        var dre = service().dre(2026, 7);
+
+        assertThat(dre.receitaPorCategoria()).hasSize(2);
+        assertThat(dre.receitaPorCategoria()).anySatisfy(c -> {
+            assertThat(c.categoria()).isEqualTo("Mentoria Contínua");
+            assertThat(c.valor()).isEqualByComparingTo("1500");
+        });
+        assertThat(dre.receitaPorCategoria()).anySatisfy(c -> {
+            assertThat(c.categoria()).isEqualTo("Eventos");
+            assertThat(c.valor()).isEqualByComparingTo("200");
+        });
+        assertThat(dre.despesaPorCategoria()).hasSize(1);
+        assertThat(dre.despesaPorCategoria().get(0).categoria()).isEqualTo("Infraestrutura");
+        assertThat(dre.despesaPorCategoria().get(0).valor()).isEqualByComparingTo("150");
+    }
+
+    // Pedido do Marcos (22/07/2026) — "Despesa por categoria" precisa agrupar pela Categoria real
+    // da planilha (Estrutura/Pessoas/Eventos/... — V52), não pela subcategoria: duas subcategorias
+    // diferentes (ex. "Aluguel"/"Água Mineral") sob o mesmo grupo ("Estrutura") somam juntas.
+    @Test
+    void dreAgrupaDespesaPorGrupoQuandoPreenchidoEmVezDeSubcategoria() {
+        CategoriaFinanceira aluguel = new CategoriaFinanceira("Aluguel", TipoLancamento.DESPESA,
+                GrupoDre.DESPESA_OPERACIONAL, null, "Estrutura", null);
+        CategoriaFinanceira aguaMineral = new CategoriaFinanceira("Água Mineral", TipoLancamento.DESPESA,
+                GrupoDre.DESPESA_OPERACIONAL, null, "Estrutura", null);
+        CategoriaFinanceira diretor = new CategoriaFinanceira("Diretor", TipoLancamento.DESPESA,
+                GrupoDre.DESPESA_OPERACIONAL, null, "Pessoas", null);
+        // Categoria sem grupo preenchido (ex.: criada via "+ Nova categoria" sem definir grupo)
+        // cai pro próprio nome, nunca some do gráfico.
+        CategoriaFinanceira semGrupo = new CategoriaFinanceira("Categoria livre", TipoLancamento.DESPESA,
+                GrupoDre.DESPESA_OPERACIONAL, null);
+
+        LocalDate julho = LocalDate.of(2026, 7, 15);
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 7, 1)), eq(LocalDate.of(2026, 7, 31))))
+                .thenReturn(List.of(
+                        lancamento(aluguel, "2000", julho),
+                        lancamento(aguaMineral, "50", julho),
+                        lancamento(diretor, "8000", julho),
+                        lancamento(semGrupo, "300", julho)));
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(
+                eq(StatusLancamento.REALIZADO), eq(LocalDate.of(2026, 6, 1)), eq(LocalDate.of(2026, 6, 30))))
+                .thenReturn(List.of());
+
+        var dre = service().dre(2026, 7);
+
+        assertThat(dre.despesaPorCategoria()).hasSize(3);
+        assertThat(dre.despesaPorCategoria()).anySatisfy(c -> {
+            assertThat(c.categoria()).isEqualTo("Estrutura");
+            assertThat(c.valor()).isEqualByComparingTo("2050"); // Aluguel (2000) + Água Mineral (50)
+        });
+        assertThat(dre.despesaPorCategoria()).anySatisfy(c -> {
+            assertThat(c.categoria()).isEqualTo("Pessoas");
+            assertThat(c.valor()).isEqualByComparingTo("8000");
+        });
+        assertThat(dre.despesaPorCategoria()).anySatisfy(c -> {
+            assertThat(c.categoria()).isEqualTo("Categoria livre");
+            assertThat(c.valor()).isEqualByComparingTo("300");
+        });
+    }
+
+    // Pedido do Marcos (22/07/2026) — "o Dashboard precisa refletir tudo que está nas outras
+    // abas": resultadoDre reaproveita dre(), saldoCaixaAtual reaproveita CaixaMensalService,
+    // lancamentosPendentes/Vencidos contam por status sem escopo de período.
+    @Test
+    void dashboardFaturamentoExpoeResumoDeDreCaixaELancamentos() {
+        CategoriaFinanceira assinaturas = categoria("Assinaturas", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.ASSINATURA);
+        when(lancamentoRepository.findByStatusAndDataCompetenciaBetween(eq(StatusLancamento.REALIZADO), any(), any()))
+                .thenReturn(List.of(lancamento(assinaturas, "1000", LocalDate.of(2026, 7, 15))));
+        when(caixaMensalService.caixaDoMes(2026, 7))
+                .thenReturn(new CaixaMensalResponse(2026, 7, List.of(), new BigDecimal("5000"), new BigDecimal("7500")));
+        when(lancamentoRepository.countByStatusIn(List.of(StatusLancamento.PREVISTO, StatusLancamento.PARCIAL)))
+                .thenReturn(4L);
+        when(lancamentoRepository.countByStatusIn(List.of(StatusLancamento.VENCIDO))).thenReturn(2L);
+
+        var dashboard = service().dashboardFaturamento(2026, 7);
+
+        // resultadoDre = receitaBruta(1000) - deducoes(0) - custos(0) - despesaOperacional(0) = 1000.
+        assertThat(dashboard.resultadoDre()).isEqualByComparingTo("1000");
+        assertThat(dashboard.saldoCaixaAtual()).isEqualByComparingTo("7500");
+        assertThat(dashboard.lancamentosPendentes()).isEqualTo(4L);
+        assertThat(dashboard.lancamentosVencidos()).isEqualTo(2L);
     }
 
     private static LocalDate any() {

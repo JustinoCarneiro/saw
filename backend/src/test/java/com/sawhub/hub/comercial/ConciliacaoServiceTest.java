@@ -64,6 +64,13 @@ class ConciliacaoServiceTest {
                 LocalDate.of(2026, 10, 1), StatusLancamento.PREVISTO, null, LocalDate.of(2026, 10, 1));
     }
 
+    private static LancamentoFinanceiro lancamentoVencido(BigDecimal valor, LocalDate vencimento) {
+        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria(), "Parcela",
+                valor, vencimento, StatusLancamento.PREVISTO, null, vencimento);
+        lancamento.marcarVencida();
+        return lancamento;
+    }
+
     @Test
     void listarSomaValorPagoNoAtoMaisTaxaPlataformaSemParcelas() {
         Lead lead = leadFechado("Maria Souza", new BigDecimal("1000.00"), new BigDecimal("890.00"), new BigDecimal("110.00"));
@@ -123,6 +130,57 @@ class ConciliacaoServiceTest {
         List<ConciliacaoVendaResponse> resultado = service().listar();
 
         assertThat(resultado.get(0).valorRecebido()).isEqualByComparingTo("0.00");
+    }
+
+    // Pedido do Marcos (22/07/2026) — alerta de atraso: parcela com vencimento no passado e
+    // ainda não liquidada por completo.
+    @Test
+    void listarMarcaEmAtrasoParcelaComVencimentoNoPassadoNaoLiquidada() {
+        Lead lead = leadFechado("Beatriz Lima", new BigDecimal("10000.00"), BigDecimal.ZERO, null);
+        LocalDate vencimento = LocalDate.now().minusDays(15);
+        ParcelaVenda p1 = new ParcelaVenda(lead, 1, new BigDecimal("5000.00"), vencimento);
+        p1.vincularLancamento(lancamentoVencido(new BigDecimal("5000.00"), vencimento));
+        when(leadRepository.buscarComVendaFechada()).thenReturn(List.of(lead));
+        when(parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId())).thenReturn(List.of(p1));
+
+        ConciliacaoVendaResponse c = service().listar().get(0);
+
+        assertThat(c.emAtraso()).isTrue();
+        assertThat(c.diasAtraso()).isEqualTo(15);
+        assertThat(c.parcelasEmAtraso()).isEqualTo(1);
+    }
+
+    // Parcial não vira VENCIDO nunca (LancamentoFinanceiro.marcarVencida só transiciona a partir
+    // de PREVISTO) — mesmo assim precisa contar como atraso pela data, não só pelo status.
+    @Test
+    void listarMarcaEmAtrasoParcelaParcialComVencimentoNoPassado() {
+        Lead lead = leadFechado("Carlos Nunes", new BigDecimal("5000.00"), BigDecimal.ZERO, null);
+        LocalDate vencimento = LocalDate.now().minusDays(3);
+        LancamentoFinanceiro parcial = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria(), "Parcela",
+                new BigDecimal("5000.00"), vencimento, StatusLancamento.PREVISTO, null, vencimento);
+        parcial.liquidarParcial(new BigDecimal("2000.00"), LocalDate.now().minusDays(10));
+        ParcelaVenda p1 = new ParcelaVenda(lead, 1, new BigDecimal("5000.00"), vencimento);
+        p1.vincularLancamento(parcial);
+        when(leadRepository.buscarComVendaFechada()).thenReturn(List.of(lead));
+        when(parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId())).thenReturn(List.of(p1));
+
+        ConciliacaoVendaResponse c = service().listar().get(0);
+
+        assertThat(c.emAtraso()).isTrue();
+        assertThat(c.diasAtraso()).isEqualTo(3);
+    }
+
+    @Test
+    void listarSemAtrasoTraDiasEParcelasNulos() {
+        Lead lead = leadFechado("Maria Souza", new BigDecimal("1000.00"), new BigDecimal("1000.00"), null);
+        when(leadRepository.buscarComVendaFechada()).thenReturn(List.of(lead));
+        when(parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId())).thenReturn(List.of());
+
+        ConciliacaoVendaResponse c = service().listar().get(0);
+
+        assertThat(c.emAtraso()).isFalse();
+        assertThat(c.diasAtraso()).isNull();
+        assertThat(c.parcelasEmAtraso()).isNull();
     }
 
     @Test

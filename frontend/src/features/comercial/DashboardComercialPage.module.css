@@ -79,3 +79,72 @@
   height: 100%;
   border-radius: var(--r-pill);
 }
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.importRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.select {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.outlineButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 600 12.5px var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.outlineButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.muted {
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+.sucesso {
+  color: var(--success);
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+
+.erros {
+  color: var(--danger);
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+
+.erros ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}

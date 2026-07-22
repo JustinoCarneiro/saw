@@ -65,4 +65,9 @@ public interface LancamentoFinanceiroRepository extends JpaRepository<Lancamento
     // antes) e lançamentos sem vencimento (dataVencimento NULL) nunca batem, mesmo raciocínio do
     // buscarComFiltroPorVencimento acima.
     List<LancamentoFinanceiro> findByStatusAndDataVencimentoBefore(StatusLancamento status, LocalDate data);
+
+    // Pedido do Marcos (22/07/2026) — resumo do Dashboard financeiro: quantos lançamentos
+    // precisam de atenção agora, sem escopo de período (um vencido de 3 meses atrás continua
+    // relevante hoje, diferente de faturamentoMensal/DRE que são por ano/mês selecionado).
+    long countByStatusIn(List<StatusLancamento> status);
 }

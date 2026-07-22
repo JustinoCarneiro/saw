@@ -5,6 +5,8 @@ import com.sawhub.hub.financeiro.LancamentoFinanceiro;
 import com.sawhub.hub.financeiro.StatusLancamento;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +35,9 @@ public class ConciliacaoService {
 
     private ConciliacaoVendaResponse conciliar(Lead lead) {
         BigDecimal recebido = zeroSeNulo(lead.getValorPagoNoAto()).add(zeroSeNulo(lead.getTaxaPlataformaRetida()));
+        LocalDate hoje = LocalDate.now();
+        int parcelasEmAtraso = 0;
+        int diasAtrasoMaximo = 0;
         for (ParcelaVenda parcela : parcelaVendaRepository.buscarPorLeadIdComConta(lead.getId())) {
             LancamentoFinanceiro lancamento = parcela.getLancamento();
             if (lancamento == null) {
@@ -40,8 +45,21 @@ public class ConciliacaoService {
             }
             if (lancamento.getStatus() == StatusLancamento.REALIZADO) {
                 recebido = recebido.add(parcela.getValor());
-            } else if (lancamento.getStatus() == StatusLancamento.PARCIAL) {
+                continue;
+            }
+            if (lancamento.getStatus() == StatusLancamento.PARCIAL) {
                 recebido = recebido.add(zeroSeNulo(lancamento.getValorPago()));
+            }
+            // Pedido do Marcos (22/07/2026) — "atraso" checado pela data em si (não só pelo
+            // status VENCIDO): LancamentoFinanceiro.marcarVencida() só transiciona a partir de
+            // PREVISTO (nunca de PARCIAL, ver VencimentoScheduler), então uma parcela paga
+            // parcialmente com vencimento já passado nunca vira VENCIDO — mas continua atrasada
+            // de verdade pro cliente.
+            LocalDate vencimento = lancamento.getDataVencimento();
+            if (vencimento != null && vencimento.isBefore(hoje)) {
+                parcelasEmAtraso++;
+                int dias = (int) ChronoUnit.DAYS.between(vencimento, hoje);
+                diasAtrasoMaximo = Math.max(diasAtrasoMaximo, dias);
             }
         }
 
@@ -50,7 +68,9 @@ public class ConciliacaoService {
         double percentual = total.signum() == 0 ? 0.0
                 : recebido.divide(total, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)).doubleValue();
 
-        return new ConciliacaoVendaResponse(lead.getId(), lead.getNome(), total, recebido, pendente, percentual);
+        boolean emAtraso = parcelasEmAtraso > 0;
+        return new ConciliacaoVendaResponse(lead.getId(), lead.getNome(), total, recebido, pendente, percentual,
+                emAtraso, emAtraso ? diasAtrasoMaximo : null, emAtraso ? parcelasEmAtraso : null);
     }
 
     private static BigDecimal zeroSeNulo(BigDecimal valor) {

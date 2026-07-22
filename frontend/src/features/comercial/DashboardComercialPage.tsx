@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
-import type { DashboardComercialResponse, StatusLead } from '../../shared/lib/types';
+import { Tooltip } from '../../shared/components/Tooltip';
+import type { DashboardComercialResponse, EventoVendaResumo, ImportResultResponse, StatusLead } from '../../shared/lib/types';
 import { formatBRL } from '../../shared/lib/format';
+import { getApiErrorMessage } from '../../shared/lib/apiError';
 import styles from './DashboardComercialPage.module.css';
 
 const STATUS_LABEL: Record<StatusLead, string> = {
@@ -53,28 +56,38 @@ export function DashboardComercialPage() {
         <>
           <div className={styles.kpis}>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Novos mentorados no mês</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="Leads que fecharam venda de contrato de mentoria (Lead FECHADO) dentro do mês/ano selecionado.">Novos mentorados no mês</Tooltip>
+              </div>
               <div className={styles.kpiValue}>{dashboard.novosMentoradosNoMes}</div>
             </Card>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Taxa de conversão</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="% de leads que chegaram a FECHADO em relação ao total de leads do funil no período.">Taxa de conversão</Tooltip>
+              </div>
               <div className={styles.kpiValue}>{dashboard.taxaConversaoPct.toFixed(1)}%</div>
             </Card>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Receita recorrente (MRR)</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="Receita mensal recorrente — contratos de mentoria em andamento, sem contar receitas pontuais (Loja, eventos).">Receita recorrente (MRR)</Tooltip>
+              </div>
               <div className={styles.kpiValue}>{formatBRL(dashboard.mrr)}</div>
               <div className={styles.kpiHint} style={{ color: dashboard.variacaoMrrPct >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                 {dashboard.variacaoMrrPct >= 0 ? '+' : ''}{dashboard.variacaoMrrPct.toFixed(1)}% vs. mês anterior
               </div>
             </Card>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Vendas da loja</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="Total de pedidos Pagos da Loja SAW no período.">Vendas da loja</Tooltip>
+              </div>
               <div className={styles.kpiValue}>{formatBRL(dashboard.vendasLoja)}</div>
             </Card>
           </div>
 
           <Card style={{ padding: '20px 22px' }}>
-            <div className={styles.sectionTitle}>Funil de vendas</div>
+            <div className={styles.sectionTitle}>
+              <Tooltip text="Quantos leads estão em cada etapa (Solicitação → Em contato → Diagnóstico → Proposta → Fechado), no período selecionado.">Funil de vendas</Tooltip>
+            </div>
             <div className={styles.funilList}>
               {dashboard.funil.map((f) => {
                 const pct = (f.quantidade / maiorQuantidade) * 100;
@@ -98,7 +111,9 @@ export function DashboardComercialPage() {
 
           {dashboard.vendaIngressos.length > 0 && (
             <Card style={{ padding: '20px 22px', marginTop: 16 }}>
-              <div className={styles.sectionTitle}>Venda de ingressos por evento</div>
+              <div className={styles.sectionTitle}>
+                <Tooltip text="Quantidade e valor líquido vendido de ingressos, por evento, no período selecionado.">Venda de ingressos por evento</Tooltip>
+              </div>
               <div className={styles.funilList}>
                 {dashboard.vendaIngressos.map((v) => (
                   <div key={v.eventoId} className={styles.funilRow}>
@@ -113,8 +128,110 @@ export function DashboardComercialPage() {
               </div>
             </Card>
           )}
+
+          <ImportarHistoricoIngressos />
         </>
       )}
     </div>
+  );
+}
+
+// Change request pós-MVP ("importação de planilhas de eventos passados pra popular histórico",
+// reunião 17/07/2026) — uma aba por evento na planilha real, por isso o evento é escolhido aqui
+// (não é coluna do CSV, ver VendaIngressoCsvService no backend). Diferente de CsvImportExport
+// (que sempre exige exportUrl): este import não tem export equivalente, é só backfill histórico.
+function ImportarHistoricoIngressos() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [eventos, setEventos] = useState<EventoVendaResumo[]>([]);
+  const [eventoId, setEventoId] = useState('');
+  const [importando, setImportando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<ImportResultResponse | null>(null);
+
+  useEffect(() => {
+    apiClient.get<EventoVendaResumo[]>('/admin/comercial/eventos/historico')
+      .then((res) => setEventos(res.data))
+      .catch(() => setErro('Não foi possível carregar a lista de eventos já realizados.'));
+  }, []);
+
+  async function importar(e: ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo || !eventoId) return;
+    setImportando(true);
+    setErro(null);
+    setResultado(null);
+    const form = new FormData();
+    form.append('arquivo', arquivo);
+    try {
+      const res = await apiClient.post<ImportResultResponse>(`/admin/comercial/eventos/${eventoId}/ingressos/import`, form);
+      setResultado(res.data);
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 422 && Array.isArray(err.response.data?.erros)) {
+        setResultado(err.response.data as ImportResultResponse);
+      } else {
+        setErro(getApiErrorMessage(err, 'Não foi possível importar o arquivo.'));
+      }
+    } finally {
+      setImportando(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  return (
+    <Card style={{ padding: '20px 22px', marginTop: 16 }}>
+      <div className={styles.sectionHeader}>
+        <div className={styles.sectionTitle} style={{ marginBottom: 0 }}>
+          <Tooltip text="Backfill de eventos já realizados antes do sistema existir — não afeta vendas de eventos futuros, que são registradas pelo fluxo normal de inscrição.">Importar histórico de vendas de ingresso</Tooltip>
+        </div>
+        <div className={styles.importRow}>
+          <select
+            className={styles.select}
+            aria-label="Selecione o evento"
+            value={eventoId}
+            onChange={(e) => setEventoId(e.target.value)}
+          >
+            <option value="">{eventos.length === 0 ? 'Nenhum evento realizado ainda' : 'Selecione o evento…'}</option>
+            {eventos.map((ev) => (
+              <option key={ev.id} value={ev.id}>{ev.titulo}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={styles.outlineButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!eventoId || importando}
+          >
+            {importando ? 'Importando…' : 'Importar CSV'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            hidden
+            onChange={importar}
+            data-testid="importar-ingressos-input"
+          />
+        </div>
+      </div>
+      <div className={styles.muted}>
+        Colunas esperadas: nomeAluno, quantidadeIngressos, valorLiquidoIngresso, tipoIngresso, email
+        (origemVenda, nomeEmpresa, telefone são opcionais) — mesmo layout da planilha "Vendas Eventos".
+      </div>
+
+      {erro && <div className={styles.erros}>{erro}</div>}
+      {resultado && resultado.erros.length === 0 && (
+        <div className={styles.sucesso}>{resultado.importados} ingresso(s) importado(s) com sucesso.</div>
+      )}
+      {resultado && resultado.erros.length > 0 && (
+        <div className={styles.erros}>
+          <div>Nenhuma linha foi importada — corrija o arquivo e reenvie:</div>
+          <ul>
+            {resultado.erros.map((e) => (
+              <li key={e.linha}>Linha {e.linha}: {e.motivo}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Card>
   );
 }

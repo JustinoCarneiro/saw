@@ -144,6 +144,23 @@ public class Lead extends BaseEntity {
         return lead;
     }
 
+    /** Change request pós-MVP ("importação de planilhas de eventos passados", E13) — nasce direto
+     * FECHADO, mesma lógica de {@link #criarJaFechado} (M23), mas pro produto INGRESSO_EVENTO em
+     * vez de TipoContrato: o comprador de ingresso avulso importado do histórico não passou pelo
+     * funil de verdade, é dado retroativo de uma venda que já aconteceu (ver
+     * VendaIngressoCsvService). */
+    public static Lead criarFechadoParaImportacaoIngresso(String nome, String email, String telefone,
+                                                           OrigemVenda origemVenda, BigDecimal valorTotalVenda) {
+        Lead lead = new Lead(nome, email, telefone, null);
+        lead.status = StatusLead.FECHADO;
+        lead.produtoVenda = ProdutoVenda.INGRESSO_EVENTO;
+        lead.origemVenda = origemVenda;
+        lead.valorTotalVenda = valorTotalVenda;
+        lead.valorPagoNoAto = valorTotalVenda;
+        lead.dataFechamento = Instant.now();
+        return lead;
+    }
+
     /** Só a partir de SOLICITACAO — primeiro contato do time comercial com o lead. */
     public void moverParaEmContato(Colaborador vendedor) {
         exigirStatus(StatusLead.SOLICITACAO);

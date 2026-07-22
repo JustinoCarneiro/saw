@@ -46,6 +46,11 @@ public class LeadService {
             ProdutoVenda.INGRESSO_EVENTO, "Eventos"
     );
 
+    // Gap 7 (taxaPlataformaRetida, confirmado 19/07/2026) — até aqui só usada na Conciliação
+    // (ConciliacaoService), nunca virava lançamento no DRE. Categoria seedada via V50, mesmo
+    // critério de garantia de CATEGORIA_POR_PRODUTO (V40).
+    private static final String CATEGORIA_TAXA_PLATAFORMA = "Taxas de Plataforma de Pagamento";
+
     private final LeadRepository leadRepository;
     private final ColaboradorRepository colaboradorRepository;
     private final AtividadeLogService atividadeLogService;
@@ -140,7 +145,8 @@ public class LeadService {
             criarVendasIngresso(lead, request);
         }
         if (request.valorPagoNoAto() != null && request.valorPagoNoAto().signum() > 0) {
-            criarLancamentoValorPagoNoAto(lead, request.produtoVenda(), request.valorPagoNoAto());
+            criarLancamentoValorPagoNoAto(lead, request.produtoVenda(), request.valorPagoNoAto(),
+                    request.taxaPlataformaRetida(), request.formaPagamento());
         }
         if (request.parcelas() != null) {
             criarParcelas(lead, request.produtoVenda(), request.parcelas());
@@ -176,13 +182,32 @@ public class LeadService {
     }
 
     /** M26 — dinheiro recebido no ato do fechamento já é receita realizada (diferente de parcela,
-     * que é "a receber"), então nasce direto REALIZADO, sem `dataVencimento`. */
-    private void criarLancamentoValorPagoNoAto(Lead lead, ProdutoVenda produtoVenda, BigDecimal valorPagoNoAto) {
+     * que é "a receber"), então nasce direto REALIZADO, sem `dataVencimento`. Gap 7 (confirmado
+     * 19/07/2026): quando há taxa de plataforma retida (Hotmart etc.), a Receita Bruta lançada
+     * passa a ser o valor cheio da venda (pago no ato + taxa) — a taxa em si vira um lançamento de
+     * DESPESA separado, categoria DEDUCOES, pra a Receita Líquida do DRE bater com o que a SAW de
+     * fato recebeu (H14.2: Receita Bruta - Deduções = Receita Líquida). Sem taxa, o valor lançado
+     * continua sendo exatamente o valorPagoNoAto de sempre. Gap 6 (Pix Recorrente): propaga
+     * formaPagamento pro lançamento, pro MRR (RelatorioFinanceiroService) enxergar receita
+     * recorrente independente da categoria do produto. */
+    private void criarLancamentoValorPagoNoAto(Lead lead, ProdutoVenda produtoVenda, BigDecimal valorPagoNoAto,
+                                                BigDecimal taxaPlataformaRetida, FormaPagamento formaPagamento) {
         CategoriaFinanceira categoria = resolverCategoriaVenda(produtoVenda);
-        LancamentoFinanceiro lancamento = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
-                "Pago no ato - " + lead.getNome(), valorPagoNoAto, LocalDate.now(), StatusLancamento.REALIZADO,
-                null, null);
-        lancamentoFinanceiroRepository.save(lancamento);
+        BigDecimal taxa = zeroSeNulo(taxaPlataformaRetida);
+        BigDecimal valorReceitaBruta = valorPagoNoAto.add(taxa);
+        boolean recorrente = formaPagamento == FormaPagamento.PIX_RECORRENTE;
+        LancamentoFinanceiro receita = new LancamentoFinanceiro(TipoLancamento.RECEITA, categoria,
+                "Pago no ato - " + lead.getNome(), valorReceitaBruta, LocalDate.now(), StatusLancamento.REALIZADO,
+                null, null, recorrente);
+        lancamentoFinanceiroRepository.save(receita);
+
+        if (taxa.signum() > 0) {
+            CategoriaFinanceira categoriaTaxa = resolverCategoriaPorNome(CATEGORIA_TAXA_PLATAFORMA);
+            LancamentoFinanceiro deducao = new LancamentoFinanceiro(TipoLancamento.DESPESA, categoriaTaxa,
+                    "Taxa de plataforma - " + lead.getNome(), taxa, LocalDate.now(), StatusLancamento.REALIZADO,
+                    null, null, false);
+            lancamentoFinanceiroRepository.save(deducao);
+        }
     }
 
     private void criarParcelas(Lead lead, ProdutoVenda produtoVenda, List<ParcelaVendaRequest> parcelas) {
@@ -199,10 +224,18 @@ public class LeadService {
 
     private CategoriaFinanceira resolverCategoriaVenda(ProdutoVenda produtoVenda) {
         String nomeCategoria = CATEGORIA_POR_PRODUTO.get(produtoVenda);
+        return resolverCategoriaPorNome(nomeCategoria, "esperada pré-cadastrada pela migration V40 pra vendas de " + produtoVenda + ".");
+    }
+
+    private CategoriaFinanceira resolverCategoriaPorNome(String nomeCategoria) {
+        return resolverCategoriaPorNome(nomeCategoria, "esperada pré-cadastrada pela migration V50.");
+    }
+
+    private CategoriaFinanceira resolverCategoriaPorNome(String nomeCategoria, String contextoErro) {
         List<CategoriaFinanceira> candidatas = categoriaFinanceiraRepository.findByNomeIgnoreCase(nomeCategoria);
         if (candidatas.isEmpty()) {
-            throw new IllegalStateException("Categoria financeira \"" + nomeCategoria + "\" não encontrada — "
-                    + "esperada pré-cadastrada pela migration V40 pra vendas de " + produtoVenda + ".");
+            throw new IllegalStateException(
+                    "Categoria financeira \"" + nomeCategoria + "\" não encontrada — " + contextoErro);
         }
         if (candidatas.size() > 1) {
             throw new IllegalStateException("Categoria financeira \"" + nomeCategoria + "\" é ambígua "

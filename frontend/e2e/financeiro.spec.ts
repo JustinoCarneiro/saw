@@ -25,6 +25,10 @@ test.describe('Financeiro (E14)', () => {
     await expect(main.getByText(/Demonstrativo Estruturado/)).toBeVisible();
     await expect(main.getByText('Receita Líquida')).toBeVisible();
     await expect(main.getByText('Comparativo com o mês anterior')).toBeVisible();
+    // "mais gráficos e detalhe que estão nas planilhas do financeiro" (reunião 17/07/2026).
+    await expect(main.getByText('Receita por categoria')).toBeVisible();
+    await expect(main.getByText('Despesa por categoria')).toBeVisible();
+    await expect(main.getByText('Mentoria Contínua')).toBeVisible();
   });
 
   test('Lançamentos lista o seed real e permite criar um novo', async ({ page }) => {

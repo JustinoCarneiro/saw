@@ -89,3 +89,47 @@
   height: 100%;
   border-radius: var(--r-pill);
 }
+
+.resumoGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.resumoCard {
+  cursor: pointer;
+  border-radius: var(--r-lg, 12px);
+  transition: transform .12s ease;
+}
+
+.resumoCard:hover,
+.resumoCard:focus-visible {
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.resumoTitulo {
+  font-size: 12px;
+  color: var(--text-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resumoTitulo::after {
+  content: '›';
+  color: var(--text-faint);
+  font-size: 16px;
+}
+
+.resumoDestaque {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 8px 0 2px;
+}
+
+.resumoLegenda {
+  font-size: 11px;
+  color: var(--text-faint);
+}

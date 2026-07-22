@@ -227,14 +227,18 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .orElseThrow(() -> new IllegalStateException("Categoria EVENTO (V40) não encontrada."));
         CategoriaFinanceira loja = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
                 "Loja SAW", TipoLancamento.RECEITA, GrupoDre.RECEITA_BRUTA, OrigemReceita.LOJA));
+        // `grupo` (22/07/2026, ver V52) precisa nascer preenchido aqui, não só via UPDATE de
+        // migration — DemoDataSeeder roda DEPOIS de todas as migrations, num ambiente novo (E2E,
+        // produção com seed inicial) essas linhas ainda não existem quando V52 roda, então o
+        // UPDATE lá é um no-op; só funcionou no dev local porque o seed já tinha rodado antes.
         CategoriaFinanceira impostos = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Impostos sobre vendas", TipoLancamento.DESPESA, GrupoDre.DEDUCOES, null));
+                "Impostos sobre vendas", TipoLancamento.DESPESA, GrupoDre.DEDUCOES, null, "Financeiro/Jurídico", null));
         CategoriaFinanceira infra = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Infraestrutura", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null));
+                "Infraestrutura", TipoLancamento.DESPESA, GrupoDre.CUSTOS, null, "Estrutura", null));
         CategoriaFinanceira marketing = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Marketing", TipoLancamento.DESPESA, GrupoDre.DESPESA_OPERACIONAL, null));
+                "Marketing", TipoLancamento.DESPESA, GrupoDre.DESPESA_OPERACIONAL, null, "Marketing", null));
         CategoriaFinanceira equipe = categoriaFinanceiraRepository.save(new CategoriaFinanceira(
-                "Equipe & Folha", TipoLancamento.DESPESA, GrupoDre.DESPESA_OPERACIONAL, null));
+                "Equipe & Folha", TipoLancamento.DESPESA, GrupoDre.DESPESA_OPERACIONAL, null, "Pessoas", null));
 
         // Junho e julho/2026 — dois meses fechados pra comparativo mês a mês do DRE (H14.2) e
         // MRR/churn do dashboard (H14.3). Assinaturas somam os planos dos 6 mentorados seedados.

@@ -52,16 +52,19 @@ public class ComercialController {
     private final ColaboradorRepository colaboradorRepository;
     private final LeadCsvService leadCsvService;
     private final EventoRepository eventoRepository;
+    private final VendaIngressoCsvService vendaIngressoCsvService;
 
     public ComercialController(LeadService leadService, ComercialDashboardService dashboardService,
                                 RankingComercialService rankingService, ColaboradorRepository colaboradorRepository,
-                                LeadCsvService leadCsvService, EventoRepository eventoRepository) {
+                                LeadCsvService leadCsvService, EventoRepository eventoRepository,
+                                VendaIngressoCsvService vendaIngressoCsvService) {
         this.leadService = leadService;
         this.dashboardService = dashboardService;
         this.rankingService = rankingService;
         this.colaboradorRepository = colaboradorRepository;
         this.leadCsvService = leadCsvService;
         this.eventoRepository = eventoRepository;
+        this.vendaIngressoCsvService = vendaIngressoCsvService;
     }
 
     /** Só leitura, pro seletor de vendedor na tela de funil (mover lead pra Em contato) —
@@ -128,6 +131,27 @@ public class ComercialController {
     @PostMapping("/leads/import")
     public ResponseEntity<ImportResultResponse> importarLeads(@RequestParam("arquivo") MultipartFile arquivo) {
         ImportResultResponse resultado = leadCsvService.importar(arquivo);
+        HttpStatus status = resultado.erros().isEmpty() ? HttpStatus.OK : HttpStatus.UNPROCESSABLE_ENTITY;
+        return ResponseEntity.status(status).body(resultado);
+    }
+
+    // Change request pós-MVP ("importação de planilhas de eventos passados") — oposto de
+    // eventosParaVenda() (só PROGRAMADO/AO_VIVO): aqui é o seletor de evento pro import de
+    // histórico, que só faz sentido pra evento que JÁ aconteceu.
+    @GetMapping("/eventos/historico")
+    public List<EventoVendaResumo> eventosHistorico() {
+        return eventoRepository.buscarPorStatusIn(List.of(StatusEvento.REALIZADO), null)
+                .stream().map(EventoVendaResumo::from).toList();
+    }
+
+    // Change request pós-MVP ("importação de planilhas de eventos passados pra popular
+    // histórico") — uma aba por evento na planilha real, por isso eventoId é path param, não
+    // coluna do CSV (ver VendaIngressoCsvService). 200 se tudo foi validado e persistido, 422 se
+    // nada foi (ver erros no corpo) — mesmo contrato dos demais imports (M21/M22).
+    @PostMapping("/eventos/{eventoId}/ingressos/import")
+    public ResponseEntity<ImportResultResponse> importarVendasIngresso(
+            @PathVariable UUID eventoId, @RequestParam("arquivo") MultipartFile arquivo) {
+        ImportResultResponse resultado = vendaIngressoCsvService.importar(eventoId, arquivo);
         HttpStatus status = resultado.erros().isEmpty() ? HttpStatus.OK : HttpStatus.UNPROCESSABLE_ENTITY;
         return ResponseEntity.status(status).body(resultado);
     }

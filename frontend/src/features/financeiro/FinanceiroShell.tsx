@@ -8,6 +8,7 @@ const TABS = [
   { to: '/admin/financeiro/dashboard', label: 'Dashboard' },
   { to: '/admin/financeiro/dre', label: 'DRE' },
   { to: '/admin/financeiro/lancamentos', label: 'Lançamentos' },
+  { to: '/admin/financeiro/caixa', label: 'Caixa' },
   { to: '/admin/financeiro/conciliacao', label: 'Conciliação' },
 ];
 

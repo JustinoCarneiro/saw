@@ -74,24 +74,40 @@ public class LancamentoFinanceiro extends BaseEntity {
     @Column(name = "valor_pago")
     private BigDecimal valorPago;
 
+    // Gap 6 (Pix Recorrente, confirmado 19/07/2026, ver docs/reuniao-2026-07-17-atualizacoes.md) —
+    // true só quando a venda de origem foi paga via FormaPagamento.PIX_RECORRENTE (comercial.Lead,
+    // ver LeadService.criarLancamentoValorPagoNoAto). Boolean solto em vez de referenciar
+    // comercial.FormaPagamento diretamente: financeiro não pode depender de comercial sem criar
+    // ciclo de pacote (comercial já depende de financeiro, ver Javadoc de LeadService). Sinal de
+    // receita genuinamente recorrente independente da categoria do produto vendido — usado em
+    // RelatorioFinanceiroService.dashboardFaturamento (MRR), ao lado de OrigemReceita.ASSINATURA.
+    @Column(name = "pagamento_recorrente", nullable = false)
+    private boolean pagamentoRecorrente;
+
     protected LancamentoFinanceiro() {
     }
 
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
                                  BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status) {
-        this(tipo, categoria, descricao, valor, dataCompetencia, status, null, null);
+        this(tipo, categoria, descricao, valor, dataCompetencia, status, null, null, false);
     }
 
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
                                  BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
                                  Evento evento) {
-        this(tipo, categoria, descricao, valor, dataCompetencia, status, evento, null);
+        this(tipo, categoria, descricao, valor, dataCompetencia, status, evento, null, false);
     }
 
-    /** M26 — construtor canônico, ganha {@code dataVencimento} (nullable, ver Javadoc da classe). */
     public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
                                  BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
                                  Evento evento, LocalDate dataVencimento) {
+        this(tipo, categoria, descricao, valor, dataCompetencia, status, evento, dataVencimento, false);
+    }
+
+    /** Canônico — ganha {@code pagamentoRecorrente} (ver Javadoc do campo). */
+    public LancamentoFinanceiro(TipoLancamento tipo, CategoriaFinanceira categoria, String descricao,
+                                 BigDecimal valor, LocalDate dataCompetencia, StatusLancamento status,
+                                 Evento evento, LocalDate dataVencimento, boolean pagamentoRecorrente) {
         this.tipo = tipo;
         this.categoria = categoria;
         this.descricao = descricao;
@@ -100,6 +116,7 @@ public class LancamentoFinanceiro extends BaseEntity {
         this.status = status;
         this.evento = evento;
         this.dataVencimento = dataVencimento;
+        this.pagamentoRecorrente = pagamentoRecorrente;
     }
 
     /** M26 (absorvido de {@code ContaPagarReceber#liquidar}) — só permitido a partir de
@@ -186,5 +203,9 @@ public class LancamentoFinanceiro extends BaseEntity {
 
     public BigDecimal getValorPago() {
         return valorPago;
+    }
+
+    public boolean isPagamentoRecorrente() {
+        return pagamentoRecorrente;
     }
 }

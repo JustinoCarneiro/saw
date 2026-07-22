@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../shared/lib/apiClient';
 import { Card } from '../../shared/components/Card';
-import type { DreResponse } from '../../shared/lib/types';
+import type { CategoriaValor, DreResponse } from '../../shared/lib/types';
 import { formatBRL, formatPct } from '../../shared/lib/format';
 import { PeriodoPicker } from '../../shared/components/PeriodoPicker';
+import { Tooltip } from '../../shared/components/Tooltip';
 import styles from './DrePage.module.css';
+
+// Paleta fixa e cíclica — categoria é texto livre (nome de CategoriaFinanceira), não enum, então
+// não dá pra mapear cor 1:1 como ORIGEM_COLOR faz em DashboardFaturamentoPage.
+const PALETA = ['var(--gold)', 'var(--info)', 'var(--success)', 'var(--danger)', 'var(--text-faint)'];
 
 export function DrePage() {
   const now = new Date();
@@ -36,15 +41,21 @@ export function DrePage() {
         <>
           <div className={styles.kpis}>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Receita Bruta</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="Soma de todas as receitas Realizadas no período, antes de deduções.">Receita Bruta</Tooltip>
+              </div>
               <div className={styles.kpiValue}>{formatBRL(dre.receitaBruta)}</div>
             </Card>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Custos</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="Lançamentos de despesa categorizados como custo direto (ex.: insumo, matéria-prima), não operacional.">Custos</Tooltip>
+              </div>
               <div className={styles.kpiValue} style={{ color: 'var(--danger)' }}>{formatBRL(dre.custos)}</div>
             </Card>
             <Card style={{ padding: 18 }}>
-              <div className={styles.kpiLabel}>Despesas Operacionais</div>
+              <div className={styles.kpiLabel}>
+                <Tooltip text="Despesas do dia a dia da operação (folha, aluguel, ferramentas etc.), separadas de Custos.">Despesas Operacionais</Tooltip>
+              </div>
               <div className={styles.kpiValue} style={{ color: 'var(--danger)' }}>{formatBRL(dre.despesasOperacionais)}</div>
             </Card>
             <Card
@@ -55,7 +66,9 @@ export function DrePage() {
               }}
             >
               <div className={styles.kpiLabel} style={{ color: lucro ? 'var(--success)' : 'var(--danger)' }}>
-                {lucro ? 'Lucro' : 'Prejuízo'}
+                <Tooltip text="Receita Líquida menos Custos menos Despesas Operacionais — o resultado final do período.">
+                  {lucro ? 'Lucro' : 'Prejuízo'}
+                </Tooltip>
               </div>
               <div className={styles.kpiValue} style={{ color: lucro ? 'var(--success)' : 'var(--danger)' }}>
                 {formatBRL(dre.resultado)}
@@ -81,25 +94,52 @@ export function DrePage() {
               tem esse campo populado, mostrar 0/0 sempre pareceria quebrado. */}
           {(dre.despesasFixas !== 0 || dre.despesasVariaveis !== 0) && (
             <Card style={{ marginTop: 16, padding: '20px 22px' }}>
-              <div className={styles.sectionTitle}>Despesas fixas x variáveis</div>
+              <div className={styles.sectionTitle}>
+                <Tooltip text="Divisão das despesas por natureza (Fixa/Variável), cadastrada por categoria financeira. Só aparece quando alguma categoria do período já tem essa natureza preenchida.">Despesas fixas x variáveis</Tooltip>
+              </div>
               <div className={styles.comparativo}>
                 <div>
-                  <div className={styles.kpiLabel}>Fixas</div>
+                  <div className={styles.kpiLabel}>
+                    <Tooltip text="Despesas que não variam com o volume de vendas (ex.: aluguel).">Fixas</Tooltip>
+                  </div>
                   <div className={styles.comparativoValue}>{formatBRL(dre.despesasFixas)}</div>
                 </div>
                 <div>
-                  <div className={styles.kpiLabel}>Variáveis</div>
+                  <div className={styles.kpiLabel}>
+                    <Tooltip text="Despesas que variam conforme o volume de vendas (ex.: insumo).">Variáveis</Tooltip>
+                  </div>
                   <div className={styles.comparativoValue}>{formatBRL(dre.despesasVariaveis)}</div>
                 </div>
               </div>
             </Card>
           )}
 
+          <div className={styles.kpis} style={{ gridTemplateColumns: '1fr 1fr', marginTop: 16 }}>
+            <Card style={{ padding: '20px 22px' }}>
+              <CategoriaBreakdown
+                titulo="Receita por categoria"
+                tooltip="Como a receita Realizada do período se divide entre as categorias financeiras cadastradas."
+                itens={dre.receitaPorCategoria}
+              />
+            </Card>
+            <Card style={{ padding: '20px 22px' }}>
+              <CategoriaBreakdown
+                titulo="Despesa por categoria"
+                tooltip="Como Custos + Despesas Operacionais do período se dividem entre as categorias financeiras cadastradas."
+                itens={dre.despesaPorCategoria}
+              />
+            </Card>
+          </div>
+
           <Card style={{ marginTop: 16, padding: '20px 22px' }}>
-            <div className={styles.sectionTitle}>Comparativo com o mês anterior</div>
+            <div className={styles.sectionTitle}>
+              <Tooltip text="Resultado (lucro/prejuízo) do mês anterior e a variação percentual em relação a ele.">Comparativo com o mês anterior</Tooltip>
+            </div>
             <div className={styles.comparativo}>
               <div>
-                <div className={styles.kpiLabel}>Resultado anterior</div>
+                <div className={styles.kpiLabel}>
+                  <Tooltip text="Resultado (lucro/prejuízo) do mês imediatamente anterior ao selecionado.">Resultado anterior</Tooltip>
+                </div>
                 <div className={styles.comparativoValue}>{formatBRL(dre.comparativoMesAnterior.resultado)}</div>
               </div>
               <div
@@ -113,6 +153,43 @@ export function DrePage() {
         </>
       )}
     </div>
+  );
+}
+
+// "mais gráficos e detalhe que estão nas planilhas do financeiro" (reunião 17/07/2026) — quebra
+// por categoria real (CategoriaFinanceira.nome), mesma granularidade da planilha "DRE Financeira
+// Saw". Mesmo estilo de barra de DashboardFaturamentoPage.composicaoList.
+function CategoriaBreakdown({ titulo, tooltip, itens }: { titulo: string; tooltip: string; itens: CategoriaValor[] }) {
+  const total = itens.reduce((acc, c) => acc + c.valor, 0);
+  return (
+    <>
+      <div className={styles.sectionTitle}>
+        <Tooltip text={tooltip}>{titulo}</Tooltip>
+      </div>
+      {itens.length === 0 && <div className={styles.empty}>Sem lançamentos categorizados neste período.</div>}
+      <div className={styles.composicaoList}>
+        {itens.map((c, i) => {
+          const pct = total === 0 ? 0 : (c.valor / total) * 100;
+          const cor = PALETA[i % PALETA.length];
+          return (
+            <div key={c.categoria}>
+              <div className={styles.composicaoHeader}>
+                <span className={styles.composicaoLabel}>
+                  <span className={styles.dot} style={{ background: cor }} />
+                  {c.categoria}
+                </span>
+                <span className={styles.composicaoValue}>
+                  {formatBRL(c.valor)} <span className={styles.composicaoPct}>({pct.toFixed(0)}%)</span>
+                </span>
+              </div>
+              <div className={styles.track}>
+                <div className={styles.fill} style={{ width: `${pct}%`, background: cor }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

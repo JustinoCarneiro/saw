@@ -1,6 +1,7 @@
 package com.sawhub.hub.financeiro;
 
 import com.sawhub.hub.common.VariacaoCalculator;
+import com.sawhub.hub.financeiro.dto.CategoriaValor;
 import com.sawhub.hub.financeiro.dto.ComparativoMes;
 import com.sawhub.hub.financeiro.dto.ComposicaoReceita;
 import com.sawhub.hub.financeiro.dto.DashboardFaturamentoResponse;
@@ -8,7 +9,9 @@ import com.sawhub.hub.financeiro.dto.DreResponse;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -19,9 +22,12 @@ import org.springframework.stereotype.Service;
 public class RelatorioFinanceiroService {
 
     private final LancamentoFinanceiroRepository lancamentoRepository;
+    private final CaixaMensalService caixaMensalService;
 
-    public RelatorioFinanceiroService(LancamentoFinanceiroRepository lancamentoRepository) {
+    public RelatorioFinanceiroService(LancamentoFinanceiroRepository lancamentoRepository,
+                                       CaixaMensalService caixaMensalService) {
         this.lancamentoRepository = lancamentoRepository;
+        this.caixaMensalService = caixaMensalService;
     }
 
     public DreResponse dre(int ano, int mes) {
@@ -36,10 +42,12 @@ public class RelatorioFinanceiroService {
         List<LancamentoFinanceiro> lancamentos = lancamentosRealizadosDoPeriodo(periodo);
         BigDecimal despesasFixas = somaPorNatureza(lancamentos, NaturezaFinanceira.FIXA);
         BigDecimal despesasVariaveis = somaPorNatureza(lancamentos, NaturezaFinanceira.VARIAVEL);
+        List<CategoriaValor> receitaPorCategoria = somaPorCategoria(lancamentos, TipoLancamento.RECEITA);
+        List<CategoriaValor> despesaPorCategoria = somaDespesaPorGrupo(lancamentos);
 
         return new DreResponse(periodo.toString(), atual.receitaBruta, atual.deducoes, atual.receitaLiquida(),
                 atual.custos, atual.despesasOperacionais, despesasFixas, despesasVariaveis, resultadoAtual,
-                new ComparativoMes(resultadoAnterior, variacaoPct));
+                new ComparativoMes(resultadoAnterior, variacaoPct), receitaPorCategoria, despesaPorCategoria);
     }
 
     public DashboardFaturamentoResponse dashboardFaturamento(int ano, int mes) {
@@ -59,8 +67,8 @@ public class RelatorioFinanceiroService {
                 .map(e -> new ComposicaoReceita(e.getKey(), e.getValue()))
                 .toList();
 
-        BigDecimal mrrAtual = porOrigem.getOrDefault(OrigemReceita.ASSINATURA, BigDecimal.ZERO);
-        BigDecimal mrrAnterior = somaOrigemAssinatura(lancamentosRealizadosDoPeriodo(periodo.minusMonths(1)));
+        BigDecimal mrrAtual = somaMrr(lancamentos);
+        BigDecimal mrrAnterior = somaMrr(lancamentosRealizadosDoPeriodo(periodo.minusMonths(1)));
 
         // Proxy de CHURN DE RECEITA (não de cliente/logo — o modelo atual não rastreia eventos de
         // cancelamento por assinante, só o valor agregado de MRR por período). Só conta queda.
@@ -72,7 +80,19 @@ public class RelatorioFinanceiroService {
                     .doubleValue();
         }
 
-        return new DashboardFaturamentoResponse(faturamentoMensal, mrrAtual, churnPct, composicao);
+        // Pedido do Marcos (22/07/2026) — Dashboard vira resumo das outras abas. resultadoDre
+        // reaproveita dre() (mesmo período); saldoCaixaAtual reaproveita CaixaMensalService (mesmo
+        // período do picker — Caixa também é conceito mensal). lancamentosPendentes/Vencidos
+        // deliberadamente SEM escopo de período: é "o que precisa de atenção agora", não "o que
+        // aconteceu nesse mês" — um lançamento vencido de 3 meses atrás continua relevante hoje.
+        BigDecimal resultadoDre = dre(ano, mes).resultado();
+        BigDecimal saldoCaixaAtual = caixaMensalService.caixaDoMes(ano, mes).totalFinal();
+        long lancamentosPendentes = lancamentoRepository.countByStatusIn(
+                List.of(StatusLancamento.PREVISTO, StatusLancamento.PARCIAL));
+        long lancamentosVencidos = lancamentoRepository.countByStatusIn(List.of(StatusLancamento.VENCIDO));
+
+        return new DashboardFaturamentoResponse(faturamentoMensal, mrrAtual, churnPct, composicao,
+                resultadoDre, saldoCaixaAtual, lancamentosPendentes, lancamentosVencidos);
     }
 
     private List<LancamentoFinanceiro> lancamentosRealizadosDoPeriodo(YearMonth periodo) {
@@ -89,12 +109,54 @@ public class RelatorioFinanceiroService {
                 somaPorGrupo(lancamentos, GrupoDre.DESPESA_OPERACIONAL));
     }
 
-    private static BigDecimal somaOrigemAssinatura(List<LancamentoFinanceiro> lancamentos) {
+    // Gap 6 (Pix Recorrente, confirmado 19/07/2026) — MRR passa a somar OrigemReceita.ASSINATURA
+    // OU pagamentoRecorrente=true (ver LancamentoFinanceiro): "recorrente" é informação de
+    // negócio da forma de pagamento, não só da categoria do produto (ex.: uma Consultoria paga
+    // via Pix Recorrente é receita recorrente de verdade, mesmo sem a categoria "Consultoria" ter
+    // origemReceita=ASSINATURA). Filtro OR sobre a mesma lista — sem dupla contagem mesmo quando
+    // as duas condições são verdadeiras ao mesmo tempo pro mesmo lançamento.
+    private static BigDecimal somaMrr(List<LancamentoFinanceiro> lancamentos) {
         return lancamentos.stream()
                 .filter(l -> l.getTipo() == TipoLancamento.RECEITA)
-                .filter(l -> l.getCategoria().getOrigemReceita() == OrigemReceita.ASSINATURA)
+                .filter(l -> l.getCategoria().getOrigemReceita() == OrigemReceita.ASSINATURA || l.isPagamentoRecorrente())
                 .map(LancamentoFinanceiro::getValor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private static List<CategoriaValor> somaPorCategoria(List<LancamentoFinanceiro> lancamentos, TipoLancamento tipo) {
+        Map<String, BigDecimal> porCategoria = new LinkedHashMap<>();
+        for (LancamentoFinanceiro l : lancamentos) {
+            if (l.getTipo() != tipo) {
+                continue;
+            }
+            porCategoria.merge(l.getCategoria().getNome(), l.getValor(), BigDecimal::add);
+        }
+        return porCategoria.entrySet().stream()
+                .map(e -> new CategoriaValor(e.getKey(), e.getValue()))
+                .sorted(Comparator.comparing(CategoriaValor::categoria))
+                .toList();
+    }
+
+    // Pedido do Marcos (22/07/2026) — "Despesa por categoria" do DRE precisa bater com a
+    // "Categoria" real da planilha (Estrutura/Eventos/Financeiro-Jurídico/Marketing/Operação/
+    // Outros/Pessoas, ver V52), não com o nome da subcategoria (ex. "Aluguel") — subcategoria é
+    // granularidade de lançamento (Lançamentos), categoria é granularidade de resumo (DRE). Cai
+    // pro nome da própria categoria quando `grupo` ainda não foi preenchido (ex. uma categoria
+    // criada via "+ Nova categoria" sem grupo definido) — nunca some do gráfico por falta de grupo.
+    private static List<CategoriaValor> somaDespesaPorGrupo(List<LancamentoFinanceiro> lancamentos) {
+        Map<String, BigDecimal> porGrupo = new LinkedHashMap<>();
+        for (LancamentoFinanceiro l : lancamentos) {
+            if (l.getTipo() != TipoLancamento.DESPESA) {
+                continue;
+            }
+            String grupo = l.getCategoria().getGrupo();
+            String chave = (grupo == null || grupo.isBlank()) ? l.getCategoria().getNome() : grupo;
+            porGrupo.merge(chave, l.getValor(), BigDecimal::add);
+        }
+        return porGrupo.entrySet().stream()
+                .map(e -> new CategoriaValor(e.getKey(), e.getValue()))
+                .sorted(Comparator.comparing(CategoriaValor::categoria))
+                .toList();
     }
 
     private static BigDecimal somaPorGrupo(List<LancamentoFinanceiro> lancamentos, GrupoDre grupo) {

@@ -132,4 +132,27 @@ test.describe('Comercial (E13)', () => {
     await page.goto('/admin/comercial/leads');
     await expect(page.getByText('Sem acesso')).toBeVisible();
   });
+
+  // Change request pós-MVP ("importação de planilhas de eventos passados pra popular histórico",
+  // reunião 17/07/2026) — "Live: Tendências do setor" é o evento REALIZADO seedado por
+  // DemoDataSeeder (único evento cujo status permite o import histórico).
+  test('Importa histórico de vendas de ingresso de um evento já realizado', async ({ page }) => {
+    await loginAs(page, 'paula@sawhub.com.br');
+    await expect(page).toHaveURL(/\/admin\/comercial\/dashboard$/);
+
+    const main = page.getByRole('main');
+    await expect(main.getByText('Importar histórico de vendas de ingresso')).toBeVisible();
+    await main.getByLabel(/Selecione o evento/).selectOption({ label: 'Live: Tendências do setor' });
+
+    const email = `comprador.e2e.${Date.now()}@example.com`;
+    const conteudo = 'nomeAluno;quantidadeIngressos;valorLiquidoIngresso;tipoIngresso;origemVenda;email\n'
+      + `Comprador Histórico E2E;2;150,00;VIP;HOTMART;${email}`;
+    await main.getByTestId('importar-ingressos-input').setInputFiles({
+      name: 'vendas-ingresso.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(conteudo, 'utf-8'),
+    });
+
+    await expect(main.getByText('2 ingresso(s) importado(s) com sucesso.')).toBeVisible();
+  });
 });
