@@ -142,7 +142,11 @@ function MetaEditRow({ meta, onSalvo, onCancelar }: {
 }) {
   const [titulo, setTitulo] = useState(meta.titulo);
   const [prazo, setPrazo] = useState(meta.prazo);
-  const [progressoPct, setProgressoPct] = useState(meta.progressoPct);
+  // string, não number — mesmo padrão já usado nos outros inputs numéricos do sistema (ver
+  // CaixaPage.tsx, saldoInicial/saldoFinal). Achado ao vivo (pedido do Marcos): manter o estado
+  // como number e converter via Number(e.target.value) a cada tecla trava a digitação — só as
+  // setas do input funcionavam, porque elas disparam o evento nativo por um caminho diferente.
+  const [progressoPct, setProgressoPct] = useState(String(meta.progressoPct));
   const [error, setError] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -152,7 +156,9 @@ function MetaEditRow({ meta, onSalvo, onCancelar }: {
     setSalvando(true);
     try {
       // descricao preservada como estava — a tela admin não expõe esse campo pra edição.
-      await apiClient.put(`/admin/metas/${meta.id}`, { titulo, descricao: meta.descricao, prazo, progressoPct });
+      await apiClient.put(`/admin/metas/${meta.id}`, {
+        titulo, descricao: meta.descricao, prazo, progressoPct: Number(progressoPct) || 0,
+      });
       onSalvo();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível salvar a meta.'));
@@ -183,7 +189,7 @@ function MetaEditRow({ meta, onSalvo, onCancelar }: {
         max={100}
         aria-label={`Progresso de ${meta.titulo}`}
         value={progressoPct}
-        onChange={(e) => setProgressoPct(Number(e.target.value))}
+        onChange={(e) => setProgressoPct(e.target.value)}
       />
       <div />
       <div style={{ display: 'flex', gap: 6, flexDirection: 'column' }}>
