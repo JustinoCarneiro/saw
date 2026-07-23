@@ -54,9 +54,13 @@ grande área de fundo. Vinho para faixas de marca e o hero de login. Fundo sempr
 - Transições suaves (150–250ms, `cubic-bezier(.2,.7,.2,1)`); respeitar `prefers-reduced-motion`.
 
 ## 6. Responsividade
-- **Desktop:** sidebar fixa + conteúdo em grid (cards bento).
-- **≤900px:** sidebar vira drawer (hambúrguer); grids colapsam para 1–2 colunas.
-- **Mobile:** cards empilhados, tabelas viram listas/cards roláveis. Áreas de toque ≥ 44px.
+> **Fora do MVP** (cliente confirmou em reunião 07/07/2026, ver CLAUDE.md § Princípios) — o
+> comportamento abaixo é a intenção de design pra quando mobile virar requisito pós-MVP, mas
+> **não foi implementado**: hoje não existe nenhum `@media query` no CSS do frontend. O que se
+> pede por enquanto é só não fechar portas (evitar larguras fixas absurdas), não construir isto.
+- **Desktop:** sidebar fixa + conteúdo em grid (cards bento). É o único breakpoint que existe hoje.
+- **≤900px (planejado, não implementado):** sidebar vira drawer (hambúrguer); grids colapsam para 1–2 colunas.
+- **Mobile (planejado, não implementado):** cards empilhados, tabelas viram listas/cards roláveis. Áreas de toque ≥ 44px.
 
 ## 7. Acessibilidade (AA no dark)
 - Texto `--text` sobre `--bg`/`--surface`: contraste AA. Dourado sobre near-black para destaque, mas

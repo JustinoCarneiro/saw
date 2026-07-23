@@ -72,6 +72,16 @@ cobrem uma camada de proteção em repouso nesse meio-tempo.
 
 ## Modelagem de banco (M04 · E14)
 
+> **Superado em 2 pontos, mantido como registro histórico do Blueprint original:**
+> 1. **M26 (19/07/2026)** fundiu `conta_pagar_receber` em `lancamento_financeiro` — a tabela/entidade
+>    `conta_pagar_receber` abaixo **não existe mais**; os campos de vencimento/pagamento viraram
+>    colunas nullable de `lancamento_financeiro` (`data_vencimento`, `data_pagamento`, `valor_pago`),
+>    e o status ganhou um 3º valor: `PREVISTO → PARCIAL → REALIZADO` (desvio `VENCIDO`), ver
+>    `LancamentoFinanceiro.java`.
+> 2. **M28 (21/07/2026)** removeu `Plano` do sistema por completo — a coluna `plano_referencia`
+>    abaixo não existe mais; venda hoje é por `TipoContrato`/`ProdutoVenda` (ver CLAUDE.md §
+>    Produtos & Tipo de Contrato), sem cobrança recorrente por tier.
+
 ```sql
 CREATE TABLE categoria_financeira (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -130,6 +140,12 @@ projeto): roda diariamente, marca `PENDENTE → VENCIDO` toda `conta_pagar_receb
 `data_vencimento < hoje` e `status = PENDENTE`.
 
 ## Contratos de API (M04 · E14)
+
+> **Superado:** os contratos abaixo são o Blueprint original do M04. Desde o M26, `POST/GET
+> /contas` e `PATCH /contas/{id}/liquidar` **não existem mais** — foram absorvidos por
+> `/api/v1/admin/financeiro/lancamentos` (mesma tabela unificada, ver nota na Modelagem de banco
+> acima); `planoReferencia` também não existe mais (M28). Contrato atual real: ver
+> `LancamentoController.java`/`CriarLancamentoRequest.java`.
 
 Todas as rotas sob `/api/v1/admin/financeiro/**`, `@RequiresModulo(Modulo.FINANCEIRO)` — e é aqui
 que entra o item M4 da revisão de segurança: **default-deny explícito no filter chain** por rota
@@ -224,7 +240,9 @@ Resposta: `ContaResponse[]` — `{ id, tipo, descricao, valor, dataVencimento, d
 
 **Por que Grande:**
 - **Complexidade:** funil de vendas com máquina de estado própria (`Lead comercial` do `CLAUDE.md`:
-  `Solicitação → Em contato → Proposta → Fechado` · desvio `→ Perdido`), dashboard cruzando dado
+  `Solicitação → Em contato → Proposta → Fechado` · desvio `→ Perdido` — **atualização M25:** ganhou
+  o status opcional `Diagnóstico` entre "Em contato" e "Proposta", ver CLAUDE.md § Máquinas de
+  estado), dashboard cruzando dado
   próprio (leads) com dado de outro módulo (MRR/vendas da loja, já calculados no Financeiro), e
   metas/ranking por vendedor.
 - **Risco não listado no `CLAUDE.md` mas real:** este módulo introduz o **primeiro endpoint público
@@ -279,6 +297,11 @@ pra pegar antes da Fase 5.
 
 ## Modelagem de banco (M05 · E13)
 
+> **Superado (M28, 21/07/2026):** `plano_interesse`/`plano_fechado` abaixo **não existem mais** —
+> `Plano` (Gratuito/Básico/Essencial/Profissional) foi removido do sistema por completo. O Lead real
+> hoje referencia `ProdutoVenda` (catálogo do Comercial), não mais um enum de plano por tier — ver
+> CLAUDE.md § Produtos & Tipo de Contrato e `Lead.java`/`ProdutoVenda.java`.
+
 ```sql
 -- Máquina de estado (CLAUDE.md): Solicitação -> Em contato -> Proposta -> Fechado | desvio: -> Perdido
 CREATE TABLE lead (
@@ -326,6 +349,9 @@ consequência esperada da ordem de construção, não um bug (mesmo caso do E17 
 antes do E4 completo).
 
 ## Contratos de API (M05 · E13)
+
+> **Superado (M28):** `planoInteresse` nos contratos abaixo não existe mais no request/response
+> real — substituído por `produtoVenda` (`ProdutoVenda`), sem gating por tier.
 
 ### `POST /api/v1/leads` — público, `permitAll()` (fecha H1.3)
 ```jsonc
@@ -383,8 +409,9 @@ Transições válidas idênticas à máquina de estado do `CLAUDE.md`; inválida
 ### `GET /api/v1/admin/comercial/vendedores`
 Endpoint auxiliar, não previsto no Blueprint original — surgiu na construção do frontend: o
 seletor de vendedor da tela de funil (mover lead pra Em contato) precisa listar colaboradores da
-área Comercial, e `TeamController` (`/admin/team`) é gated por `Modulo.TIME` (só Fundador), então
-uma área Comercial não-Fundador não conseguiria montar esse dropdown por ali. Mesmo padrão do
+área Comercial, e `TeamController` (`/admin/team`) é gated por `Modulo.TIME` (só Admin — "Fundador"
+no rename anterior a 15/07/2026, ver `Area.java`), então uma área Comercial não-Admin não
+conseguiria montar esse dropdown por ali. Mesmo padrão do
 `CategoriaFinanceiraController` do M04 (só leitura, repositório injetado direto no controller).
 ```jsonc
 [{ "id": "uuid", "nome": "Paula Mendes" }]
@@ -564,6 +591,9 @@ CREATE TABLE ata_encaminhamento_sugerido (
 -- Nullable de propósito: encaminhamentos já existentes (seed/E4 manual) não têm mentoria de origem.
 ALTER TABLE encaminhamento ADD COLUMN mentoria_id UUID REFERENCES mentoria(id);
 
+-- Superado (M28, 21/07/2026): `plano_minimo` abaixo não existe mais — `Plano` foi removido do
+-- sistema por completo, `Conteudo` não tem gating por tier hoje. Ver CLAUDE.md § Produtos & Tipo
+-- de Contrato.
 CREATE TABLE conteudo (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     titulo          VARCHAR(255) NOT NULL,
@@ -1127,8 +1157,8 @@ a correção acima. Sem pendência de credencial externa.
 
 **Decisões de escopo & Suposições assumidas:**
 - **Categorias (H6.1):** O `spec.md` cita filtro por "categoria e formato", mas `Conteudo` tem apenas `tipo` (formato: VIDEO, DOCUMENTO, etc.), sem coluna de categoria temática (Vendas, Gestão etc.) — filtro implementado só por `tipo`. Se a SAW pedir categorização temática, entra como coluna nova depois.
-- **Controle de acesso por plano reaproveita o padrão do M08:** `planosPermitidos()` compara `Plano.ordinal()` (mesma técnica, e o mesmo aviso, do `dicaDestaque` do M08 — funciona porque a ordem declarada do enum já é a hierarquia de negócio, mas é frágil a reordenar `Plano.java`).
-- **Indicadores de consumo (H6.3) — pendência real, não só suposição:** a história pede "o consumo conta nos meus indicadores (dias assistidos, minutos, favoritas)". O que existe hoje é só o toggle `assistido`/`favorito` por item (`ConteudoMentorado.dataConsumo` grava a data na 1ª vez que é marcado assistido) — **não existe nenhum endpoint ou tela agregando esses dados num "indicador"** (nem contagem de dias assistidos, nem minutos, nem um resumo de favoritas). Diferente das Suposições acima (decisões conscientes), isto é um pedaço da história não implementado — ver Status abaixo.
+- **Controle de acesso por plano** *(superado — M28, 21/07/2026: `Plano` foi removido do sistema por completo; `Conteudo` não tem mais gating por tier hoje)*: `planosPermitidos()` comparava `Plano.ordinal()` (mesma técnica, e o mesmo aviso, do `dicaDestaque` do M08).
+- ~~**Indicadores de consumo (H6.3) — pendência real, não só suposição**~~ — **resolvido** (commit `a16106e`, M15/E9): existe hoje `GET /mentorado/conteudos/indicadores` (`ConteudoMentoradoController.indicadores`/`ConteudoMentoradoService.indicadoresConsumo`), agregando dias assistidos, minutos e favoritas — a lacuna descrita abaixo não existe mais.
 
 ## Modelagem de banco (M11)
 
@@ -1156,12 +1186,15 @@ ALTER TABLE conteudo_mentorado ADD COLUMN versao BIGINT NOT NULL DEFAULT 0;
 
 ## Contratos de API (M11)
 
+> **Superado (M28):** `planoMinimo` no contrato abaixo não existe mais — `Plano` foi removido do
+> sistema, `Conteudo` não filtra mais por plano do mentorado.
+
 ```jsonc
-// hasRole("MENTORADO") — traz catálogo filtrado por planoMinimo <= plano do mentorado
+// hasRole("MENTORADO") — catálogo completo (sem gating por plano desde o M28)
 GET /api/v1/mentorado/conteudos?tipo=&favorito=
 [{
   "id": "uuid", "titulo": "Ficha Técnica Completa", "tipo": "PLANILHA", "url": "https://...",
-  "planoMinimo": "BASICO", "publicado": true, "criadoEm": "2026-06-01T12:00:00Z",
+  "publicado": true, "criadoEm": "2026-06-01T12:00:00Z",
   "favorito": true, "assistido": false
 }]
 
@@ -1173,9 +1206,7 @@ PATCH /api/v1/mentorado/conteudos/{id}/favorito
 
 PATCH /api/v1/mentorado/conteudos/{id}/assistido   // 1ª vez marcando true grava data_consumo
 { "assistido": true }
-// 404 se o conteúdo não existe; 403 se o plano do mentorado não permite (AccessDeniedException,
-// não IllegalStateException — achado nesta verificação, corrigido pra bater com o padrão já
-// usado em GlobalExceptionHandler pro resto do projeto)
+// 404 se o conteúdo não existe
 ```
 
 ## Rastreabilidade história ↔ módulo (M11)
@@ -2220,8 +2251,9 @@ endpoint. Hoje os únicos colaboradores existentes vêm do `DemoDataSeeder`, nã
 tela. Este módulo é puramente frontend — nenhuma mudança de backend.
 
 **BDD do `spec.md` (H15.1):** "Dado um colaborador novo, quando defino sua área (Comercial /
-Marketing / Gestão de Performance / Fundador), então o sistema aplica automaticamente as
-permissões daquela área." — a aplicação automática de permissões por área já é garantida pelo
+Marketing / Gestão de Performance / Admin), então o sistema aplica automaticamente as
+permissões daquela área." (spec.md dizia "Fundador" antes do rename de 15/07/2026, ver `Area.java`)
+— a aplicação automática de permissões por área já é garantida pelo
 `AreaModuloMatrix` existente (não depende de nada novo aqui), só falta o caminho de criação.
 
 **Suposição:** senha do novo colaborador é definida pelo próprio Admin no formulário (campo
@@ -2360,7 +2392,8 @@ meta/realizado/pct corretos)) + frontend (`TeamPage.tsx` — carteira real na ta
 "Conversões" removida, novo card "Desempenho do Time" com `PeriodoPicker`) + E2E (`team.spec.ts`
 +1 teste, `rbac.spec.ts` +1 teste para Marketing) — 75/75 verde na suíte completa.**
 
-Verificado ao vivo via curl como Fundador: `GET /admin/team` mostra carteira real computada (Lucas
+Verificado ao vivo via curl como Admin ("Fundador" era o nome do valor do enum antes do rename de
+15/07/2026, ver `Area.java`): `GET /admin/team` mostra carteira real computada (Lucas
 Alves 29→30 mentorados distintos conforme mentorias reais foram criadas por outros specs da suíte,
 Ricardo Costa 4 — nada mais parecido com os valores fixos 38/42 que o seeder escrevia antes),
 `GET /admin/team/desempenho?ano=2026&mes=7` mostra `mentoriasRealizadas` correto por mentor e
@@ -2887,14 +2920,14 @@ nasceria em branco, sobrescrevendo silenciosamente o que a Leia já tivesse pree
 **Verificado ao vivo** (sem browser automation neste ambiente — verificado via `curl` replicando
 exatamente o que o `apiClient`/axios do frontend faz, incluindo o header CSRF
 `X-XSRF-TOKEN`/cookie `XSRF-TOKEN` que o Spring Security exige em todo POST/PATCH): login como
-Fundador → `POST .../direto` cria mentorado + retorna senha → `PATCH .../dados-contrato` grava e
+Admin ("Fundador" antes do rename de 15/07/2026) → `POST .../direto` cria mentorado + retorna senha → `PATCH .../dados-contrato` grava e
 `vencimentoContrato` sai calculado certo (`2027-07-17` a partir de `2026-07-17` +
 `MENTORIA_CONTINUA`) → `GET`/`PATCH .../diagnostico-inicial` upsert funcionando. RBAC confirmado
 na marra: login como Lucas Alves (Gestão de Performance) recebe 403 em `/direto` e
 `/dados-contrato` ("Você não tem acesso a este módulo"), mas 200 em `/diagnostico-inicial` —
 exatamente o corte pretendido pelo achado do `revisor-seguranca`.
 
-**E2E Playwright concluído** — `mentorados-contrato-m23.spec.ts` (2 testes novos): Fundador cria
+**E2E Playwright concluído** — `mentorados-contrato-m23.spec.ts` (2 testes novos): Admin cria
 mentorado direto + edita dados de contrato (confirma persistência reabrindo a tela, não só o
 estado local do form); Gestão de Performance preenche o Diagnóstico Inicial e confirma que não vê
 "Dados de contrato" nem o botão "Criar mentorado direto". **Achado real durante a escrita do
@@ -2942,7 +2975,7 @@ pausado (`AREA_MENTORADO_PAUSADA`), não regressão desta leva. Testado também 
 conteúdo com `Content-Disposition: attachment`.
 
 **Pendência registrada, não implementada** (achado ao longo do fechamento, não bloqueia): "Criar
-mentorado direto" e "Dados de contrato" hoje só são alcançáveis pelo Fundador/ADMIN na prática —
+mentorado direto" e "Dados de contrato" hoje só são alcançáveis pelo Admin na prática —
 `Area.COMERCIAL` sozinha não tem `Modulo.MENTORADOS`, então não abre `/admin/mentorados/lista`
 pra sequer ver o botão. Não é bug (a segurança está correta: ninguém sem permissão vê dado
 sensível), mas pode ser mais restritivo do que o Victor imaginava ao pedir a feature — vale
@@ -3640,14 +3673,14 @@ métrica de comparação entre módulos, não uma promessa de calendário.
 | 2 | E13 · Comercial & Vendas | Grande | 6d + ~1d (H1.3) | ✅ Concluído — backend (90/90 testes) + `revisor-seguranca` (M1/M2/L2/L3 corrigidos) + frontend (dashboard/funil/ranking) + E2E (17/17, `comercial.spec.ts`) |
 | 3 | E11 · Gestão Admin (mentorias ind./grupo, curadoria, eventos) + E5 · Mentorias & Atas (lado Admin) + **diferencial de IA** (transcrição de áudio → rascunho de ata) | Grande | 6d + ~2-3d da integração de IA | ✅ Concluído — backend (137/137 testes) + `revisor-seguranca` (1 alto/2 médios/1 baixo corrigidos) + frontend (mentorados/mentorias/ata/conteúdos/eventos) + E2E (21/21, `mentorados.spec.ts`). Pipeline de IA verificado até a borda (falha limpa sem `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`) — validar com chaves reais antes da demo. H5.1-H5.3 (Mentorias) e H7.1-H7.3 (Eventos) são histórias do mentorado (não do Admin) — dado/CRUD pronto aqui, tela deferida pra quando os módulos do mentorado entrassem no pipeline; ver linha 9 (M12) e linha 10 (M13) |
 | 4 | Google OAuth (fast-follow do E1) | Pequeno | 1.5d | ✅ Concluído — backend (141/141 testes) + `revisor-seguranca` (2 achados corrigidos: oráculo de enumeração de contas + nota pendurada) + frontend (botão condicional + tradução de erro) + E2E (24/24, `google-oauth.spec.ts`). Fluxo real (redirect→consentimento→callback) verificado só até a borda — sem app Google Cloud Console configurado neste ambiente |
-| 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ✅ Concluído — backend (152/152 testes) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado) + frontend (primeira rota `/mentorado` de verdade) + E2E (29/29, `dashboard-mentorado.spec.ts`) |
-| 6 | E3 · Metas Estratégicas | Médio | 3.5d | ✅ Concluído — backend (165/165 testes, 1ª entidade nova desde o M06) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado nos caminhos de escrita) + frontend (`MetasPage` self-service) + E2E (32/32, `metas.spec.ts`) |
-| 7 | E4 · Tarefas & Agenda | Médio | 3.5d | ✅ Concluído — backend (178/178 testes) + `revisor-seguranca` (sem achado bloqueante: peso do ranking protegido, isolamento Tarefa→Meta confirmado, migração idempotente, máquina de estado com guardas, JPQL seguro) + frontend (`TarefasPage` self-service) + E2E (35/35, `tarefas.spec.ts`) |
-| 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ✅ Concluído — backend (183/183 testes) + `revisor-seguranca` (4 achados corrigidos: reverse tabnabbing, `Plano.ordinal()` duplicado, corrida de criação concorrente, `url` sem validação de esquema) + frontend (`MateriaisPage`) + E2E (38/38, `materiais.spec.ts`). Indicadores agregados de consumo (H6.3) não implementados — pendência real |
-| 9 | E5 · Mentorias & Atas (lado mentorado) | Médio | 4d | ✅ Concluído — backend (213/213 testes) + `revisor-seguranca` (2 achados corrigidos: injeção de CR solto no .ics, `linkOnline` sem validação de esquema) + frontend (`MentoriasPage`) + E2E (42/42, `mentorias.spec.ts`). Fecha H5.1-H5.3, deferidas desde o M06. Achado ao vivo: `LazyInitializationException` na listagem Admin, corrigido. Pendência: UI de curadoria de materiais recomendados no Admin (endpoint existe, tela não) |
-| 10 | E7 · Eventos & Inscrições (lado mentorado) | Médio | 4.5d | ✅ Concluído — backend (226/226 testes) + `revisor-seguranca` (sem achado bloqueante — primeira revisão limpa desde M08-M10) + frontend (`EventosMentoradoPage`, calendário próprio) + E2E (46/46, `eventos.spec.ts`). Fecha H7.1-H7.3, deferidas desde o M06. Nova entidade `InscricaoEvento` com corrida de última vaga protegida por `@Version`. Pendência: janela de corrida rara em `marcarParticipacoes` (baixo impacto) |
-| 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ✅ Concluído — backend (270/270 testes) + `revisor-seguranca` obrigatório (Seguro — 2 achados de hardening corrigidos: teto de quantidade, janela de frescor da assinatura do webhook) + frontend (`LojaPage`, `ProdutosPage`/`PedidosPage` Admin) + E2E (52/52, `loja.spec.ts`). Gateway Mercado Pago (Checkout Pro), sem credencial neste ambiente — verificado só até a borda, validar contra sandbox real antes de produção |
-| 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ✅ Concluído — backend (280/280 testes) + `revisor-seguranca` (sem achado bloqueante — quarta revisão limpa da esteira) + frontend (`PerfilPage`) + E2E (57/57, `perfil.spec.ts`). XP/nível/conquistas calculados por leitura, sem persistência (ver Blueprint) — pendência real: sem data de desbloqueio de conquista, sem histórico de XP. Achado e corrigido: gap entre o Blueprint (vencimentoPlano via admin) e a implementação inicial (nunca fazia isso) |
+| 5 | E2 · Dashboard do Mentorado | Médio | 3.5d | ✅ Concluído · **pausado desde 17/07/2026** (`AREA_MENTORADO_PAUSADA`, ver CLAUDE.md § Épicos) — backend (152/152 testes) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado) + frontend (primeira rota `/mentorado` de verdade) + E2E (29/29, `dashboard-mentorado.spec.ts`) |
+| 6 | E3 · Metas Estratégicas | Médio | 3.5d | ✅ Concluído · **pausado desde 17/07/2026** (`AREA_MENTORADO_PAUSADA`) — backend (165/165 testes, 1ª entidade nova desde o M06) + `revisor-seguranca` (sem achado bloqueante, isolamento por tenant confirmado nos caminhos de escrita) + frontend (`MetasPage` self-service) + E2E (32/32, `metas.spec.ts`) |
+| 7 | E4 · Tarefas & Agenda | Médio | 3.5d | ✅ Concluído · **pausado desde 17/07/2026** (`AREA_MENTORADO_PAUSADA`) — backend (178/178 testes) + `revisor-seguranca` (sem achado bloqueante: peso do ranking protegido, isolamento Tarefa→Meta confirmado, migração idempotente, máquina de estado com guardas, JPQL seguro) + frontend (`TarefasPage` self-service) + E2E (35/35, `tarefas.spec.ts`) |
+| 8 | E6 · Materiais & Dicas do Brayan | Médio | 3.5d | ✅ Concluído · **pausado desde 17/07/2026** (`AREA_MENTORADO_PAUSADA`) — backend (183/183 testes) + `revisor-seguranca` (4 achados corrigidos: reverse tabnabbing, `Plano.ordinal()` duplicado, corrida de criação concorrente, `url` sem validação de esquema) + frontend (`MateriaisPage`) + E2E (38/38, `materiais.spec.ts`). Indicadores agregados de consumo (H6.3): resolvido depois no M15/E9 (commit `a16106e`), ver `GET /mentorado/conteudos/indicadores` |
+| 9 | E5 · Mentorias & Atas (lado mentorado) | Médio | 4d | ✅ Concluído · **pausado desde 17/07/2026** (`AREA_MENTORADO_PAUSADA`) — backend (213/213 testes) + `revisor-seguranca` (2 achados corrigidos: injeção de CR solto no .ics, `linkOnline` sem validação de esquema) + frontend (`MentoriasPage`) + E2E (42/42, `mentorias.spec.ts`). Fecha H5.1-H5.3, deferidas desde o M06. Achado ao vivo: `LazyInitializationException` na listagem Admin, corrigido. Pendência: UI de curadoria de materiais recomendados no Admin (endpoint existe, tela não) |
+| 10 | E7 · Eventos & Inscrições (lado mentorado) | Médio | 4.5d | ✅ Concluído · **pausado desde 17/07/2026** (`AREA_MENTORADO_PAUSADA`) — backend (226/226 testes) + `revisor-seguranca` (sem achado bloqueante — primeira revisão limpa desde M08-M10) + frontend (`EventosMentoradoPage`, calendário próprio) + E2E (46/46, `eventos.spec.ts`). Fecha H7.1-H7.3, deferidas desde o M06. Nova entidade `InscricaoEvento` com corrida de última vaga protegida por `@Version`. Pendência: janela de corrida rara em `marcarParticipacoes` (baixo impacto) |
+| 11 | E8 · Loja SAW (catálogo, carrinho, checkout, gateway) | Grande · risco alto | 6d | ✅ Concluído · **pausado desde 17/07/2026** (`LOJA_ADMIN_PAUSADA`/`AREA_MENTORADO_PAUSADA`) — backend (270/270 testes) + `revisor-seguranca` obrigatório (Seguro — 2 achados de hardening corrigidos: teto de quantidade, janela de frescor da assinatura do webhook) + frontend (`LojaPage`, `ProdutosPage`/`PedidosPage` Admin) + E2E (52/52, `loja.spec.ts`). Gateway Mercado Pago (Checkout Pro), sem credencial neste ambiente — verificado só até a borda, validar contra sandbox real antes de produção |
+| 12 | E9 · Perfil & Gamificação | Médio | 3.5d | ✅ Concluído · **pausado desde 17/07/2026** (`AREA_MENTORADO_PAUSADA`) — backend (280/280 testes) + `revisor-seguranca` (sem achado bloqueante — quarta revisão limpa da esteira) + frontend (`PerfilPage`) + E2E (57/57, `perfil.spec.ts`). XP/nível/conquistas calculados por leitura, sem persistência (ver Blueprint) — pendência real: sem data de desbloqueio de conquista, sem histórico de XP. Achado e corrigido: gap entre o Blueprint (vencimentoPlano via admin) e a implementação inicial (nunca fazia isso) |
 | 13 | E10 · Painel Administrativo & Métricas (parte além do E17, já pronto) | Médio | 3.5d | ✅ Concluído — backend (290/290 testes) + `revisor-seguranca` (sem achado bloqueante — quinta revisão limpa da esteira) + frontend (`DashboardAdminPage`, substitui o placeholder que ocupava `/admin/dashboard`) + E2E (59/59, `dashboard-admin.spec.ts`). Refatoração proativa: `variacaoPct` (duplicado em E13/E14) centralizado em `VariacaoCalculator` antes do código novo. Pendência: "atividades recentes" só cobre eventos de criação, sem histórico de transição de status |
 | 14 | E16 · Avisos & Notificações (transversal) | Pequeno | 1.5d | ✅ Concluído — backend (300/300 testes) + `revisor-seguranca` (sem achado bloqueante — sexta revisão limpa da esteira) + frontend (sino + `AvisosPage` + `AvisosAdminPage`) + E2E (66/66, `avisos.spec.ts`). Fecha o gap do `avisos` do Dashboard (M08). RBAC reaproveita `Modulo.CONTEUDOS`. Pendência: sem edição/exclusão de aviso nesta leva. Último módulo do pipeline original — MVP completo naquele ponto, ver M18/M19 abaixo (fast-follows achados numa auditoria de cobertura pós-MVP) |
 | 15 | H1.4 · Recuperar senha (fast-follow de E1, achado em auditoria pós-MVP) | — | — | ✅ Concluído — backend (311/311 testes) + `revisor-seguranca` **obrigatório** (achado corrigido: falta de try/catch no envio de e-mail criava oráculo de enumeração de contas) + frontend (`EsqueciSenhaPage`, `RedefinirSenhaPage`) + E2E (73/73, `esqueci-senha.spec.ts`). Verificado ao vivo ponta a ponta com token real (solicitação → log → redefinição → login). Sem SMTP configurado neste ambiente — e-mail logado em WARN, mesma classe de pendência do M06/M07/M14 |
@@ -3677,6 +3710,8 @@ Import único de mentorados (A) · lista de seleção vertical (B) · página de
 | 25 | M29 · Financeiro/Comercial — auditoria dos itens "não conectados" do change request de 17/07/2026 (Pix Recorrente→MRR, taxa de plataforma→DRE, DRE detalhado por categoria, import de vendas de ingresso históricas, Caixa do mês, Transferências entre contas) — pedido do Marcos ao revisar o estado real do E13/E14 contra `docs/reuniao-2026-07-17-atualizacoes.md` (22/07/2026) | Grande | ~3d | ✅ **Concluído (22/07/2026)** — auditoria prévia (agente Explore) confirmou que 6 itens do change request tinham o campo/dado gravado mas nunca chegavam a afetar nenhum cálculo; escolha de escopo validada com o Marcos via `AskUserQuestion` antes de implementar (os 6 itens explicitamente pedidos + 2 conceitos novos — caixa por banco e transferências — que só tinham aparecido como estrutura observada na planilha real, não pedido explícito). **1. Pix Recorrente→MRR**: `LancamentoFinanceiro` ganhou `pagamentoRecorrente` (boolean solto, não referencia `comercial.FormaPagamento` — evitaria ciclo de pacote); `RelatorioFinanceiroService.somaMrr` passa a somar `OrigemReceita.ASSINATURA` OU `pagamentoRecorrente=true` (filtro OR sobre a mesma lista, sem dupla contagem). **2. Taxa de plataforma→DRE**: `LeadService.criarLancamentoValorPagoNoAto` agora lança a Receita Bruta como `valorPagoNoAto + taxaPlataformaRetida` (antes só o líquido) e, quando há taxa, um 2º lançamento de DESPESA/DEDUCOES separado ("Taxas de Plataforma de Pagamento", categoria nova via `V50`) — Receita Líquida do DRE passa a bater com o que a SAW recebeu de fato. **3. DRE detalhado por categoria**: `DreResponse` ganhou `receitaPorCategoria`/`despesaPorCategoria` (`CategoriaValor[]`, agrupado por `CategoriaFinanceira.nome` — deliberadamente não pelo campo `grupo`, que segue sem seed em massa por decisão anterior do E14, "não é classificação pra inventar"); categoria "Patrocínio" (`V50`) fecha o último bucket de receita confirmado na planilha real sem CategoriaFinanceira correspondente. **4/5. Caixa do mês + Transferências** (conceito novo, não pedido explícito — confirmado com o Marcos antes de construir): 3 entidades novas (`ContaBancaria`, `PosicaoCaixaMensal` upsert por conta+ano+mês, `TransferenciaBancaria`, nenhuma delas entra no DRE), `V51` (schema + seed de Itaú/Infinity Pay, as 2 contas reais confirmadas na planilha), `CaixaController` (`/admin/financeiro/{contas-bancarias,caixa,transferencias}`). **6. Import de vendas de ingresso históricas**: `VendaIngressoCsvService` novo (`POST /admin/comercial/eventos/{eventoId}/ingressos/import`, `eventoId` é path param — uma aba por evento na planilha real, não coluna do CSV), `Lead.criarFechadoParaImportacaoIngresso` (nasce FECHADO, mesmo padrão de `criarJaFechado` do M23); escopo deliberadamente estrutural — não cria `LancamentoFinanceiro` (evita duplicar receita se o Admin já importou o total daqueles meses via `LancamentoCsvService`) nem chama `Evento.ocuparVaga()` (capacidade retroativa não faz sentido pra evento já realizado). Endpoint irmão `GET /eventos/historico` (oposto de `eventosParaVenda()` — lista só `StatusEvento.REALIZADO`). Migrations `V49`-`V51`. 564/564 testes backend passam (1 falha pré-existente e não-relacionada em `LancamentoFinanceiroRepositoryTest`, causada por dado de dev acumulado em agosto/2026 sem evento, confirmada via query direta no Postgres antes de descartar como regressão), `tsc -b` limpo, `npm run build` limpo, `oxlint` sem erro novo. `revisor-seguranca`: 2 achados na primeira rodada, ambos corrigidos e testados — médio (DoS por amplificação: `quantidadeIngressos` do CSV sem teto virava capacidade de `ArrayList`, `QUANTIDADE_MAXIMA=500` adicionado) e baixo (path CSV de venda de ingresso sem os mesmos limites de tamanho do path JSON `VendaIngressoRequest`, `CsvUtils.exigirTamanhoMaximo` adicionado em email/telefone/nomeEmpresa); RBAC, isolamento de tenant, SQL/JPQL injection, CSV injection, corrida em `CaixaMensalService.registrarPosicao`, cálculo de Receita Bruta/MRR e pgcrypto revisados sem achado. Frontend: `DrePage.tsx` ganhou 2 gráficos de barra (receita/despesa por categoria, mesmo estilo de `DashboardFaturamentoPage.composicaoList`); `CaixaPage.tsx` novo (aba "Caixa" no `FinanceiroShell`) — CRUD de conta bancária, registrar posição mensal, KPIs de caixa inicial/final/variação, transferências com filtro de período; `DashboardComercialPage.tsx` ganhou o widget "Importar histórico de vendas de ingresso" (seletor de evento realizado + upload CSV, sem `exportUrl` — não reaproveita `CsvImportExport` porque não existe export equivalente). E2E: `caixa.spec.ts` novo (2/2 — cadastro de conta + posição mensal, transferência entre contas), `comercial.spec.ts` ganhou o cenário de import histórico (1/1), `financeiro.spec.ts` estendido pra cobrir os 2 gráficos novos do DRE — suíte completa (17 specs de `financeiro`/`caixa`/`comercial`) rodada contra a stack E2E isolada (`e2e-up.sh`, Postgres real, migrations `V49`-`V51` aplicadas): **17/17 verde**. `docs/spec.md` segue desatualizado pro escopo completo do change request de 17/07/2026 (H13.x/H14.x ainda refletem só o MVP original) — dívida de documentação registrada, não bloqueou esta leva. Não commitado ainda — mesmo fluxo de sempre (implementar → testar → apresentar → só commitar com confirmação explícita do Marcos).
 
 **Fast-follow, mesmo dia (22/07/2026)** — Marcos, revisando a tela real, perguntou se "Despesa por categoria" batia com a planilha; resposta honesta foi "só parcialmente" (mostrava as poucas categorias do seed de demo, não a "Categoria" real de 7 valores da planilha — Estrutura/Eventos/Financeiro-Jurídico/Marketing/Operação/Outros/Pessoas — nem as 48 subcategorias confirmadas no raio-x, porque o campo `grupo` nunca tinha sido populado em massa por decisão anterior do E14). Marcos escolheu popular agora (`V52__categoria_financeira_subcategorias_reais.sql`): as 48 subcategorias reais viram `CategoriaFinanceira` (DESPESA, `grupo_dre=DESPESA_OPERACIONAL` — Custos x Despesa Operacional é classificação de DRE de verdade, mantido sem inventar; `natureza` fica NULL, mesmo critério), cada uma com `grupo` atribuído por classificação semântica do nome (não é dado extraído linha a linha da planilha — o raio-x capturou valores distintos por coluna, não o join subcategoria→categoria — documentado explicitamente no comentário da migration, editável livremente depois). `RelatorioFinanceiroService.somaDespesaPorGrupo` (nova) substitui a agregação por subcategoria: `despesaPorCategoria` do DRE agora agrupa por `categoria.grupo` (cai pro nome da própria categoria quando `grupo` está vazio, nunca some do gráfico). **Achado ao vivo, corrigido antes de virar bug em produção**: a primeira versão da migration tentava um `UPDATE ... WHERE nome = 'Infraestrutura'` pra dar `grupo` às categorias já seedadas pelo `DemoDataSeeder` — funcionou no dev local só porque o seed já tinha rodado ANTES da migration existir; num ambiente novo (E2E, produção) `DemoDataSeeder` roda DEPOIS de toda migration, então esse UPDATE seria um no-op silencioso. Corrigido movendo o `grupo` pra dentro do próprio `DemoDataSeeder.seedFinanceiro()` (construtor de 6 args), mantendo o UPDATE só como rede de segurança pro banco já seedado. **Segundo achado ao vivo**: editar `V52` depois dela já ter rodado contra o dev DB (durante a correção acima) quebrou o checksum do Flyway, derrubando o `ApplicationContext` de TODO `@DataJpaTest`/`@SpringBootTest` (41 erros, mesma classe de bug já documentada nas lições do M11) — corrigido apagando a linha de `flyway_schema_history` pra V52 (SQL idempotente, seguro re-rodar) já que a migration nunca saiu do ambiente local/não commitado. 565/565 testes backend (mesma 1 falha pré-existente já discontada). Backend de dev reiniciado 2x nesta leva pra carregar o código novo (sem hot-reload real, achado já conhecido desde o M28) — confirmado ao vivo via query direta no Postgres que os 54 nomes de categoria de despesa caem exatamente nos 7 buckets reais.
+
+| 26 | M30 · Financeiro/Comercial/Time — forma de pagamento em lançamentos, filtro por subcategoria, comissão por vendedor restrita ao Admin, pagamento de colaborador, correção de segurança (change request pós-MVP + auditoria, 22/07/2026) | Médio | ~2d | ✅ **Concluído (22/07/2026)** — `daae75f`/`6b02865`/`d4ba57a`/`1259eb8`/`116b097`/`b5701b3`. **Forma de pagamento** (`V53`): `LancamentoFinanceiro.formaPagamento` (Pix/Pix Recorrente/Cartão/Boleto/Hotmart), com filtro na tela de Lançamentos e no formulário de criação. **Composição da receita** no Dashboard corrigida pra mostrar todas as categorias reais de venda (antes algumas ficavam escondidas mesmo com venda registrada). **Resultado por evento** no Dashboard Financeiro (receita − despesa por evento realizado). **Resumo por área clicável** no Dashboard Administrativo (Comercial/Financeiro/Caixa/Conciliação, 4 cards com navegação direta). **Filtro por subcategoria** em Lançamentos. **Meta comercial ganhou % de comissão** (`V54`, `MetaComercial.percentualComissao`), botão "Ver Vendas" no Ranking com detalhamento e comissão calculada — **depois restrito ao Admin** (backend: `ComercialController.definirMeta` rejeita quem não é `Area.ADMIN`; frontend: botão "+ Definir meta" escondido pra não-Admin) porque o vendedor não deveria definir a própria meta/comissão. **"Novo pagamento" de colaborador** em Gestão de Time — Admin escolhe qualquer colaborador + tipo (Salário/13º/Comissão/Outro) + valor + subcategoria, gera `LancamentoFinanceiro` com descrição padronizada (nome + período), reaproveitando os endpoints existentes de Time/Financeiro sem introduzir dependência nova de pacote. **Encaminhamentos editáveis pelo Admin** (H4.6). **Achado de segurança corrigido** (`d4ba57a`): painel de "acesso rápido (demo)" atrás de `?demo=1` em `LoginPage.tsx` tinha um botão com credencial real hardcoded (e-mail pessoal + senha) — removido por completo; senha antiga permanece em commits antigos do histórico, rotação separada pendente. **Seed de demo corrigido** (`1259eb8`): categorias fabricadas removidas, usa só as reais da planilha. Suíte backend (600/600), frontend `tsc`/build/lint limpos, E2E de Comercial/Time/Financeiro/RBAC verificados numa stack isolada resetada. |
 
 **Total restante (peso somado): ≈ 60 dias de engenharia** (MVP original) **+ 9.5d** (M23-M29,
 change request pós-MVP de 17/07/2026 — ver `docs/reuniao-2026-07-17-atualizacoes.md`; mais itens

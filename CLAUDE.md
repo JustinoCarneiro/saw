@@ -70,6 +70,8 @@ Cliente pediu explicitamente algo que "feche o projeto na hora". **Confirmado pa
 > Histórias de usuário completas e critérios de aceite BDD em `./docs/spec.md`.
 
 ### Área do Mentorado
+> **Pausada desde 17/07/2026** (`AREA_MENTORADO_PAUSADA` em `frontend/src/shared/lib/featureFlags.ts`) — decisão da reunião de 17/07: foco do momento é Comercial/Financeiro/Mentorados via Admin. O mentorado ainda consegue fazer login (E1 continua ativo), mas cai numa tela de "pausado" em vez do portal — toda a área self-service (E2–E9, incluindo E8 · Loja) fica bloqueada/oculta, não removida. A gestão desses mesmos dados pelo Admin (back-office) continua ativa normalmente. Reverter: `AREA_MENTORADO_PAUSADA=false` (e `LOJA_ADMIN_PAUSADA=false` pra Loja).
+
 1. **E1 · Autenticação & Acesso** *(Grande · risco alto)* — login e-mail/senha, Google OAuth, solicitar acesso, recuperar senha, sessão, perfis.
 2. **E2 · Dashboard do Mentorado** *(Médio)* — visão geral: próxima reunião, meta semanal, tarefas abertas, evolução, compromissos, avisos, dica.
 3. **E3 · Metas Estratégicas** *(Médio)* — metas com progresso, prazo, status (No prazo/Atenção/Atrasada) e resumo.
@@ -106,8 +108,8 @@ Cliente pediu explicitamente algo que "feche o projeto na hora". **Confirmado pa
 - **Meta:** `Ativa {No prazo | Atenção | Atrasada} → Concluída` · desvio: `→ Pausada`.
 - **Pedido (Loja):** `Carrinho → Aguardando pagamento → Pago → Liberado` · desvios: `Cancelado`, `Reembolsado`.
 - **Inscrição em evento:** `Disponível → Inscrito → Participado` · desvio: `Cancelada`.
-- **Lead comercial:** `Solicitação → Em contato → Proposta → Fechado` · desvio: `Perdido`.
-- **Lançamento financeiro:** `Previsto → Realizado` · conta: `A pagar/A receber → Pago/Recebido` (ou `Vencido`).
+- **Lead comercial:** `Solicitação → Em contato → Diagnóstico → Proposta → Fechado` · desvio: `Perdido` (Diagnóstico é opcional, adicionado no M25 pra bater com o funil real do Comercial).
+- **Lançamento financeiro:** `Previsto → Parcial → Realizado` · desvio: `Previsto → Vencido` — única máquina desde o M26 (fundiu o antigo `ContaPagarReceber` em `LancamentoFinanceiro`; não existem mais "lançamento" e "conta" como conceitos/tabelas separados).
 
 ## Produtos & Tipo de Contrato
 Decisão do cliente (reunião 17/07/2026): **"não existem planos, mas sim produtos"** — o antigo `Plano` (Gratuito/Básico/Essencial/Profissional, com cobrança recorrente por tier) não reflete o modelo de negócio real e foi **removido por completo do sistema** (schema, backend, frontend — M28, concluído 21/07/2026).

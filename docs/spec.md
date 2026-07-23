@@ -3,6 +3,10 @@
 > Fonte única das histórias de usuário e critérios de aceite (BDD). Referência visual: as 15 telas
 > em `onda-propostas/clientes/saw/SAW HUB.pdf`. Perfis: **Mentorado** e **Admin (SAW)**.
 
+> **E2–E9 (área self-service do mentorado) pausados desde 17/07/2026** (`AREA_MENTORADO_PAUSADA`,
+> ver CLAUDE.md § Épicos) — as histórias continuam valendo como especificação, mas o mentorado
+> hoje só vê uma tela de "pausado" ao logar; a gestão desses mesmos dados pelo Admin segue ativa.
+
 ---
 
 ## E1 · Autenticação & Acesso  *(Grande · risco alto)*
@@ -111,6 +115,8 @@
 
 ## E8 · Loja SAW  *(Grande · risco alto)*
 
+> **Pausada desde 17/07/2026** (`LOJA_ADMIN_PAUSADA`/`AREA_MENTORADO_PAUSADA`, ver CLAUDE.md § Épicos) — as histórias abaixo continuam válidas como especificação, mas a Loja está bloqueada/oculta tanto pro mentorado quanto na gestão do Admin até reabertura formal com o cliente.
+
 **H8.1** — Como mentorado, quero navegar o catálogo por categoria.
 - **Dado** produtos (cursos, planilhas, templates, e-books, ferramentas, kits, consultorias), **quando** filtro/busco, **então** vejo destaques e mais vendidos com preço e avaliação.
 
@@ -202,7 +208,7 @@
 ## E15 · Gestão de Time (SAW)  *(Médio · risco alto pelo escopo de acesso)*
 
 **H15.1** — Como SAW, quero cadastrar a equipe interna com uma área definida (não um papel genérico).
-- **Dado** um colaborador novo, **quando** defino sua área (Comercial / Marketing / Gestão de Performance / Fundador), **então** o sistema aplica automaticamente as permissões daquela área.
+- **Dado** um colaborador novo, **quando** defino sua área (Comercial / Marketing / Gestão de Performance / Admin), **então** o sistema aplica automaticamente as permissões daquela área.
 
 **H15.2** — Como colaborador do Comercial, quero acessar apenas o painel Comercial.
 - **Dado** minha área = Comercial, **quando** entro na Área Admin, **então** vejo apenas Dashboard Comercial, leads/funil e ranking comercial (E13); não vejo Financeiro, Mentorados ou Time.
@@ -214,8 +220,8 @@
 **H15.4** — Como colaborador de Gestão de Performance, quero acessar apenas a gestão de mentorados.
 - **Dado** minha área = Gestão de Performance, **quando** entro na Área Admin, **então** vejo Mentorados, Mentorias, Conteúdos e o Painel Consolidado (E17); não vejo Financeiro nem Comercial.
 
-**H15.5** — Como Fundador (cliente/sócio), quero acesso irrestrito a toda a Área Admin.
-- **Dado** minha área = Fundador, **então** vejo todas as telas administrativas sem restrição, incluindo Financeiro e Time.
+**H15.5** — Como Admin/Fundador (cliente/sócio), quero acesso irrestrito a toda a Área Admin.
+- **Dado** minha área = Admin, **então** vejo todas as telas administrativas sem restrição, incluindo Financeiro e Time.
 
 **H15.6** — Como SAW, quero ver a carteira de clientes por mentor.
 - **Dado** os mentores, **então** vejo quantos mentorados cada um atende e a distribuição da carteira.
@@ -255,13 +261,13 @@
 
 ## Suposições a validar com a SAW
 1. ~~**Planos e o que cada um libera**~~ — **resolvido** (reunião 17/07/2026): "não existem planos, mas sim produtos". `Plano` removido do sistema por completo (M28); o conceito real é `TipoContrato`/`ProdutoVenda`, sem gating de conteúdo por tier.
-2. **Gateway de pagamento** a ser usado (Mercado Pago / Stripe / Pagar.me) e emissão fiscal.
+2. ~~**Gateway de pagamento**~~ — **resolvido**: Mercado Pago escolhido e integrado (`backend/.../loja/pagamento/MercadoPagoGatewayService.java`), hoje bloqueado só pelo bug de assinatura do webhook (ticket aberto, ver memória do projeto), não por indecisão de gateway. **Emissão fiscal** continua genuinamente em aberto — não há nenhuma integração de nota fiscal implementada.
 3. **Mentoria em grupo** — quantos mentorados por grupo e como a ata é compartilhada.
 4. **Origem dos vídeos** (upload próprio vs. YouTube/Vimeo não listado) das dicas e materiais.
 5. **Integração de agenda** — apenas Google Meet ou também Zoom/presencial com endereço.
 6. **App nativo** fica fora do MVP (web responsiva atende); confirmar.
 7. **Marketing como área própria (E15/H15.3)** — o protótipo hoje só tem "Conteúdos"; confirmar se Marketing reaproveita essa tela, ganha uma nova, ou é o mesmo que Comercial.
-8. **Lista fechada de "ferramentas obrigatórias" (E17/H17.4)** — cliente citou ficha técnica, DRE e manual da cultura; falta a lista completa e se ela é igual para todos os planos.
-9. **Escala de peso dos encaminhamentos (E4/H4.5, E17/H17.2)** — cliente falou em peso 1 e 2; confirmar se são só esses dois níveis ou se há mais.
+8. ~~**Lista fechada de "ferramentas obrigatórias" (E17/H17.4)**~~ — **resolvido** (M27, 19/07/2026): cliente definiu 4 ferramentas nomeadas (não as 3 originalmente citadas) — Ficha Técnica, DRE, Manual da Cultura e **Manual de Processos** —, cada uma com 3 estados (Sim/Não/Em construção), implementadas em `Mentorado.ferramentaFichaTecnica/ferramentaDre/ferramentaManualCultura/ferramentaManualProcessos`.
+9. ~~**Escala de peso dos encaminhamentos (E4/H4.5, E17/H17.2)**~~ — **resolvido**: implementado como exatamente 2 níveis (peso 1 ou 2), sem terceiro nível.
 10. **Origem do dado de faturamento do mentorado (E17/H17.3)** — o mentorado informa manualmente, ou isso se conecta a alguma integração/planilha?
 11. **Mentorado nunca acessa a área de Time/Gestão de Performance** (E15) — confirmado como fora do MVP; cliente sinalizou que pode virar visão futura do mentorado ("gestão de performance" dele mesmo), não implementar agora.
